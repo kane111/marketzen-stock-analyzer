@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -10,6 +10,8 @@ import TechnicalAnalysis from './components/TechnicalAnalysis'
 import MarketStatus from './components/MarketStatus'
 import Portfolio from './components/Portfolio'
 import { IndicatorConfig, DEFAULT_PARAMS } from './components/IndicatorConfig'
+import SectorDashboard from './components/SectorDashboard'
+import NewsFeed from './components/NewsFeed'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -56,7 +58,7 @@ function App() {
     return saved ? JSON.parse(saved) : DEFAULT_STOCKS
   })
   
-  const [view, setView] = useState('dashboard') // 'dashboard', 'analysis', 'portfolio'
+  const [view, setView] = useState('dashboard') // 'dashboard', 'analysis', 'portfolio', 'sectors', 'news'
   const [selectedStock, setSelectedStock] = useState(null)
   const [stockData, setStockData] = useState(null)
   const [chartData, setChartData] = useState([])
@@ -384,6 +386,32 @@ function App() {
         />
 
         <div className="flex items-center gap-3">
+          {/* Sectors Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setView(view === 'sectors' ? 'dashboard' : 'sectors')}
+            className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+              view === 'sectors' ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Sectors</span>
+          </motion.button>
+
+          {/* News Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setView(view === 'news' ? 'dashboard' : 'news')}
+            className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+              view === 'news' ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+            }`}
+          >
+            <Newspaper className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">News</span>
+          </motion.button>
+
           {/* Portfolio Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -436,6 +464,26 @@ function App() {
           >
             <TrendingUp className="w-5 h-5" />
             <span className="text-xs">Market</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setView('sectors')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+              view === 'sectors' ? 'text-primary' : 'text-textSecondary'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-xs">Sectors</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setView('news')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+              view === 'news' ? 'text-primary' : 'text-textSecondary'
+            }`}
+          >
+            <Newspaper className="w-5 h-5" />
+            <span className="text-xs">News</span>
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -600,6 +648,20 @@ function App() {
                   setSelectedStock(stock)
                   setView('dashboard')
                 }}
+              />
+            ) : view === 'sectors' ? (
+              <SectorDashboard 
+                key="sectors"
+                onSectorSelect={(sector) => {
+                  // Filter stocks by sector or navigate to relevant analysis
+                  console.log('Selected sector:', sector)
+                  setView('dashboard')
+                }}
+              />
+            ) : view === 'news' ? (
+              <NewsFeed 
+                key="news"
+                stockId={selectedStock?.id || null}
               />
             ) : view === 'analysis' ? (
               <TechnicalAnalysis 
