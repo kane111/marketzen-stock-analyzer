@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Activity, TrendingUp, TrendingDown, Target, Zap, AlertTriangle, CheckCircle, XCircle, Info, RefreshCw } from 'lucide-react'
-import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line, Bar, Scatter, Cell } from 'recharts'
+import { ArrowLeft, Activity, TrendingUp, TrendingDown, Target, Zap, AlertTriangle, Info, RefreshCw, LineChart, BarChart2 } from 'lucide-react'
+import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line, Bar, Cell } from 'recharts'
+import TimeframeSelector from './TimeframeSelector'
 
 // Technical Indicator Calculation Functions
 const calculateSMA = (data, period) => {
@@ -518,7 +519,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {[
           { id: 'summary', label: 'Summary', icon: Target },
-          { id: 'price', label: 'Price & MA', icon: TrendingLine },
+          { id: 'price', label: 'Price & MA', icon: LineChart },
           { id: 'rsi', label: 'RSI', icon: Activity },
           { id: 'macd', label: 'MACD', icon: Zap },
           { id: 'bollinger', label: 'Bollinger Bands', icon: Target },
