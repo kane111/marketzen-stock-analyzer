@@ -81,3 +81,42 @@ input:-webkit-autofill:active {
   -webkit-text-fill-color: #f3f4f6 !important;
   caret-color: #f3f4f6;
 }
+
+/* Multi-chart grid animations */
+.multi-chart-grid {
+  display: grid;
+  gap: 1rem;
+  animation: gridIn 0.4s ease-out;
+}
+
+@keyframes gridIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Status indicator pulse animation */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.status-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}

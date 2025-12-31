@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
 import TimeframeSelector from './components/TimeframeSelector'
 import LoadingSkeleton from './components/LoadingSkeleton'
 import TechnicalAnalysis from './components/TechnicalAnalysis'
+import MarketStatus from './components/MarketStatus'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -39,6 +40,14 @@ const TA_TIMEFRAMES = [
   { label: '1Y', range: '1y', interval: '1d' }
 ]
 
+// Multi-chart timeframes for comparison view
+const MULTI_CHART_TIMEFRAMES = [
+  { label: '1H', range: '1d', interval: '15m', type: 'intraday' },
+  { label: '4H', range: '5d', interval: '1h', type: 'intraday' },
+  { label: '1D', range: '1mo', interval: '1d', type: 'daily' },
+  { label: '1W', range: '3mo', interval: '1wk', type: 'weekly' }
+]
+
 function App() {
   const [watchlist, setWatchlist] = useState(() => {
     const saved = localStorage.getItem('marketzen_watchlist')
@@ -49,13 +58,19 @@ function App() {
   const [selectedStock, setSelectedStock] = useState(null)
   const [stockData, setStockData] = useState(null)
   const [chartData, setChartData] = useState([])
+  const [multiChartData, setMultiChartData] = useState({})
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1])
+  const [selectedMultiTimeframes, setSelectedMultiTimeframes] = useState(['1D', '1W'])
+  const [multiChartMode, setMultiChartMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [searchOpen, setSearchOpen] = useState(false)
   const [priceChange, setPriceChange] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileWatchlist, setShowMobileWatchlist] = useState(false)
   const [error, setError] = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [refreshInterval, setRefreshInterval] = useState(null)
+  const [marketStatus, setMarketStatus] = useState('closed')
 
   // Check mobile
   useEffect(() => {
@@ -77,14 +92,46 @@ function App() {
     localStorage.setItem('marketzen_watchlist', JSON.stringify(watchlist))
   }, [watchlist])
 
-  const fetchStockData = useCallback(async (stock, timeframe = selectedTimeframe, taMode = false) => {
+  // Market status detection
+  useEffect(() => {
+    const updateMarketStatus = () => {
+      const now = new Date()
+      const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+      const day = istNow.getDay()
+      const hour = istNow.getHours()
+      const minute = istNow.getMinutes()
+      const currentMinutes = hour * 60 + minute
+      
+      // BSE/NSE trading hours: 9:15 AM - 3:30 PM IST, Mon-Fri
+      const marketOpen = 9 * 60 + 15 // 9:15
+      const marketClose = 15 * 60 + 30 // 15:30
+      
+      let status = 'closed'
+      if (day >= 1 && day <= 5) {
+        if (currentMinutes >= marketOpen && currentMinutes <= marketClose) {
+          status = 'live'
+        } else if (currentMinutes > marketClose) {
+          status = 'post-market'
+        } else {
+          status = 'pre-market'
+        }
+      }
+      setMarketStatus(status)
+    }
+    
+    updateMarketStatus()
+    const interval = setInterval(updateMarketStatus, 60000) // Check every minute
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchStockData = useCallback(async (stock, timeframe = selectedTimeframe, taMode = false, isMultiChart = false, multiTimeframe = null) => {
     if (!stock) return
     
     setError(null)
     setLoading(true)
     
     try {
-      const tf = taMode ? timeframe : timeframe
+      const tf = taMode ? timeframe : (multiTimeframe || timeframe)
       const url = `${YAHOO_BASE}/${stock.id}?range=${tf.range}&interval=${tf.interval}`
       const response = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`)
       
@@ -115,7 +162,7 @@ function App() {
         
         // Get stock info from meta
         const meta = result.meta
-        setStockData({
+        const stockDataObj = {
           symbol: meta.symbol || stock.symbol,
           name: stock.name,
           current_price: currentPrice,
@@ -138,7 +185,7 @@ function App() {
               year: 'numeric'
             })
           })).filter(d => d.close !== null && d.close !== undefined)
-        })
+        }
         
         // Transform chart data
         const transformed = timestamps.map((timestamp, index) => {
@@ -153,7 +200,21 @@ function App() {
           }
         }).filter(item => item.price !== null && item.price !== undefined)
         
-        setChartData(transformed)
+        if (isMultiChart) {
+          // Store data for multi-chart view
+          setMultiChartData(prev => ({
+            ...prev,
+            [multiTimeframe?.label || timeframe.label]: {
+              data: transformed,
+              stockData: stockDataObj
+            }
+          }))
+        } else {
+          setStockData(stockDataObj)
+          setChartData(transformed)
+        }
+        
+        setLastUpdated(new Date())
       } else {
         throw new Error('No data available')
       }
@@ -165,6 +226,18 @@ function App() {
     }
   }, [selectedTimeframe])
 
+  // Fetch multi-chart data when mode is enabled
+  useEffect(() => {
+    if (multiChartMode && selectedStock) {
+      const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
+        selectedMultiTimeframes.includes(tf.label)
+      )
+      timeframesToFetch.forEach(tf => {
+        fetchStockData(selectedStock, null, false, true, tf)
+      })
+    }
+  }, [multiChartMode, selectedStock, selectedMultiTimeframes, fetchStockData])
+
   useEffect(() => {
     if (selectedStock) {
       const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
@@ -172,15 +245,39 @@ function App() {
     }
   }, [selectedStock, selectedTimeframe, fetchStockData, view])
 
+  // Auto-refresh during market hours
+  useEffect(() => {
+    if (marketStatus === 'live' && selectedStock) {
+      const interval = setInterval(() => {
+        const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
+        fetchStockData(selectedStock, tf, view === 'analysis')
+      }, 60000) // Refresh every minute during market hours
+      
+      setRefreshInterval(interval)
+      return () => clearInterval(interval)
+    }
+  }, [marketStatus, selectedStock, selectedTimeframe, fetchStockData, view])
+
   const handleStockSelect = (stock) => {
     setSelectedStock(stock)
     setShowMobileWatchlist(false)
+    // Reset multi-chart data when switching stock
+    if (multiChartMode) {
+      setMultiChartData({})
+      const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
+        selectedMultiTimeframes.includes(tf.label)
+      )
+      timeframesToFetch.forEach(tf => {
+        fetchStockData(stock, null, false, true, tf)
+      })
+    }
   }
 
   const handleAnalyzeClick = (stock, e) => {
     e.stopPropagation()
     setSelectedStock(stock)
     setView('analysis')
+    setMultiChartMode(false)
     // Force refetch data for TA with proper timeframe
     setTimeout(() => {
       if (stock) {
@@ -192,6 +289,20 @@ function App() {
   const handleBackToDashboard = () => {
     setView('dashboard')
     setSelectedTimeframe(TIMEFRAMES[1])
+    setMultiChartMode(false)
+  }
+
+  const toggleMultiTimeframe = (label) => {
+    setSelectedMultiTimeframes(prev => {
+      if (prev.includes(label)) {
+        if (prev.length > 1) {
+          return prev.filter(l => l !== label)
+        }
+        return prev // Keep at least one selected
+      } else {
+        return [...prev, label]
+      }
+    })
   }
 
   const addToWatchlist = (stock) => {
@@ -230,6 +341,15 @@ function App() {
     return value.toLocaleString()
   }
 
+  const formatTimeAgo = (date) => {
+    if (!date) return 'Never'
+    const seconds = Math.floor((new Date() - date) / 1000)
+    if (seconds < 60) return 'Just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    return date.toLocaleDateString()
+  }
+
   return (
     <div className="min-h-screen bg-background text-text overflow-hidden">
       {/* Header */}
@@ -247,6 +367,13 @@ function App() {
             <p className="text-xs text-textSecondary">Indian Stock Tracker</p>
           </div>
         </div>
+
+        {/* Market Status Indicator */}
+        <MarketStatus 
+          marketStatus={marketStatus} 
+          lastUpdated={lastUpdated} 
+          onRefresh={() => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')}
+        />
 
         <div className="flex items-center gap-3">
           <motion.button
@@ -450,7 +577,7 @@ function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="max-w-4xl mx-auto"
+                className="max-w-6xl mx-auto"
               >
                 {/* Stock Header */}
                 <div className="mb-6">
@@ -460,16 +587,42 @@ function App() {
                     </div>
                     <div className="flex-1">
                       <h2 className="text-2xl font-semibold">{stockData.name}</h2>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-lg text-textSecondary">{stockData.symbol}</span>
                         <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary">
                           NSE
                         </span>
+                        {/* Multi-chart mode toggle */}
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setMultiChartMode(!multiChartMode)
+                            if (!multiChartMode) {
+                              // Initialize multi-chart data
+                              setMultiChartData({})
+                              const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
+                                selectedMultiTimeframes.includes(tf.label)
+                              )
+                              timeframesToFetch.forEach(tf => {
+                                fetchStockData(selectedStock, null, false, true, tf)
+                              })
+                            }
+                          }}
+                          className={`ml-auto px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                            multiChartMode 
+                              ? 'bg-primary text-white' 
+                              : 'bg-surfaceLight text-textSecondary hover:bg-surface'
+                          }`}
+                        >
+                          <BarChart2 className="w-4 h-4" />
+                          Multi-Timeframe
+                        </motion.button>
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => setView('analysis')}
-                          className="ml-auto px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors"
                         >
                           <Activity className="w-4 h-4" />
                           Technical Analysis
@@ -526,63 +679,180 @@ function App() {
                   </div>
                 </div>
 
-                {/* Chart */}
+                {/* Chart Section */}
                 <div className="glass rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-                    <h3 className="text-lg font-medium">Price Chart</h3>
-                    <TimeframeSelector 
-                      timeframes={TIMEFRAMES}
-                      selected={selectedTimeframe}
-                      onSelect={setSelectedTimeframe}
-                    />
+                    <h3 className="text-lg font-medium">
+                      {multiChartMode ? 'Multi-Timeframe Analysis' : 'Price Chart'}
+                    </h3>
+                    
+                    {!multiChartMode ? (
+                      <TimeframeSelector 
+                        timeframes={TIMEFRAMES}
+                        selected={selectedTimeframe}
+                        onSelect={setSelectedTimeframe}
+                      />
+                    ) : (
+                      /* Multi-chart timeframe selector */
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-textSecondary mr-2">Compare:</span>
+                        {MULTI_CHART_TIMEFRAMES.map((tf) => (
+                          <motion.button
+                            key={tf.label}
+                            onClick={() => toggleMultiTimeframe(tf.label)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                              selectedMultiTimeframes.includes(tf.label)
+                                ? 'bg-primary text-white'
+                                : 'bg-surfaceLight text-textSecondary hover:bg-surface'
+                            }`}
+                          >
+                            {tf.label}
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
-                        <defs>
-                          <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <XAxis 
-                          dataKey="time" 
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: '#9ca3af', fontSize: 12 }}
-                          interval="preserveStartEnd"
-                          minTickGap={50}
-                        />
-                        <YAxis 
-                          domain={['auto', 'auto']}
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: '#9ca3af', fontSize: 12 }}
-                          tickFormatter={(value) => `₹${value.toLocaleString()}`}
-                          width={80}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            background: 'rgba(21, 26, 33, 0.95)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '8px',
-                            backdropFilter: 'blur(12px)'
-                          }}
-                          labelStyle={{ color: '#9ca3af' }}
-                          formatter={(value) => [formatCurrency(value), 'Price']}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="price"
-                          stroke={isPositive ? '#10b981' : '#ef4444'}
-                          strokeWidth={2}
-                          fill="url(#colorPrice)"
-                          animationDuration={1000}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {/* Single Chart View */}
+                  {!multiChartMode ? (
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                          <defs>
+                            <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis 
+                            dataKey="time" 
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#9ca3af', fontSize: 12 }}
+                            interval="preserveStartEnd"
+                            minTickGap={50}
+                          />
+                          <YAxis 
+                            domain={['auto', 'auto']}
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#9ca3af', fontSize: 12 }}
+                            tickFormatter={(value) => `₹${value.toLocaleString()}`}
+                            width={80}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: 'rgba(21, 26, 33, 0.95)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              backdropFilter: 'blur(12px)'
+                            }}
+                            labelStyle={{ color: '#9ca3af' }}
+                            formatter={(value) => [formatCurrency(value), 'Price']}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="price"
+                            stroke={isPositive ? '#10b981' : '#ef4444'}
+                            strokeWidth={2}
+                            fill="url(#colorPrice)"
+                            animationDuration={1000}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    /* Multi-Chart Grid View */
+                    <div className={`grid gap-4 ${
+                      selectedMultiTimeframes.length <= 2 ? 'grid-cols-2' : 
+                      selectedMultiTimeframes.length <= 3 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'
+                    }`}>
+                      {selectedMultiTimeframes.map((tfLabel) => {
+                        const chartInfo = multiChartData[tfLabel]
+                        const timeframe = MULTI_CHART_TIMEFRAMES.find(t => t.label === tfLabel)
+                        const chartDataTf = chartInfo?.data || []
+                        const stockDataTf = chartInfo?.stockData
+                        const isPositiveTf = stockDataTf ? 
+                          (stockDataTf.current_price >= stockDataTf.previous_close) : true
+                        
+                        return (
+                          <motion.div
+                            key={tfLabel}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="glass rounded-xl p-4"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-medium text-textSecondary">{tfLabel}</span>
+                              {stockDataTf && (
+                                <span className={`text-sm font-mono ${
+                                  isPositiveTf ? 'text-positive' : 'text-negative'
+                                }`}>
+                                  {formatCurrency(stockDataTf.current_price)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="h-40">
+                              {chartDataTf.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={chartDataTf}>
+                                    <defs>
+                                      <linearGradient id={`colorPrice${tfLabel}`} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={isPositiveTf ? '#10b981' : '#ef4444'} stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor={isPositiveTf ? '#10b981' : '#ef4444'} stopOpacity={0}/>
+                                      </linearGradient>
+                                    </defs>
+                                    <XAxis dataKey="time" hide />
+                                    <YAxis 
+                                      domain={['auto', 'auto']}
+                                      tick={{ fill: '#6b7280', fontSize: 10 }}
+                                      tickFormatter={(value) => `₹${value}`}
+                                      width={50}
+                                    />
+                                    <Tooltip
+                                      contentStyle={{
+                                        background: 'rgba(21, 26, 33, 0.95)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '4px',
+                                        fontSize: '11px'
+                                      }}
+                                      formatter={(value) => [formatCurrency(value), 'Price']}
+                                    />
+                                    <Area
+                                      type="monotone"
+                                      dataKey="price"
+                                      stroke={isPositiveTf ? '#10b981' : '#ef4444'}
+                                      strokeWidth={1.5}
+                                      fill={`url(#colorPrice${tfLabel})`}
+                                    />
+                                  </AreaChart>
+                                </ResponsiveContainer>
+                              ) : (
+                                <div className="h-full flex items-center justify-center">
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                    className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            {stockDataTf && (
+                              <div className="mt-2 flex items-center justify-between text-xs text-textSecondary">
+                                <span>Vol: {formatNumber(stockDataTf.volume)}</span>
+                                <span className={isPositiveTf ? 'text-positive' : 'text-negative'}>
+                                  {isPositiveTf ? '+' : ''}
+                                  {((stockDataTf.current_price - stockDataTf.previous_close) / stockDataTf.previous_close * 100).toFixed(2)}%
+                                </span>
+                              </div>
+                            )}
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ) : (
