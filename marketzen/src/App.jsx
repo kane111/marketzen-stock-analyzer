@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -8,6 +8,8 @@ import TimeframeSelector from './components/TimeframeSelector'
 import LoadingSkeleton from './components/LoadingSkeleton'
 import TechnicalAnalysis from './components/TechnicalAnalysis'
 import MarketStatus from './components/MarketStatus'
+import Portfolio from './components/Portfolio'
+import { IndicatorConfig, DEFAULT_PARAMS } from './components/IndicatorConfig'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -54,7 +56,7 @@ function App() {
     return saved ? JSON.parse(saved) : DEFAULT_STOCKS
   })
   
-  const [view, setView] = useState('dashboard') // 'dashboard' or 'analysis'
+  const [view, setView] = useState('dashboard') // 'dashboard', 'analysis', 'portfolio'
   const [selectedStock, setSelectedStock] = useState(null)
   const [stockData, setStockData] = useState(null)
   const [chartData, setChartData] = useState([])
@@ -71,6 +73,11 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [refreshInterval, setRefreshInterval] = useState(null)
   const [marketStatus, setMarketStatus] = useState('closed')
+  const [showIndicatorConfig, setShowIndicatorConfig] = useState(false)
+  const [indicatorParams, setIndicatorParams] = useState(() => {
+    const saved = localStorage.getItem('marketzen_indicator_params')
+    return saved ? JSON.parse(saved) : DEFAULT_PARAMS
+  })
 
   // Check mobile
   useEffect(() => {
@@ -91,6 +98,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('marketzen_watchlist', JSON.stringify(watchlist))
   }, [watchlist])
+
+  // Save indicator params
+  useEffect(() => {
+    localStorage.setItem('marketzen_indicator_params', JSON.stringify(indicatorParams))
+  }, [indicatorParams])
 
   // Market status detection
   useEffect(() => {
@@ -239,7 +251,7 @@ function App() {
   }, [multiChartMode, selectedStock, selectedMultiTimeframes, fetchStockData])
 
   useEffect(() => {
-    if (selectedStock) {
+    if (selectedStock && view !== 'portfolio') {
       const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
       fetchStockData(selectedStock, tf, view === 'analysis')
     }
@@ -247,7 +259,7 @@ function App() {
 
   // Auto-refresh during market hours
   useEffect(() => {
-    if (marketStatus === 'live' && selectedStock) {
+    if (marketStatus === 'live' && selectedStock && view !== 'portfolio') {
       const interval = setInterval(() => {
         const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
         fetchStockData(selectedStock, tf, view === 'analysis')
@@ -341,13 +353,9 @@ function App() {
     return value.toLocaleString()
   }
 
-  const formatTimeAgo = (date) => {
-    if (!date) return 'Never'
-    const seconds = Math.floor((new Date() - date) / 1000)
-    if (seconds < 60) return 'Just now'
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-    return date.toLocaleDateString()
+  const handleIndicatorParamsChange = (newParams) => {
+    setIndicatorParams(newParams)
+    setShowIndicatorConfig(false)
   }
 
   return (
@@ -376,6 +384,19 @@ function App() {
         />
 
         <div className="flex items-center gap-3">
+          {/* Portfolio Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setView(view === 'portfolio' ? 'dashboard' : 'portfolio')}
+            className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+              view === 'portfolio' ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+            }`}
+          >
+            <Wallet className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Portfolio</span>
+          </motion.button>
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -387,7 +408,7 @@ function App() {
             <kbd className="hidden md:inline px-2 py-0.5 text-xs bg-surfaceLight rounded text-textSecondary">⌘K</kbd>
           </motion.button>
           
-          {isMobile && (
+          {isMobile && view === 'dashboard' && (
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowMobileWatchlist(true)}
@@ -399,7 +420,37 @@ function App() {
         </div>
       </motion.header>
 
-      <div className="pt-20 h-screen flex">
+      {/* Bottom Navigation for Mobile */}
+      {isMobile && (
+        <motion.nav
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/5 px-4 py-2 flex items-center justify-around"
+        >
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setView('dashboard')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+              view === 'dashboard' ? 'text-primary' : 'text-textSecondary'
+            }`}
+          >
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-xs">Market</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setView('portfolio')}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+              view === 'portfolio' ? 'text-primary' : 'text-textSecondary'
+            }`}
+          >
+            <Wallet className="w-5 h-5" />
+            <span className="text-xs">Portfolio</span>
+          </motion.button>
+        </motion.nav>
+      )}
+
+      <div className={`pt-20 h-screen flex ${isMobile ? 'pb-16' : ''}`}>
         {/* Watchlist Sidebar */}
         <AnimatePresence>
           {!isMobile && view === 'dashboard' && (
@@ -542,7 +593,15 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 ml-0 md:ml-72 p-4 md:p-6 overflow-y-auto">
           <AnimatePresence mode="wait">
-            {view === 'analysis' ? (
+            {view === 'portfolio' ? (
+              <Portfolio 
+                key="portfolio"
+                onStockSelect={(stock) => {
+                  setSelectedStock(stock)
+                  setView('dashboard')
+                }}
+              />
+            ) : view === 'analysis' ? (
               <TechnicalAnalysis 
                 key="analysis"
                 stock={selectedStock}
@@ -551,6 +610,8 @@ function App() {
                 taTimeframes={TA_TIMEFRAMES}
                 fetchStockData={fetchStockData}
                 loading={loading}
+                indicatorParams={indicatorParams}
+                onOpenConfig={() => setShowIndicatorConfig(true)}
               />
             ) : loading ? (
               <LoadingSkeleton key="loading" />
@@ -870,6 +931,17 @@ function App() {
         onClose={() => setSearchOpen(false)}
         onAdd={addToWatchlist}
       />
+
+      {/* Indicator Configuration Modal */}
+      <AnimatePresence>
+        {showIndicatorConfig && (
+          <IndicatorConfig
+            params={indicatorParams}
+            onChange={handleIndicatorParamsChange}
+            onClose={() => setShowIndicatorConfig(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

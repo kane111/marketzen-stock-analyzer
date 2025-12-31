@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Activity, TrendingUp, TrendingDown, Target, Zap, AlertTriangle, Info, RefreshCw, LineChart, BarChart2 } from 'lucide-react'
+import { ArrowLeft, Activity, TrendingUp, TrendingDown, Target, Zap, AlertTriangle, Info, RefreshCw, LineChart, BarChart2, Sliders } from 'lucide-react'
 import { ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line, Bar, Cell } from 'recharts'
 import TimeframeSelector from './TimeframeSelector'
 
@@ -141,7 +141,7 @@ const calculateVolumeMA = (volumes, period = 20) => {
   return calculateSMA(volumes, period)
 }
 
-function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockData, loading }) {
+function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockData, loading, indicatorParams = {}, onOpenConfig }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(taTimeframes[1])
   const [analysisData, setAnalysisData] = useState(null)
   const [signal, setSignal] = useState(null)
@@ -149,12 +149,20 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   const [localLoading, setLocalLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Merge with defaults
+  const params = useMemo(() => ({
+    rsi: { period: 14, overbought: 70, oversold: 30, ...indicatorParams.rsi },
+    macd: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, ...indicatorParams.macd },
+    sma: { shortPeriod: 20, longPeriod: 50, ...indicatorParams.sma },
+    ema: { shortPeriod: 12, longPeriod: 26, ...indicatorParams.ema },
+    bollinger: { period: 20, stdDev: 2, ...indicatorParams.bollinger },
+    volume: { maPeriod: 20, ...indicatorParams.volume }
+  }), [indicatorParams])
+
   useEffect(() => {
     if (!stockData?.ohlc || stockData.ohlc.length === 0) {
-      // Need to fetch data for technical analysis
       setLocalLoading(true)
       setError(null)
-      // Trigger data fetch
       if (fetchStockData && stock) {
         fetchStockData(stock, taTimeframes[1], true)
       }
@@ -165,13 +173,11 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   }, [stockData])
 
   useEffect(() => {
-    // Also trigger after a delay to ensure data is fetched
     const timer = setTimeout(() => {
       if (stockData?.ohlc && stockData.ohlc.length > 0) {
         performAnalysis()
         setLocalLoading(false)
       } else if (!localLoading) {
-        // If not loading and still no data, show error
         setError('Unable to fetch stock data for analysis')
       }
     }, 2000)
@@ -180,31 +186,42 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   }, [stockData])
 
   const performAnalysis = () => {
+    if (!stockData?.ohlc) return
+
     const ohlc = stockData.ohlc
     const closes = ohlc.map(d => d.close)
     const highs = ohlc.map(d => d.high)
     const lows = ohlc.map(d => d.low)
     const volumes = ohlc.map(d => d.volume)
     
-    // Calculate all indicators
-    const sma20 = calculateSMA(closes, 20)
-    const sma50 = calculateSMA(closes, 50)
-    const ema12 = calculateEMA(closes, 12)
-    const ema26 = calculateEMA(closes, 26)
-    const rsi = calculateRSI(closes, 14)
-    const { macdLine, signalLine, histogram } = calculateMACD(closes)
-    const { sma: bbSma, upperBand, lowerBand } = calculateBollingerBands(closes)
-    const volumeMA = calculateVolumeMA(volumes)
+    // Calculate all indicators using configurable parameters
+    const smaShort = calculateSMA(closes, params.sma.shortPeriod)
+    const smaLong = calculateSMA(closes, params.sma.longPeriod)
+    const emaShort = calculateEMA(closes, params.ema.shortPeriod)
+    const emaLong = calculateEMA(closes, params.ema.longPeriod)
+    const rsi = calculateRSI(closes, params.rsi.period)
+    const { macdLine, signalLine, histogram } = calculateMACD(
+      closes, 
+      params.macd.fastPeriod, 
+      params.macd.slowPeriod, 
+      params.macd.signalPeriod
+    )
+    const { sma: bbSma, upperBand, lowerBand } = calculateBollingerBands(
+      closes, 
+      params.bollinger.period, 
+      params.bollinger.stdDev
+    )
+    const volumeMA = calculateVolumeMA(volumes, params.volume.maPeriod)
     
     // Current values
     const currentPrice = closes[closes.length - 1]
     const currentRSI = rsi[rsi.length - 1]
     const currentMACD = macdLine[macdLine.length - 1]
     const currentSignal = signalLine[signalLine.length - 1]
-    const currentSMA20 = sma20[sma20.length - 1]
-    const currentSMA50 = sma50[sma50.length - 1]
-    const currentEMA12 = ema12[ema12.length - 1]
-    const currentEMA26 = ema26[ema26.length - 1]
+    const currentSMAShort = smaShort[smaShort.length - 1]
+    const currentSMALong = smaLong[smaLong.length - 1]
+    const currentEMAShort = emaShort[emaShort.length - 1]
+    const currentEMALong = emaLong[emaLong.length - 1]
     const currentBBUpper = upperBand[upperBand.length - 1]
     const currentBBLower = lowerBand[lowerBand.length - 1]
     
@@ -215,26 +232,26 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     // RSI Analysis
     let rsiSignal = 'neutral'
     let rsiText = ''
-    if (currentRSI < 30) {
+    if (currentRSI < params.rsi.oversold) {
       rsiSignal = 'buy'
-      rsiText = `RSI is at ${currentRSI.toFixed(2)}, indicating oversold conditions - potential buying opportunity`
-      signals.push({ indicator: 'RSI (14)', signal: 'BUY', strength: 'STRONG', description: rsiText, color: 'positive' })
-    } else if (currentRSI > 70) {
+      rsiText = `RSI is at ${currentRSI.toFixed(2)}, indicating oversold conditions (below ${params.rsi.oversold}) - potential buying opportunity`
+      signals.push({ indicator: `RSI (${params.rsi.period})`, signal: 'BUY', strength: 'STRONG', description: rsiText, color: 'positive' })
+    } else if (currentRSI > params.rsi.overbought) {
       rsiSignal = 'sell'
-      rsiText = `RSI is at ${currentRSI.toFixed(2)}, indicating overbought conditions - potential selling pressure`
-      signals.push({ indicator: 'RSI (14)', signal: 'SELL', strength: 'STRONG', description: rsiText, color: 'negative' })
+      rsiText = `RSI is at ${currentRSI.toFixed(2)}, indicating overbought conditions (above ${params.rsi.overbought}) - potential selling pressure`
+      signals.push({ indicator: `RSI (${params.rsi.period})`, signal: 'SELL', strength: 'STRONG', description: rsiText, color: 'negative' })
     } else {
-      rsiText = `RSI is at ${currentRSI.toFixed(2)}, indicating neutral momentum`
-      signals.push({ indicator: 'RSI (14)', signal: 'NEUTRAL', strength: 'WEAK', description: rsiText, color: 'neutral' })
+      rsiText = `RSI is at ${currentRSI.toFixed(2)}, indicating neutral momentum (between ${params.rsi.oversold}-${params.rsi.overbought})`
+      signals.push({ indicator: `RSI (${params.rsi.period})`, signal: 'NEUTRAL', strength: 'WEAK', description: rsiText, color: 'neutral' })
     }
-    analysis.push({ name: 'RSI', value: currentRSI.toFixed(2), threshold: '30/70', status: rsiSignal, details: rsiText })
+    analysis.push({ name: 'RSI', value: currentRSI.toFixed(2), threshold: `${params.rsi.oversold}/${params.rsi.overbought}`, status: rsiSignal, details: rsiText })
     
     // MACD Analysis
     let macdSignal = 'neutral'
     let macdText = ''
     if (currentMACD > currentSignal) {
       macdSignal = 'buy'
-      macdText = `MACD (${currentMACD.toFixed(2)}) is above Signal (${currentSignal.toFixed(2)}) - Bullish crossover`
+      macdText = `MACD (${currentMACD.toFixed(2)}) is above Signal (${currentSignal.toFixed(2)}) - Bullish crossover (${params.macd.fastPeriod}/${params.macd.slowPeriod}/${params.macd.signalPeriod})`
       signals.push({ indicator: 'MACD', signal: 'BUY', strength: 'MODERATE', description: macdText, color: 'positive' })
     } else if (currentMACD < currentSignal) {
       macdSignal = 'sell'
@@ -249,26 +266,26 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     // Moving Averages Analysis
     let maSignal = 'neutral'
     let maText = ''
-    if (currentPrice > currentSMA50 && currentPrice > currentSMA20) {
+    if (currentPrice > currentSMALong && currentPrice > currentSMAShort) {
       maSignal = 'buy'
-      maText = `Price (₹${currentPrice.toFixed(2)}) is above SMA50 (₹${currentSMA50.toFixed(2)}) and SMA20 (₹${currentSMA20.toFixed(2)}) - Strong uptrend`
-      signals.push({ indicator: 'SMA (20/50)', signal: 'BUY', strength: 'STRONG', description: maText, color: 'positive' })
-    } else if (currentPrice < currentSMA50 && currentPrice < currentSMA20) {
+      maText = `Price (₹${currentPrice.toFixed(2)}) is above SMA${params.sma.longPeriod} (₹${currentSMALong?.toFixed(2)}) and SMA${params.sma.shortPeriod} (₹${currentSMAShort?.toFixed(2)}) - Strong uptrend`
+      signals.push({ indicator: `SMA (${params.sma.shortPeriod}/${params.sma.longPeriod})`, signal: 'BUY', strength: 'STRONG', description: maText, color: 'positive' })
+    } else if (currentPrice < currentSMALong && currentPrice < currentSMAShort) {
       maSignal = 'sell'
-      maText = `Price (₹${currentPrice.toFixed(2)}) is below SMA50 (₹${currentSMA50.toFixed(2)}) and SMA20 (₹${currentSMA20.toFixed(2)}) - Downtrend`
-      signals.push({ indicator: 'SMA (20/50)', signal: 'SELL', strength: 'STRONG', description: maText, color: 'negative' })
+      maText = `Price (₹${currentPrice.toFixed(2)}) is below SMA${params.sma.longPeriod} (₹${currentSMALong?.toFixed(2)}) and SMA${params.sma.shortPeriod} (₹${currentSMAShort?.toFixed(2)}) - Downtrend`
+      signals.push({ indicator: `SMA (${params.sma.shortPeriod}/${params.sma.longPeriod})`, signal: 'SELL', strength: 'STRONG', description: maText, color: 'negative' })
     } else {
       maText = `Price is between key moving averages - consolidating`
-      signals.push({ indicator: 'SMA (20/50)', signal: 'NEUTRAL', strength: 'WEAK', description: maText, color: 'neutral' })
+      signals.push({ indicator: `SMA (${params.sma.shortPeriod}/${params.sma.longPeriod})`, signal: 'NEUTRAL', strength: 'WEAK', description: maText, color: 'neutral' })
     }
-    analysis.push({ name: 'SMA', value: `20: ₹${currentSMA20?.toFixed(2) || 'N/A'}`, threshold: 'Price vs SMA', status: maSignal, details: maText })
+    analysis.push({ name: 'SMA', value: `Short: ₹${currentSMAShort?.toFixed(2) || 'N/A'}`, threshold: 'Price vs SMA', status: maSignal, details: maText })
     
     // Bollinger Bands Analysis
     let bbSignal = 'neutral'
     let bbText = ''
     if (currentPrice > currentBBUpper) {
       bbSignal = 'sell'
-      bbText = `Price is above upper Bollinger Band - potentially overbought`
+      bbText = `Price is above upper Bollinger Band (${params.bollinger.period}/${params.bollinger.stdDev}σ) - potentially overbought`
       signals.push({ indicator: 'Bollinger Bands', signal: 'SELL', strength: 'MODERATE', description: bbText, color: 'negative' })
     } else if (currentPrice < currentBBLower) {
       bbSignal = 'buy'
@@ -283,19 +300,19 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     // EMA Crossover Analysis
     let emaSignal = 'neutral'
     let emaText = ''
-    if (currentEMA12 > currentEMA26) {
+    if (currentEMAShort > currentEMALong) {
       emaSignal = 'buy'
-      emaText = `EMA12 (${currentEMA12?.toFixed(2)}) is above EMA26 (${currentEMA26?.toFixed(2)}) - Bullish momentum`
-      signals.push({ indicator: 'EMA Crossover', signal: 'BUY', strength: 'MODERATE', description: emaText, color: 'positive' })
-    } else if (currentEMA12 < currentEMA26) {
+      emaText = `EMA${params.ema.shortPeriod} (₹${currentEMAShort?.toFixed(2)}) is above EMA${params.ema.longPeriod} (₹${currentEMALong?.toFixed(2)}) - Bullish momentum`
+      signals.push({ indicator: `EMA Crossover`, signal: 'BUY', strength: 'MODERATE', description: emaText, color: 'positive' })
+    } else if (currentEMAShort < currentEMALong) {
       emaSignal = 'sell'
-      emaText = `EMA12 (${currentEMA12?.toFixed(2)}) is below EMA26 (${currentEMA26?.toFixed(2)}) - Bearish momentum`
-      signals.push({ indicator: 'EMA Crossover', signal: 'SELL', strength: 'MODERATE', description: emaText, color: 'negative' })
+      emaText = `EMA${params.ema.shortPeriod} (₹${currentEMAShort?.toFixed(2)}) is below EMA${params.ema.longPeriod} (₹${currentEMALong?.toFixed(2)}) - Bearish momentum`
+      signals.push({ indicator: `EMA Crossover`, signal: 'SELL', strength: 'MODERATE', description: emaText, color: 'negative' })
     } else {
       emaText = `EMA lines are aligned - waiting for clear signal`
-      signals.push({ indicator: 'EMA Crossover', signal: 'NEUTRAL', strength: 'WEAK', description: emaText, color: 'neutral' })
+      signals.push({ indicator: `EMA Crossover`, signal: 'NEUTRAL', strength: 'WEAK', description: emaText, color: 'neutral' })
     }
-    analysis.push({ name: 'EMA', value: `12: ₹${currentEMA12?.toFixed(2) || 'N/A'}`, threshold: '12/26 Cross', status: emaSignal, details: emaText })
+    analysis.push({ name: 'EMA', value: `Short: ₹${currentEMAShort?.toFixed(2) || 'N/A'}`, threshold: '12/26 Cross', status: emaSignal, details: emaText })
     
     // Calculate overall signal
     const buySignals = signals.filter(s => s.signal === 'BUY').length
@@ -318,10 +335,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     // Prepare chart data with indicators
     const chartData = ohlc.map((d, i) => ({
       ...d,
-      sma20: sma20[i],
-      sma50: sma50[i],
-      ema12: ema12[i],
-      ema26: ema26[i],
+      smaShort: smaShort[i],
+      smaLong: smaLong[i],
+      emaShort: emaShort[i],
+      emaLong: emaLong[i],
       rsi: rsi[i],
       macd: macdLine[i],
       macdSignal: signalLine[i],
@@ -439,7 +456,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       className="max-w-6xl mx-auto"
     >
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 flex-wrap">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -449,7 +466,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           <ArrowLeft className="w-5 h-5" />
         </motion.button>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-2xl font-semibold">{stock?.name}</h2>
             <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary">
               {stock?.symbol}
@@ -457,6 +474,20 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           </div>
           <p className="text-textSecondary text-sm">Technical Analysis</p>
         </div>
+        
+        {/* Indicator Config Button */}
+        {onOpenConfig && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onOpenConfig}
+            className="glass px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-surfaceLight transition-colors"
+          >
+            <Sliders className="w-4 h-4 text-primary" />
+            <span className="text-sm">Configure</span>
+          </motion.button>
+        )}
+        
         <TimeframeSelector 
           timeframes={taTimeframes}
           selected={selectedTimeframe}
@@ -641,7 +672,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={analysisData.chartData}>
                     <defs>
-                      <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="priceGradientTA" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                       </linearGradient>
@@ -652,30 +683,30 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                       contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                       formatter={(value) => [formatCurrency(value), '']}
                     />
-                    <Area type="monotone" dataKey="close" stroke="none" fill="url(#priceGradient)" />
-                    <Line type="monotone" dataKey="sma20" stroke="#f59e0b" strokeWidth={2} dot={false} name="SMA 20" />
-                    <Line type="monotone" dataKey="sma50" stroke="#8b5cf6" strokeWidth={2} dot={false} name="SMA 50" />
-                    <Line type="monotone" dataKey="ema12" stroke="#10b981" strokeWidth={2} dot={false} name="EMA 12" />
-                    <Line type="monotone" dataKey="ema26" stroke="#ef4444" strokeWidth={2} dot={false} name="EMA 26" />
+                    <Area type="monotone" dataKey="close" stroke="none" fill="url(#priceGradientTA)" />
+                    <Line type="monotone" dataKey="smaShort" stroke="#f59e0b" strokeWidth={2} dot={false} name={`SMA ${params.sma.shortPeriod}`} />
+                    <Line type="monotone" dataKey="smaLong" stroke="#8b5cf6" strokeWidth={2} dot={false} name={`SMA ${params.sma.longPeriod}`} />
+                    <Line type="monotone" dataKey="emaShort" stroke="#10b981" strokeWidth={2} dot={false} name={`EMA ${params.ema.shortPeriod}`} />
+                    <Line type="monotone" dataKey="emaLong" stroke="#ef4444" strokeWidth={2} dot={false} name={`EMA ${params.ema.longPeriod}`} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+              <div className="flex items-center justify-center gap-6 mt-4 text-sm flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 bg-amber-500"></div>
-                  <span>SMA 20</span>
+                  <span>SMA {params.sma.shortPeriod}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 bg-purple-500"></div>
-                  <span>SMA 50</span>
+                  <span>SMA {params.sma.longPeriod}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 bg-emerald-500"></div>
-                  <span>EMA 12</span>
+                  <span>EMA {params.ema.shortPeriod}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 bg-red-500"></div>
-                  <span>EMA 26</span>
+                  <span>EMA {params.ema.longPeriod}</span>
                 </div>
               </div>
             </div>
@@ -691,7 +722,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="glass rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">Relative Strength Index (RSI)</h3>
+              <h3 className="text-lg font-semibold mb-4">Relative Strength Index (RSI {params.rsi.period})</h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={analysisData.chartDataRSI}>
@@ -700,8 +731,8 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                     <Tooltip
                       contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                     />
-                    <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
-                    <ReferenceLine y={30} stroke="#10b981" strokeDasharray="5 5" />
+                    <ReferenceLine y={params.rsi.overbought} stroke="#ef4444" strokeDasharray="5 5" />
+                    <ReferenceLine y={params.rsi.oversold} stroke="#10b981" strokeDasharray="5 5" />
                     <ReferenceLine y={50} stroke="#6b7280" strokeDasharray="3 3" />
                     <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   </ComposedChart>
@@ -709,15 +740,15 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4">
                 <div className="bg-negative/10 rounded-lg p-4 text-center">
-                  <p className="text-xs text-textSecondary mb-1">Overbought (70+)</p>
+                  <p className="text-xs text-textSecondary mb-1">Overbought ({params.rsi.overbought}+)</p>
                   <p className="text-negative font-semibold">SELL SIGNAL</p>
                 </div>
                 <div className="bg-surfaceLight rounded-lg p-4 text-center">
-                  <p className="text-xs text-textSecondary mb-1">Neutral (30-70)</p>
+                  <p className="text-xs text-textSecondary mb-1">Neutral ({params.rsi.oversold}-{params.rsi.overbought})</p>
                   <p className="text-textSecondary font-semibold">NO SIGNAL</p>
                 </div>
                 <div className="bg-positive/10 rounded-lg p-4 text-center">
-                  <p className="text-xs text-textSecondary mb-1">Oversold (30-)</p>
+                  <p className="text-xs text-textSecondary mb-1">Oversold ({params.rsi.oversold}-)</p>
                   <p className="text-positive font-semibold">BUY SIGNAL</p>
                 </div>
               </div>
@@ -734,7 +765,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="glass rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">MACD (Moving Average Convergence Divergence)</h3>
+              <h3 className="text-lg font-semibold mb-4">MACD ({params.macd.fastPeriod}/{params.macd.slowPeriod}/{params.macd.signalPeriod})</h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={analysisData.chartDataMACD}>
@@ -784,7 +815,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="glass rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">Bollinger Bands</h3>
+              <h3 className="text-lg font-semibold mb-4">Bollinger Bands ({params.bollinger.period}/{params.bollinger.stdDev}σ)</h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={analysisData.chartData}>
@@ -828,7 +859,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="glass rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">Volume Analysis</h3>
+              <h3 className="text-lg font-semibold mb-4">Volume Analysis (MA {params.volume.maPeriod})</h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={analysisData.chartDataVolume}>
@@ -843,7 +874,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         <Cell key={`cell-${index}`} fill={entry.isGreen ? '#10b981' : '#ef4444'} />
                       ))}
                     </Bar>
-                    <Line type="monotone" dataKey="ma" stroke="#f59e0b" strokeWidth={2} dot={false} name="MA 20" />
+                    <Line type="monotone" dataKey="ma" stroke="#f59e0b" strokeWidth={2} dot={false} name={`MA ${params.volume.maPeriod}`} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -858,7 +889,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 bg-amber-500"></div>
-                  <span>20-Day MA</span>
+                  <span>{params.volume.maPeriod}-Day MA</span>
                 </div>
               </div>
             </div>
