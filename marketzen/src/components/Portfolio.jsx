@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, PieChart, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, Tag } from 'lucide-react'
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, PieChart, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, Tag, ExternalLink } from 'lucide-react'
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 // Load portfolio from localStorage
@@ -35,6 +35,7 @@ function Portfolio({ onStockSelect }) {
   const [allocationView, setAllocationView] = useState('value') // 'value' or 'count'
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [notification, setNotification] = useState(null)
   
   // Add/Edit form state
   const [formData, setFormData] = useState({
@@ -46,6 +47,12 @@ function Portfolio({ onStockSelect }) {
     purchaseDate: new Date().toISOString().split('T')[0],
     tags: []
   })
+
+  // Show notification helper
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 3000)
+  }
 
   // Load portfolio on mount
   useEffect(() => {
@@ -62,8 +69,8 @@ function Portfolio({ onStockSelect }) {
 
   // Calculate sector allocation (simplified based on stock symbols)
   const getSector = (symbol) => {
-    const finance = ['HDFCBANK', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'KOTAKBANK']
-    const tech = ['TCS', 'INFY', 'WIPRO', 'TECHM']
+    const finance = ['HDFCBANK', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'KOTAKBANK', 'AXISBANK']
+    const tech = ['TCS', 'INFY', 'WIPRO', 'TECHM', 'HCLTECH']
     const energy = ['RELIANCE', 'ONGC', 'IOC', 'NTPC']
     const telecom = ['BHARTIARTL']
     
@@ -121,6 +128,7 @@ function Portfolio({ onStockSelect }) {
     const updated = [...holdings, newHolding]
     setHoldings(updated)
     savePortfolio(updated)
+    showNotification(`${formData.symbol} added to portfolio`, 'success')
     closeModal()
   }
 
@@ -142,9 +150,11 @@ function Portfolio({ onStockSelect }) {
   }
 
   const handleDeleteHolding = (id) => {
+    const holding = holdings.find(h => h.id === id)
     const updated = holdings.filter(h => h.id !== id)
     setHoldings(updated)
     savePortfolio(updated)
+    showNotification(`${holding?.symbol || 'Stock'} removed from portfolio`, 'info')
   }
 
   const closeModal = () => {
@@ -170,6 +180,17 @@ function Portfolio({ onStockSelect }) {
       name: stock.name
     }))
     setSearchQuery(stock.name)
+  }
+
+  // Handle stock click to navigate to dashboard
+  const handleViewStock = (stock) => {
+    if (onStockSelect) {
+      onStockSelect({
+        id: stock.id,
+        symbol: stock.symbol,
+        name: stock.name
+      })
+    }
   }
 
   if (loading) {
@@ -198,8 +219,26 @@ function Portfolio({ onStockSelect }) {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-6xl mx-auto"
     >
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+              notification.type === 'success' ? 'bg-positive/20 text-positive border border-positive/30' :
+              notification.type === 'info' ? 'bg-primary/20 text-primary border border-primary/30' :
+              'bg-surfaceLight text-textSecondary'
+            }`}
+          >
+            <p className="text-sm font-medium">{notification.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-semibold">My Portfolio</h2>
           <p className="text-textSecondary text-sm">Track your investments</p>
@@ -312,11 +351,15 @@ function Portfolio({ onStockSelect }) {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center cursor-pointer"
+                         onClick={() => handleViewStock(holding)}>
                       <span className="text-sm font-bold text-primary">{holding.symbol.substring(0, 2)}</span>
                     </div>
                     <div>
-                      <h4 className="font-medium">{holding.symbol}</h4>
+                      <h4 className="font-medium cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => handleViewStock(holding)}>
+                        {holding.symbol}
+                      </h4>
                       <p className="text-sm text-textSecondary">{holding.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-textSecondary">{holding.shares} shares</span>
@@ -352,16 +395,18 @@ function Portfolio({ onStockSelect }) {
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => onStockSelect({ id: holding.id, symbol: holding.symbol, name: holding.name })}
+                      onClick={() => handleViewStock(holding)}
                       className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
+                      title="View on chart"
                     >
-                      <ArrowUpRight className="w-4 h-4" />
+                      <ExternalLink className="w-4 h-4" />
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => handleDeleteHolding(holding.id)}
                       className="p-1.5 rounded-lg bg-negative/10 text-negative hover:bg-negative/20"
+                      title="Remove"
                     >
                       <Trash2 className="w-4 h-4" />
                     </motion.button>

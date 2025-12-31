@@ -52,6 +52,22 @@ const MULTI_CHART_TIMEFRAMES = [
   { label: '1W', range: '3mo', interval: '1wk', type: 'weekly' }
 ]
 
+// Sector to stock mapping for sector drill-down
+const SECTOR_STOCKS = {
+  'nifty50': ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 'SBIN.NS', 'INFY.NS'],
+  'niftybank': ['HDFCBANK.NS', 'ICICIBANK.NS', 'SBIN.NS', 'KOTAKBANK.NS', 'AXISBANK.NS'],
+  'niftyit': ['TCS.NS', 'INFY.NS', 'WIPRO.NS', 'TECHM.NS', 'HCLTECH.NS'],
+  'nifty pharma': ['SUNPHARMA.NS', 'DRREDDY.NS', 'CIPLA.NS', 'BHARTIARTL.NS', 'ZYDUSLIFE.NS'],
+  'nifty auto': ['MARUTI.NS', 'TATAMOTORS.NS', 'MOTHERSUMI.NS', 'BAJAJ-AUTO.NS', 'EICHERMOT.NS'],
+  'nifty fmcg': ['HINDUNILVR.NS', 'NESTLEIND.NS', 'ASIANPAINT.NS', 'DABUR.NS', 'BRITANNIA.NS'],
+  'nifty metal': ['TATASTEEL.NS', 'JSWSTEEL.NS', 'HINDALCO.NS', 'COALINDIA.NS', 'VEDL.NS'],
+  'nifty realty': ['DLF.NS', 'GODREJPROP.NS', 'SOBHA.NS', 'PRESTIGE.NS', 'LODHA.NS'],
+  'nifty energy': ['RELIANCE.NS', 'ONGC.NS', 'IOC.NS', 'NTPC.NS', 'POWERGRID.NS'],
+  'nifty media': ['ZEE.NS', 'PVR.NS', 'INOXLEISUR.NS', 'DISHTV.NS', 'SUNTV.NS'],
+  'nifty consumer': ['HINDUNILVR.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'ITC.NS', 'GODREJCP.NS'],
+  'nifty healthcare': ['APOLLOHOSP.NS', 'FORTIS.NS', 'MAXHEALTH.NS', 'METROPOLIS.NS', 'DRREDDY.NS']
+}
+
 function App() {
   const [watchlist, setWatchlist] = useState(() => {
     const saved = localStorage.getItem('marketzen_watchlist')
@@ -76,10 +92,17 @@ function App() {
   const [refreshInterval, setRefreshInterval] = useState(null)
   const [marketStatus, setMarketStatus] = useState('closed')
   const [showIndicatorConfig, setShowIndicatorConfig] = useState(false)
+  const [notification, setNotification] = useState(null)
   const [indicatorParams, setIndicatorParams] = useState(() => {
     const saved = localStorage.getItem('marketzen_indicator_params')
     return saved ? JSON.parse(saved) : DEFAULT_PARAMS
   })
+
+  // Show notification helper
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 3000)
+  }
 
   // Check mobile
   useEffect(() => {
@@ -105,6 +128,15 @@ function App() {
   useEffect(() => {
     localStorage.setItem('marketzen_indicator_params', JSON.stringify(indicatorParams))
   }, [indicatorParams])
+
+  // Clear refresh interval on unmount or view change
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval)
+      }
+    }
+  }, [refreshInterval])
 
   // Market status detection
   useEffect(() => {
@@ -252,16 +284,9 @@ function App() {
     }
   }, [multiChartMode, selectedStock, selectedMultiTimeframes, fetchStockData])
 
+  // Only auto-refresh when on dashboard or analysis views with a stock selected
   useEffect(() => {
-    if (selectedStock && view !== 'portfolio') {
-      const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
-      fetchStockData(selectedStock, tf, view === 'analysis')
-    }
-  }, [selectedStock, selectedTimeframe, fetchStockData, view])
-
-  // Auto-refresh during market hours
-  useEffect(() => {
-    if (marketStatus === 'live' && selectedStock && view !== 'portfolio') {
+    if (marketStatus === 'live' && selectedStock && (view === 'dashboard' || view === 'analysis')) {
       const interval = setInterval(() => {
         const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
         fetchStockData(selectedStock, tf, view === 'analysis')
@@ -320,8 +345,12 @@ function App() {
   }
 
   const addToWatchlist = (stock) => {
-    if (!watchlist.find(s => s.id === stock.id)) {
+    const exists = watchlist.find(s => s.id === stock.id)
+    if (exists) {
+      showNotification(`${stock.symbol} is already in your watchlist`, 'warning')
+    } else {
       setWatchlist(prev => [...prev, stock])
+      showNotification(`${stock.symbol} added to watchlist`, 'success')
     }
     setSearchOpen(false)
   }
@@ -335,6 +364,38 @@ function App() {
       }
       return filtered
     })
+  }
+
+  const handleSectorSelect = (sector) => {
+    // Find stocks in the selected sector and add them to watchlist if not present
+    const sectorStockIds = SECTOR_STOCKS[sector.id] || []
+    const newStocks = []
+    
+    sectorStockIds.forEach(stockId => {
+      const exists = watchlist.find(s => s.id === stockId)
+      if (!exists) {
+        // Add common stocks for this sector
+        const stockInfo = DEFAULT_STOCKS.find(s => s.id === stockId)
+        if (stockInfo) {
+          newStocks.push(stockInfo)
+        }
+      }
+    })
+    
+    if (newStocks.length > 0) {
+      setWatchlist(prev => [...prev, ...newStocks])
+      showNotification(`${newStocks.length} stocks from ${sector.name} added to watchlist`, 'success')
+    } else {
+      showNotification(`${sector.name} stocks are already in your watchlist`, 'info')
+    }
+    
+    // Switch to dashboard to see the stocks
+    setView('dashboard')
+  }
+
+  const handlePortfolioStockSelect = (stock) => {
+    setSelectedStock(stock)
+    setView('dashboard')
   }
 
   const isPositive = priceChange >= 0
@@ -360,8 +421,39 @@ function App() {
     setShowIndicatorConfig(false)
   }
 
+  // Keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div className="min-h-screen bg-background text-text overflow-hidden">
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+              notification.type === 'success' ? 'bg-positive/20 text-positive border border-positive/30' :
+              notification.type === 'warning' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+              notification.type === 'info' ? 'bg-primary/20 text-primary border border-primary/30' :
+              'bg-negative/20 text-negative border border-negative/30'
+            }`}
+          >
+            <p className="text-sm font-medium">{notification.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <motion.header 
         initial={{ y: -20, opacity: 0 }}
@@ -369,13 +461,20 @@ function App() {
         className="fixed top-0 left-0 right-0 z-40 glass px-4 md:px-6 py-4 flex items-center justify-between"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg font-semibold tracking-tight">MarketZen</h1>
-            <p className="text-xs text-textSecondary">Indian Stock Tracker</p>
-          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setView('dashboard')}
+            className="flex items-center gap-3"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-semibold tracking-tight">MarketZen</h1>
+              <p className="text-xs text-textSecondary">Indian Stock Tracker</p>
+            </div>
+          </motion.button>
         </div>
 
         {/* Market Status Indicator */}
@@ -436,7 +535,7 @@ function App() {
             <kbd className="hidden md:inline px-2 py-0.5 text-xs bg-surfaceLight rounded text-textSecondary">⌘K</kbd>
           </motion.button>
           
-          {isMobile && view === 'dashboard' && (
+          {isMobile && (view === 'dashboard' || view === 'analysis') && (
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowMobileWatchlist(true)}
@@ -571,9 +670,9 @@ function App() {
           )}
         </AnimatePresence>
 
-        {/* Mobile Watchlist Drawer */}
+        {/* Mobile Watchlist Drawer - Fixed: Now accessible from Analysis view too */}
         <AnimatePresence>
-          {isMobile && showMobileWatchlist && view === 'dashboard' && (
+          {isMobile && showMobileWatchlist && (view === 'dashboard' || view === 'analysis') && (
             <>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -644,24 +743,18 @@ function App() {
             {view === 'portfolio' ? (
               <Portfolio 
                 key="portfolio"
-                onStockSelect={(stock) => {
-                  setSelectedStock(stock)
-                  setView('dashboard')
-                }}
+                onStockSelect={handlePortfolioStockSelect}
               />
             ) : view === 'sectors' ? (
               <SectorDashboard 
                 key="sectors"
-                onSectorSelect={(sector) => {
-                  // Filter stocks by sector or navigate to relevant analysis
-                  console.log('Selected sector:', sector)
-                  setView('dashboard')
-                }}
+                onSectorSelect={handleSectorSelect}
               />
             ) : view === 'news' ? (
               <NewsFeed 
                 key="news"
                 stockId={selectedStock?.id || null}
+                onBack={() => setView('dashboard')}
               />
             ) : view === 'analysis' ? (
               <TechnicalAnalysis 

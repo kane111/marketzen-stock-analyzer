@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, BarChart3, PieChart, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react'
+import { TrendingUp, TrendingDown, BarChart3, PieChart, ArrowUpRight, ArrowDownRight, RefreshCw, X } from 'lucide-react'
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts'
 
 // Sector data with performance metrics
@@ -19,25 +19,20 @@ const SECTOR_DATA = [
   { id: 'nifty healthcare', name: 'Nifty Healthcare', change: 1.56, marketCap: 55000, constituents: 10 },
 ]
 
-const SECTOR_COLORS = {
-  positive: '#10b981',
-  negative: '#ef4444',
-  neutral: '#6b7280'
-}
-
-// Get heatmap color based on performance
+// Get heatmap color based on performance - improved contrast
 const getHeatmapColor = (change) => {
-  if (change >= 2) return '#059669' // Strong positive
-  if (change >= 1) return '#10b981' // Positive
-  if (change >= 0) return '#34d399' // Mild positive
-  if (change >= -1) return '#f87171' // Mild negative
-  if (change >= -2) return '#ef4444' // Negative
-  return '#dc2626' // Strong negative
+  if (change >= 2) return '#047857' // Emerald 700 - strong positive
+  if (change >= 1) return '#059669' // Emerald 600 - positive
+  if (change >= 0) return '#10b981' // Emerald 500 - mild positive
+  if (change >= -1) return '#f87171' // Red 400 - mild negative
+  if (change >= -2) return '#ef4444' // Red 500 - negative
+  return '#dc2626' // Red 600 - strong negative
 }
 
-// Get text color for heatmap
+// Get text color for heatmap - ensure contrast
 const getHeatmapTextColor = (change) => {
-  return change >= 0 ? 'text-white' : 'text-white'
+  // Use white text for all colors as they're all dark enough
+  return 'text-white'
 }
 
 function SectorDashboard({ onSectorSelect }) {
@@ -59,7 +54,6 @@ function SectorDashboard({ onSectorSelect }) {
   const totalLosers = SECTOR_DATA.filter(s => s.change < 0).length
   const avgChange = SECTOR_DATA.reduce((sum, s) => sum + s.change, 0) / SECTOR_DATA.length
   const bestSector = SECTOR_DATA.reduce((best, s) => s.change > best.change ? s : best, SECTOR_DATA[0])
-  const worstSector = SECTOR_DATA.reduce((worst, s) => s.change < worst.change ? s : worst, SECTOR_DATA[0])
 
   const handleRefresh = () => {
     setIsRefreshing(true)
@@ -120,6 +114,7 @@ function SectorDashboard({ onSectorSelect }) {
             whileTap={{ scale: 0.95 }}
             onClick={handleRefresh}
             className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+            title="Refresh data"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </motion.button>
@@ -191,7 +186,7 @@ function SectorDashboard({ onSectorSelect }) {
       </div>
 
       {/* Sort Options */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
         <span className="text-sm text-textSecondary">Sort by:</span>
         <div className="flex items-center gap-2">
           {['change', 'name', 'marketCap'].map((option) => (
@@ -253,6 +248,7 @@ function SectorDashboard({ onSectorSelect }) {
                   >
                     <div className="text-center text-white">
                       <p className="text-xs opacity-75">{sector.constituents} constituents</p>
+                      <p className="text-xs mt-1">Click to add stocks</p>
                     </div>
                   </motion.div>
                 )}
@@ -260,15 +256,19 @@ function SectorDashboard({ onSectorSelect }) {
             ))}
           </div>
 
-          {/* Heatmap Legend */}
+          {/* Heatmap Legend - Fixed with Tailwind classes */}
           <div className="mt-6 pt-4 border-t border-white/10">
             <p className="text-xs text-textSecondary mb-2">Performance Scale</p>
-            <div className="flex items-center gap-1">
-              <div className="px-2 py-1 bg-red-700 rounded text-xs text-white">-2%</div>
-              <div className="px-2 py-1 bg-red-500 rounded text-xs text-white">-1%</div>
-              <div className="px-2 py-1 bg-gray-400 rounded text-xs text-white">0%</div>
-              <div className="px-2 py-1 bg-emerald-400 rounded text-xs text-white">+1%</div>
-              <div className="px-2 py-1 bg-emerald-600 rounded text-xs text-white">+2%+</div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="px-2 py-1 rounded text-xs text-white font-medium" style={{ backgroundColor: '#dc2626' }}>-2%</span>
+              <span className="text-textSecondary">to</span>
+              <span className="px-2 py-1 rounded text-xs text-white font-medium" style={{ backgroundColor: '#ef4444' }}>-1%</span>
+              <span className="text-textSecondary">|</span>
+              <span className="px-2 py-1 rounded text-xs text-white font-medium" style={{ backgroundColor: '#10b981' }}>0%</span>
+              <span className="text-textSecondary">to</span>
+              <span className="px-2 py-1 rounded text-xs text-white font-medium" style={{ backgroundColor: '#059669' }}>+1%</span>
+              <span className="text-textSecondary">|</span>
+              <span className="px-2 py-1 rounded text-xs text-white font-medium" style={{ backgroundColor: '#047857' }}>+2%+</span>
             </div>
           </div>
         </motion.div>

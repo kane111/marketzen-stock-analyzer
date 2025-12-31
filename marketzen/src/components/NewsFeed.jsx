@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ExternalLink, Clock, ChevronRight, Newspaper, TrendingUp, TrendingDown, X, Filter } from 'lucide-react'
+import { ExternalLink, Clock, ChevronRight, Newspaper, TrendingUp, TrendingDown, X, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 
-// Mock news data for different stocks
+// Enhanced mock news data with correct tags
 const MOCK_NEWS = {
   default: [
     { id: 1, title: 'Nifty 50 closes at record high amid strong FII inflow', source: 'Economic Times', time: '2h ago', url: '#', sentiment: 'positive', tags: ['Market', 'FII'] },
@@ -12,7 +12,7 @@ const MOCK_NEWS = {
     { id: 5, title: 'Oil prices stabilize amid Middle East tensions', source: 'Reuters', time: '8h ago', url: '#', sentiment: 'neutral', tags: ['Commodity', 'Oil'] },
   ],
   'RELIANCE.NS': [
-    { id: 101, title: 'Reliance Jio adds 5 million new subscribers in Q3', source: 'Economic Times', time: '1h ago', url: '#', sentiment: 'positive', tags: ['Telecom', ' subscriber growth'] },
+    { id: 101, title: 'Reliance Jio adds 5 million new subscribers in Q3', source: 'Economic Times', time: '1h ago', url: '#', sentiment: 'positive', tags: ['Telecom', 'Subscriber Growth'] },
     { id: 102, title: 'Reliance Retail reports 25% revenue growth in FY24', source: 'Livemint', time: '3h ago', url: '#', sentiment: 'positive', tags: ['Retail', 'Revenue'] },
     { id: 103, title: 'Oil refining margins remain strong for Reliance', source: 'Bloomberg', time: '5h ago', url: '#', sentiment: 'positive', tags: ['Oil', 'Refining'] },
     { id: 104, title: 'Reliance Energy secures new solar project contract', source: 'The Hindu', time: '7h ago', url: '#', sentiment: 'positive', tags: ['Energy', 'Solar'] },
@@ -35,9 +35,9 @@ const MOCK_NEWS = {
 }
 
 const SENTIMENT_COLORS = {
-  positive: { bg: 'bg-positive/10', text: 'text-positive', border: 'border-positive/30' },
-  negative: { bg: 'bg-negative/10', text: 'text-negative', border: 'border-negative/30' },
-  neutral: { bg: 'bg-surfaceLight', text: 'text-textSecondary', border: 'border-white/10' }
+  positive: { bg: 'bg-positive/10', text: 'text-positive', border: 'border-positive/30', icon: 'bg-emerald-500/20' },
+  negative: { bg: 'bg-negative/10', text: 'text-negative', border: 'border-negative/30', icon: 'bg-red-500/20' },
+  neutral: { bg: 'bg-surfaceLight', text: 'text-textSecondary', border: 'border-white/10', icon: 'bg-gray-500/20' }
 }
 
 const SENTIMENT_ICONS = {
@@ -46,22 +46,32 @@ const SENTIMENT_ICONS = {
   neutral: Newspaper
 }
 
-function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true }) {
+function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true, onBack }) {
   const [news, setNews] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all') // 'all', 'positive', 'negative'
+  const [filter, setFilter] = useState('all') // 'all', 'positive', 'negative', 'neutral'
   const [expandedId, setExpandedId] = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(null)
 
+  // Simulate live news updates
   useEffect(() => {
-    // Simulate API fetch
-    setLoading(true)
-    const fetchTimeout = setTimeout(() => {
-      const stockNews = MOCK_NEWS[stockId] || MOCK_NEWS.default
-      setNews(stockNews)
-      setLoading(false)
-    }, 800)
+    const fetchNews = () => {
+      setLoading(true)
+      const fetchTimeout = setTimeout(() => {
+        const stockNews = MOCK_NEWS[stockId] || MOCK_NEWS.default
+        setNews(stockNews)
+        setLoading(false)
+        setLastUpdated(new Date())
+      }, 600)
 
-    return () => clearTimeout(fetchTimeout)
+      return () => clearTimeout(fetchTimeout)
+    }
+
+    fetchNews()
+    
+    // Simulate periodic updates (every 60 seconds during market hours)
+    const interval = setInterval(fetchNews, 60000)
+    return () => clearInterval(interval)
   }, [stockId])
 
   // Filter news based on sentiment
@@ -78,6 +88,16 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
     if (newsItem.url && newsItem.url !== '#') {
       window.open(newsItem.url, '_blank', 'noopener,noreferrer')
     }
+  }
+
+  const handleRefresh = () => {
+    setLoading(true)
+    setTimeout(() => {
+      const stockNews = MOCK_NEWS[stockId] || MOCK_NEWS.default
+      setNews(stockNews)
+      setLoading(false)
+      setLastUpdated(new Date())
+    }, 800)
   }
 
   if (compact) {
@@ -137,21 +157,51 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl mx-auto"
     >
-      {/* Header */}
+      {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-semibold">Market News</h2>
-          <p className="text-textSecondary text-sm">
-            {stockId ? `Latest updates for ${stockId.replace('.NS', '')}` : 'Top market headlines'}
-          </p>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onBack}
+              className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </motion.button>
+          )}
+          <div>
+            <h2 className="text-2xl font-semibold">Market News</h2>
+            <p className="text-textSecondary text-sm">
+              {stockId ? `Latest updates for ${stockId.replace('.NS', '')}` : 'Top market headlines'}
+            </p>
+          </div>
         </div>
+        
+        {/* Refresh Button */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleRefresh}
+          className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+          title="Refresh news"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </motion.button>
       </div>
+
+      {/* Last Updated Timestamp */}
+      {lastUpdated && (
+        <p className="text-xs text-textSecondary mb-4">
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </p>
+      )}
 
       {/* Filters */}
       {showFilters && (
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <Filter className="w-4 h-4 text-textSecondary flex-shrink-0" />
-          {['all', 'positive', 'negative'].map((f) => (
+          {['all', 'positive', 'negative', 'neutral'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -161,7 +211,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                   : 'bg-surfaceLight text-textSecondary hover:bg-surface'
               }`}
             >
-              {f === 'all' ? 'All News' : f === 'positive' ? 'Positive' : 'Negative'}
+              {f === 'all' ? 'All News' : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
@@ -189,6 +239,29 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
             </motion.div>
           ))}
         </div>
+      ) : filteredNews.length === 0 ? (
+        /* Empty State */
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl p-12 text-center"
+        >
+          <AlertCircle className="w-12 h-12 text-textSecondary mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-medium mb-2">No News Found</h3>
+          <p className="text-textSecondary text-sm mb-4">
+            {filter === 'all' 
+              ? 'No news articles available at the moment.' 
+              : `No ${filter} news articles found.`}
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setFilter('all')}
+            className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium"
+          >
+            View All News
+          </motion.button>
+        </motion.div>
       ) : (
         <div className="space-y-4">
           <AnimatePresence>
@@ -215,7 +288,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                   >
                     <div className="flex items-start gap-4">
                       {/* Sentiment Indicator */}
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.icon}`}>
                         <SentimentIcon className={`w-5 h-5 ${colors.text}`} />
                       </div>
 
@@ -248,6 +321,9 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                               {tag}
                             </span>
                           ))}
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}`}>
+                            {item.sentiment}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -263,13 +339,13 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                         className="border-t border-white/5"
                       >
                         <div className="p-6 pt-4">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between flex-wrap gap-4">
                             <div className="flex items-center gap-2">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${colors.bg} ${colors.text}`}>
-                                {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
+                                {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)} Sentiment
                               </span>
                               <span className="text-sm text-textSecondary">
-                                Sentiment Analysis
+                                Based on market reaction
                               </span>
                             </div>
                             
@@ -294,16 +370,16 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                             <h4 className="text-sm font-medium mb-2">Key Takeaways</h4>
                             <ul className="space-y-2 text-sm text-textSecondary">
                               <li className="flex items-start gap-2">
-                                <span className="text-primary mt-1">•</span>
-                                News impacts {item.sentiment === 'positive' ? 'positively' : item.sentiment === 'negative' ? 'negatively' : 'neutrally'} on stock price
+                                <span className={`mt-1 ${colors.text}`}>•</span>
+                                <span>News impacts {item.sentiment === 'positive' ? 'positively' : item.sentiment === 'negative' ? 'negatively' : 'neutrally'} on stock price movement</span>
                               </li>
                               <li className="flex items-start gap-2">
                                 <span className="text-primary mt-1">•</span>
-                                {item.tags.join(', ')} are key themes in this update
+                                <span>{item.tags.join(', ')} are key themes in this update</span>
                               </li>
                               <li className="flex items-start gap-2">
                                 <span className="text-primary mt-1">•</span>
-                                Market reaction expected in next trading session
+                                <span>Market reaction expected in upcoming trading sessions</span>
                               </li>
                             </ul>
                           </div>
@@ -323,6 +399,8 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
         <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           className="w-full mt-6 py-3 rounded-xl bg-surfaceLight text-textSecondary hover:bg-surface transition-colors"
         >
           Load More News
