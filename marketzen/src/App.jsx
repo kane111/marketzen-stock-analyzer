@@ -119,6 +119,13 @@ function App() {
     }
   }, [watchlist, selectedStock, view])
 
+  // Fetch stock data when selectedStock changes
+  useEffect(() => {
+    if (selectedStock) {
+      fetchStockData(selectedStock, selectedTimeframe)
+    }
+  }, [selectedStock, fetchStockData, selectedTimeframe])
+
   // Save watchlist
   useEffect(() => {
     localStorage.setItem('marketzen_watchlist', JSON.stringify(watchlist))
