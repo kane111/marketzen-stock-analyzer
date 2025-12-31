@@ -181,6 +181,12 @@ function App() {
     e.stopPropagation()
     setSelectedStock(stock)
     setView('analysis')
+    // Force refetch data for TA with proper timeframe
+    setTimeout(() => {
+      if (stock) {
+        fetchStockData(stock, TA_TIMEFRAMES[1], true)
+      }
+    }, 100)
   }
 
   const handleBackToDashboard = () => {

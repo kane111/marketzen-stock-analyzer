@@ -145,12 +145,38 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   const [analysisData, setAnalysisData] = useState(null)
   const [signal, setSignal] = useState(null)
   const [activeTab, setActiveTab] = useState('summary')
+  const [localLoading, setLocalLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (stockData?.ohlc && stockData.ohlc.length > 0) {
+    if (!stockData?.ohlc || stockData.ohlc.length === 0) {
+      // Need to fetch data for technical analysis
+      setLocalLoading(true)
+      setError(null)
+      // Trigger data fetch
+      if (fetchStockData && stock) {
+        fetchStockData(stock, taTimeframes[1], true)
+      }
+    } else if (stockData?.ohlc && stockData.ohlc.length > 0) {
       performAnalysis()
+      setLocalLoading(false)
     }
-  }, [stockData, selectedTimeframe])
+  }, [stockData])
+
+  useEffect(() => {
+    // Also trigger after a delay to ensure data is fetched
+    const timer = setTimeout(() => {
+      if (stockData?.ohlc && stockData.ohlc.length > 0) {
+        performAnalysis()
+        setLocalLoading(false)
+      } else if (!localLoading) {
+        // If not loading and still no data, show error
+        setError('Unable to fetch stock data for analysis')
+      }
+    }, 2000)
+    
+    return () => clearTimeout(timer)
+  }, [stockData])
 
   const performAnalysis = () => {
     const ohlc = stockData.ohlc
@@ -354,7 +380,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     }
   }
 
-  if (loading) {
+  if (localLoading) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -367,8 +393,39 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"
           />
-          <p className="text-textSecondary">Performing Technical Analysis...</p>
+          <p className="text-textSecondary">Loading stock data for analysis...</p>
+          {error && <p className="text-negative mt-2 text-sm">{error}</p>}
         </div>
+      </motion.div>
+    )
+  }
+
+  if (error && !analysisData) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center justify-center h-96"
+      >
+        <div className="text-negative mb-4 text-center">
+          <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <p>{error}</p>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            setError(null)
+            setLocalLoading(true)
+            if (fetchStockData && stock) {
+              fetchStockData(stock, taTimeframes[1], true)
+            }
+          }}
+          className="glass px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-surfaceLight"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Retry Analysis
+        </motion.button>
       </motion.div>
     )
   }
