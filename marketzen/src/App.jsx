@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
 import TimeframeSelector from './components/TimeframeSelector'
 import LoadingSkeleton from './components/LoadingSkeleton'
-import MobileNav from './components/MobileNav'
+import TechnicalAnalysis from './components/TechnicalAnalysis'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -31,12 +31,21 @@ const TIMEFRAMES = [
   { label: '5Y', range: '5y', interval: '1wk' }
 ]
 
+// Technical Analysis Timeframes (longer period for better signals)
+const TA_TIMEFRAMES = [
+  { label: '1M', range: '1mo', interval: '1h' },
+  { label: '3M', range: '3mo', interval: '1d' },
+  { label: '6M', range: '6mo', interval: '1d' },
+  { label: '1Y', range: '1y', interval: '1d' }
+]
+
 function App() {
   const [watchlist, setWatchlist] = useState(() => {
     const saved = localStorage.getItem('marketzen_watchlist')
     return saved ? JSON.parse(saved) : DEFAULT_STOCKS
   })
   
+  const [view, setView] = useState('dashboard') // 'dashboard' or 'analysis'
   const [selectedStock, setSelectedStock] = useState(null)
   const [stockData, setStockData] = useState(null)
   const [chartData, setChartData] = useState([])
@@ -58,24 +67,25 @@ function App() {
 
   // Load first stock
   useEffect(() => {
-    if (watchlist.length > 0 && !selectedStock) {
+    if (watchlist.length > 0 && !selectedStock && view === 'dashboard') {
       setSelectedStock(watchlist[0])
     }
-  }, [watchlist, selectedStock])
+  }, [watchlist, selectedStock, view])
 
   // Save watchlist
   useEffect(() => {
     localStorage.setItem('marketzen_watchlist', JSON.stringify(watchlist))
   }, [watchlist])
 
-  const fetchStockData = useCallback(async (stock) => {
+  const fetchStockData = useCallback(async (stock, timeframe = selectedTimeframe, taMode = false) => {
     if (!stock) return
     
     setError(null)
     setLoading(true)
     
     try {
-      const url = `${YAHOO_BASE}/${stock.id}?range=${selectedTimeframe.range}&interval=${selectedTimeframe.interval}`
+      const tf = taMode ? timeframe : timeframe
+      const url = `${YAHOO_BASE}/${stock.id}?range=${tf.range}&interval=${tf.interval}`
       const response = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`)
       
       if (!response.ok) {
@@ -89,6 +99,10 @@ function App() {
         const quote = result.indicators?.quote?.[0] || {}
         const timestamps = result.timestamp || []
         const prices = quote.close || []
+        const highs = quote.high || []
+        const lows = quote.low || []
+        const opens = quote.open || []
+        const volumes = quote.volume || []
         
         // Get current price and previous close for change calculation
         const currentPrice = prices[prices.length - 1]
@@ -109,7 +123,21 @@ function App() {
           open: meta.open || prices[0],
           day_high: meta.day_high,
           day_low: meta.day_low,
-          volume: quote.volume?.[prices.length - 1] || 0
+          volume: quote.volume?.[prices.length - 1] || 0,
+          // Full OHLCV data for technical analysis
+          ohlc: timestamps.map((ts, i) => ({
+            timestamp: ts,
+            open: opens[i] || prices[0],
+            high: highs[i] || prices[i],
+            low: lows[i] || prices[i],
+            close: prices[i],
+            volume: volumes[i] || 0,
+            date: new Date(ts * 1000).toLocaleDateString('en-IN', { 
+              day: '2-digit', 
+              month: 'short',
+              year: 'numeric'
+            })
+          })).filter(d => d.close !== null && d.close !== undefined)
         })
         
         // Transform chart data
@@ -119,7 +147,7 @@ function App() {
           return {
             timestamp: date,
             price: price,
-            time: selectedTimeframe.range === '1d' || selectedTimeframe.range === '5d'
+            time: tf.range === '1d' || tf.range === '5d'
               ? date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
               : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
           }
@@ -139,13 +167,25 @@ function App() {
 
   useEffect(() => {
     if (selectedStock) {
-      fetchStockData(selectedStock)
+      const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
+      fetchStockData(selectedStock, tf, view === 'analysis')
     }
-  }, [selectedStock, selectedTimeframe, fetchStockData])
+  }, [selectedStock, selectedTimeframe, fetchStockData, view])
 
   const handleStockSelect = (stock) => {
     setSelectedStock(stock)
     setShowMobileWatchlist(false)
+  }
+
+  const handleAnalyzeClick = (stock, e) => {
+    e.stopPropagation()
+    setSelectedStock(stock)
+    setView('analysis')
+  }
+
+  const handleBackToDashboard = () => {
+    setView('dashboard')
+    setSelectedTimeframe(TIMEFRAMES[1])
   }
 
   const addToWatchlist = (stock) => {
@@ -229,7 +269,7 @@ function App() {
       <div className="pt-20 h-screen flex">
         {/* Watchlist Sidebar */}
         <AnimatePresence>
-          {!isMobile && (
+          {!isMobile && view === 'dashboard' && (
             <motion.aside
               initial={{ x: -300, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
@@ -272,12 +312,23 @@ function App() {
                               <p className="text-xs text-textSecondary truncate max-w-[120px]">{stock.name}</p>
                             </div>
                           </div>
-                          <button
-                            onClick={(e) => removeFromWatchlist(e, stock.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface rounded-lg transition-all"
-                          >
-                            <X className="w-4 h-4 text-textSecondary hover:text-negative" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => handleAnalyzeClick(stock, e)}
+                              className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              title="Technical Analysis"
+                            >
+                              <Activity className="w-4 h-4" />
+                            </motion.button>
+                            <button
+                              onClick={(e) => removeFromWatchlist(e, stock.id)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface rounded-lg transition-all"
+                            >
+                              <X className="w-4 h-4 text-textSecondary hover:text-negative" />
+                            </button>
+                          </div>
                         </div>
                       </motion.div>
                     ))}
@@ -290,7 +341,7 @@ function App() {
 
         {/* Mobile Watchlist Drawer */}
         <AnimatePresence>
-          {isMobile && showMobileWatchlist && (
+          {isMobile && showMobileWatchlist && view === 'dashboard' && (
             <>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -324,18 +375,27 @@ function App() {
                             : 'hover:bg-surfaceLight'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                            selectedStock?.id === stock.id 
-                              ? 'bg-primary/20 text-primary' 
-                              : 'bg-surface text-textSecondary'
-                          }`}>
-                            {stock.symbol.substring(0, 2).toUpperCase()}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                              selectedStock?.id === stock.id 
+                                ? 'bg-primary/20 text-primary' 
+                                : 'bg-surface text-textSecondary'
+                            }`}>
+                              {stock.symbol.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium">{stock.symbol}</p>
+                              <p className="text-xs text-textSecondary">{stock.name}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{stock.symbol}</p>
-                            <p className="text-xs text-textSecondary">{stock.name}</p>
-                          </div>
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={(e) => handleAnalyzeClick(stock, e)}
+                            className="p-2 rounded-lg bg-primary/10 text-primary"
+                          >
+                            <Activity className="w-4 h-4" />
+                          </motion.button>
                         </div>
                       </motion.div>
                     ))}
@@ -349,7 +409,17 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 ml-0 md:ml-72 p-4 md:p-6 overflow-y-auto">
           <AnimatePresence mode="wait">
-            {loading ? (
+            {view === 'analysis' ? (
+              <TechnicalAnalysis 
+                key="analysis"
+                stock={selectedStock}
+                stockData={stockData}
+                onBack={handleBackToDashboard}
+                taTimeframes={TA_TIMEFRAMES}
+                fetchStockData={fetchStockData}
+                loading={loading}
+              />
+            ) : loading ? (
               <LoadingSkeleton key="loading" />
             ) : error ? (
               <motion.div
@@ -382,13 +452,22 @@ function App() {
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                       <span className="text-2xl font-bold text-primary">{stockData.symbol.substring(0, 2)}</span>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h2 className="text-2xl font-semibold">{stockData.name}</h2>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-lg text-textSecondary">{stockData.symbol}</span>
                         <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary">
                           NSE
                         </span>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setView('analysis')}
+                          className="ml-auto px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors"
+                        >
+                          <Activity className="w-4 h-4" />
+                          Technical Analysis
+                        </motion.button>
                       </div>
                     </div>
                   </div>
@@ -508,15 +587,6 @@ function App() {
           </AnimatePresence>
         </main>
       </div>
-
-      {/* Mobile Navigation */}
-      {isMobile && (
-        <MobileNav 
-          watchlist={watchlist}
-          selectedStock={selectedStock}
-          onSelect={handleStockSelect}
-        />
-      )}
 
       {/* Search Overlay */}
       <SearchOverlay 
