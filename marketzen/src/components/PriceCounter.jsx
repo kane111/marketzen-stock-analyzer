@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 
-function PriceCounter({ value, isPositive = true, decimals = 2 }) {
+function PriceCounter({ value, isPositive = true, decimals = 2, prefix = '' }) {
   const [displayValue, setDisplayValue] = useState(value)
 
   useEffect(() => {
@@ -32,9 +32,7 @@ function PriceCounter({ value, isPositive = true, decimals = 2 }) {
     requestAnimationFrame(animate)
   }, [value])
 
-  const formattedValue = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  const formattedValue = new Intl.NumberFormat('en-IN', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   }).format(displayValue)
@@ -48,7 +46,7 @@ function PriceCounter({ value, isPositive = true, decimals = 2 }) {
         isPositive ? 'text-positive' : 'text-negative'
       }`}
     >
-      {formattedValue}
+      {prefix}{formattedValue}
     </motion.span>
   )
 }

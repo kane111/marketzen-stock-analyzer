@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Home, TrendingUp, Star, Settings } from 'lucide-react'
 
-function MobileNav({ watchlist, selectedAsset, onSelect }) {
+function MobileNav({ watchlist, selectedStock, onSelect }) {
   const navItems = [
     { icon: Home, label: 'Home' },
     { icon: TrendingUp, label: 'Markets' },
@@ -55,5 +56,4 @@ function MobileNav({ watchlist, selectedAsset, onSelect }) {
   )
 }
 
-import { useState } from 'react'
 export default MobileNav

@@ -147,7 +147,8 @@ async function testMarketZen() {
     console.log('   • Responsive design for all screen sizes');
     console.log('   • Animated transitions using Framer Motion');
     console.log('   • Interactive charts using Recharts');
-    console.log('   • Search functionality with CoinGecko API');
+    console.log('   • Search functionality with Yahoo Finance API');
+    console.log('   • Indian NSE/BSE stock data');
     console.log('   • Watchlist with localStorage persistence');
     
   } catch (error) {

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Plus, Clock, TrendingUp } from 'lucide-react'
+import { Search, X, Plus, Clock, TrendingUp, Building2 } from 'lucide-react'
 
-const COINGECKO_BASE = 'https://api.coingecko.com/api/v3'
+// Yahoo Finance search API for Indian stocks
+const YAHOO_SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search'
+const CORS_PROXY = 'https://corsproxy.io/?'
 
 function SearchOverlay({ isOpen, onClose, onAdd }) {
   const [query, setQuery] = useState('')
@@ -34,11 +36,31 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
     const searchTimeout = setTimeout(async () => {
       setLoading(true)
       try {
-        const res = await fetch(`${COINGECKO_BASE}/search?query=${query}`)
+        const res = await fetch(`${CORS_PROXY}${encodeURIComponent(YAHOO_SEARCH + '?q=' + encodeURIComponent(query) + '&quotes_count=15)')}`, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        })
         const data = await res.json()
-        setResults(data.coins?.slice(0, 10) || [])
+        
+        if (data.quotes) {
+          // Filter for Indian stocks (NSE suffix) and format them
+          const formatted = data.quotes
+            .filter(q => q.symbol && (q.symbol.endsWith('.NS') || q.symbol.endsWith('.BO')))
+            .map(q => ({
+              id: q.symbol,
+              symbol: q.symbol.replace('.NS', '').replace('.BO', ''),
+              name: q.shortname || q.longname || q.symbol,
+              exchange: q.symbol.endsWith('.NS') ? 'NSE' : 'BSE'
+            }))
+          setResults(formatted)
+        } else {
+          setResults([])
+        }
       } catch (error) {
         console.error('Search error:', error)
+        // Fallback: create suggestions based on query
+        setResults(createFallbackResults(query))
       } finally {
         setLoading(false)
       }
@@ -47,17 +69,39 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
     return () => clearTimeout(searchTimeout)
   }, [query])
 
-  const handleSelect = (coin) => {
+  // Fallback results when API fails
+  const createFallbackResults = (q) => {
+    const commonStocks = [
+      { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries Ltd', exchange: 'NSE' },
+      { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy Services Ltd', exchange: 'NSE' },
+      { id: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', exchange: 'NSE' },
+      { id: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', exchange: 'NSE' },
+      { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India', exchange: 'NSE' },
+      { id: 'INFY.NS', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE' },
+      { id: 'BAJFINANCE.NS', symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd', exchange: 'NSE' },
+      { id: 'BHARTIARTL.NS', symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', exchange: 'NSE' },
+      { id: 'ASIANPAINT.NS', symbol: 'ASIANPAINT', name: 'Asian Paints Ltd', exchange: 'NSE' },
+      { id: 'MARUTI.NS', symbol: 'MARUTI', name: 'Maruti Suzuki India Ltd', exchange: 'NSE' },
+    ]
+    
+    const lowerQ = q.toLowerCase()
+    return commonStocks.filter(s => 
+      s.symbol.toLowerCase().includes(lowerQ) || 
+      s.name.toLowerCase().includes(lowerQ)
+    ).slice(0, 8)
+  }
+
+  const handleSelect = (stock) => {
     onAdd({
-      id: coin.id,
-      symbol: coin.symbol,
-      name: coin.name,
-      image: coin.large
+      id: stock.id,
+      symbol: stock.symbol,
+      name: stock.name,
+      exchange: stock.exchange || 'NSE'
     })
     
     setRecentSearches(prev => {
-      const filtered = prev.filter(p => p.id !== coin.id)
-      const updated = [coin, ...filtered].slice(0, 5)
+      const filtered = prev.filter(p => p.id !== stock.id)
+      const updated = [stock, ...filtered].slice(0, 5)
       localStorage.setItem('marketzen_recent', JSON.stringify(updated))
       return updated
     })
@@ -108,7 +152,7 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search for assets..."
+                placeholder="Search NSE/BSE stocks..."
                 className="flex-1 bg-transparent text-lg outline-none placeholder:text-textSecondary"
               />
               <button
@@ -138,19 +182,23 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                     <span>Recent Searches</span>
                   </div>
                   <div className="space-y-1">
-                    {recentSearches.map((coin) => (
+                    {recentSearches.map((stock) => (
                       <motion.button
-                        key={coin.id}
-                        onClick={() => handleSelect(coin)}
+                        key={stock.id}
+                        onClick={() => handleSelect(stock)}
                         whileHover={{ x: 4 }}
                         className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors text-left"
                       >
-                        <img src={coin.thumb} alt={coin.name} className="w-8 h-8 rounded-full" />
-                        <div className="flex-1">
-                          <p className="font-medium">{coin.name}</p>
-                          <p className="text-sm text-textSecondary">{coin.symbol.toUpperCase()}</p>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
                         </div>
-                        <Plus className="w-5 h-5 text-textSecondary opacity-0 group-hover:opacity-100" />
+                        <div className="flex-1">
+                          <p className="font-medium">{stock.name}</p>
+                          <p className="text-sm text-textSecondary">{stock.symbol}</p>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 bg-surface rounded text-textSecondary">
+                          {stock.exchange || 'NSE'}
+                        </span>
                       </motion.button>
                     ))}
                   </div>
@@ -160,23 +208,25 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
               {!loading && results.length > 0 && (
                 <div className="p-2">
                   <div className="flex items-center gap-2 px-3 py-2 text-sm text-textSecondary">
-                    <TrendingUp className="w-4 h-4" />
-                    <span>Results</span>
+                    <Building2 className="w-4 h-4" />
+                    <span>Indian Stocks</span>
                   </div>
-                  {results.map((coin, index) => (
+                  {results.map((stock, index) => (
                     <motion.button
-                      key={coin.id}
+                      key={stock.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      onClick={() => handleSelect(coin)}
+                      onClick={() => handleSelect(stock)}
                       whileHover={{ x: 4 }}
                       className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors text-left"
                     >
-                      <img src={coin.large} alt={coin.name} className="w-10 h-10 rounded-full" />
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                        <span className="text-sm font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
+                      </div>
                       <div className="flex-1">
-                        <p className="font-medium">{coin.name}</p>
-                        <p className="text-sm text-textSecondary">{coin.symbol.toUpperCase()}</p>
+                        <p className="font-medium">{stock.name}</p>
+                        <p className="text-sm text-textSecondary">{stock.symbol}</p>
                       </div>
                       <motion.div
                         whileHover={{ scale: 1.1 }}
@@ -191,7 +241,8 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
 
               {!loading && query.length >= 2 && results.length === 0 && (
                 <div className="p-8 text-center text-textSecondary">
-                  <p>No results found for "{query}"</p>
+                  <p>No stocks found for "{query}"</p>
+                  <p className="text-sm mt-2">Try searching with stock symbol or company name</p>
                 </div>
               )}
             </div>

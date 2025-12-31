@@ -1,40 +1,44 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, Plus, Star, Clock, BarChart2, RefreshCw, ChevronDown } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
-import Sparkline from './components/Sparkline'
 import PriceCounter from './components/PriceCounter'
 import TimeframeSelector from './components/TimeframeSelector'
 import LoadingSkeleton from './components/LoadingSkeleton'
 import MobileNav from './components/MobileNav'
 
-const COINGECKO_BASE = 'https://api.coingecko.com/api/v3'
+// Yahoo Finance API for Indian stocks (NSE)
+const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
+const CORS_PROXY = 'https://corsproxy.io/?'
 
-const DEFAULT_ASSETS = [
-  { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' },
-  { id: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
-  { id: 'solana', symbol: 'SOL', name: 'Solana' },
-  { id: 'cardano', symbol: 'ADA', name: 'Cardano' },
-  { id: 'polkadot', symbol: 'DOT', name: 'Polkadot' }
+// Default Indian NSE stocks
+const DEFAULT_STOCKS = [
+  { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries' },
+  { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy Services' },
+  { id: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank' },
+  { id: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank' },
+  { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India' }
 ]
 
+// Map timeframe labels to Yahoo Finance ranges and intervals
 const TIMEFRAMES = [
-  { label: '1H', days: 0.04, interval: 'minute' },
-  { label: '1D', days: 1, interval: 'hourly' },
-  { label: '1W', days: 7, interval: 'daily' },
-  { label: '1M', days: 30, interval: 'daily' },
-  { label: '1Y', days: 365, interval: 'daily' }
+  { label: '1D', range: '1d', interval: '5m' },
+  { label: '1W', range: '5d', interval: '15m' },
+  { label: '1M', range: '1mo', interval: '1h' },
+  { label: '3M', range: '3mo', interval: '1d' },
+  { label: '1Y', range: '1y', interval: '1d' },
+  { label: '5Y', range: '5y', interval: '1wk' }
 ]
 
 function App() {
   const [watchlist, setWatchlist] = useState(() => {
     const saved = localStorage.getItem('marketzen_watchlist')
-    return saved ? JSON.parse(saved) : DEFAULT_ASSETS
+    return saved ? JSON.parse(saved) : DEFAULT_STOCKS
   })
   
-  const [selectedAsset, setSelectedAsset] = useState(null)
-  const [assetData, setAssetData] = useState(null)
+  const [selectedStock, setSelectedStock] = useState(null)
+  const [stockData, setStockData] = useState(null)
   const [chartData, setChartData] = useState([])
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1])
   const [loading, setLoading] = useState(true)
@@ -42,6 +46,7 @@ function App() {
   const [priceChange, setPriceChange] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileWatchlist, setShowMobileWatchlist] = useState(false)
+  const [error, setError] = useState(null)
 
   // Check mobile
   useEffect(() => {
@@ -51,87 +56,133 @@ function App() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Load first asset
+  // Load first stock
   useEffect(() => {
-    if (watchlist.length > 0 && !selectedAsset) {
-      setSelectedAsset(watchlist[0])
+    if (watchlist.length > 0 && !selectedStock) {
+      setSelectedStock(watchlist[0])
     }
-  }, [watchlist, selectedAsset])
+  }, [watchlist, selectedStock])
 
   // Save watchlist
   useEffect(() => {
     localStorage.setItem('marketzen_watchlist', JSON.stringify(watchlist))
   }, [watchlist])
 
-  const fetchAssetData = useCallback(async (asset) => {
-    if (!asset) return
+  const fetchStockData = useCallback(async (stock) => {
+    if (!stock) return
+    
+    setError(null)
+    setLoading(true)
     
     try {
-      const [marketRes, chartRes] = await Promise.all([
-        fetch(`${COINGECKO_BASE}/coins/markets?vs_currency=usd&ids=${asset.id}&order=market_cap_desc&per_page=1&page=1&sparkline=false&price_change_percentage=24h`),
-        fetch(`${COINGECKO_BASE}/coins/${asset.id}/market_chart?vs_currency=usd&days=${selectedTimeframe.days}&interval=${selectedTimeframe.interval}`)
-      ])
+      const url = `${YAHOO_BASE}/${stock.id}?range=${selectedTimeframe.range}&interval=${selectedTimeframe.interval}`
+      const response = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`)
       
-      const marketData = await marketRes.json()
-      const chartDataRaw = await chartRes.json()
-      
-      if (marketData.length > 0) {
-        const data = marketData[0]
-        setAssetData(data)
-        setPriceChange(data.price_change_percentage_24h || 0)
+      if (!response.ok) {
+        throw new Error('Failed to fetch data')
       }
       
-      // Transform chart data
-      if (chartDataRaw.prices) {
-        const transformed = chartDataRaw.prices.map(([timestamp, price]) => ({
-          timestamp: new Date(timestamp),
-          price,
-          time: new Date(timestamp).toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: false 
-          })
-        }))
+      const data = await response.json()
+      
+      if (data.chart?.result?.[0]) {
+        const result = data.chart.result[0]
+        const quote = result.indicators?.quote?.[0] || {}
+        const timestamps = result.timestamp || []
+        const prices = quote.close || []
+        
+        // Get current price and previous close for change calculation
+        const currentPrice = prices[prices.length - 1]
+        const previousPrice = prices[0]
+        const changePercent = previousPrice > 0 
+          ? ((currentPrice - previousPrice) / previousPrice) * 100 
+          : 0
+        
+        setPriceChange(changePercent)
+        
+        // Get stock info from meta
+        const meta = result.meta
+        setStockData({
+          symbol: meta.symbol || stock.symbol,
+          name: stock.name,
+          current_price: currentPrice,
+          previous_close: meta.previous_close || previousPrice,
+          open: meta.open || prices[0],
+          day_high: meta.day_high,
+          day_low: meta.day_low,
+          volume: quote.volume?.[prices.length - 1] || 0
+        })
+        
+        // Transform chart data
+        const transformed = timestamps.map((timestamp, index) => {
+          const price = prices[index]
+          const date = new Date(timestamp * 1000)
+          return {
+            timestamp: date,
+            price: price,
+            time: selectedTimeframe.range === '1d' || selectedTimeframe.range === '5d'
+              ? date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+              : date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+          }
+        }).filter(item => item.price !== null && item.price !== undefined)
+        
         setChartData(transformed)
+      } else {
+        throw new Error('No data available')
       }
     } catch (error) {
-      console.error('Error fetching asset data:', error)
+      console.error('Error fetching stock data:', error)
+      setError('Unable to fetch data. Please try again.')
     } finally {
       setLoading(false)
     }
   }, [selectedTimeframe])
 
   useEffect(() => {
-    if (selectedAsset) {
-      setLoading(true)
-      fetchAssetData(selectedAsset)
+    if (selectedStock) {
+      fetchStockData(selectedStock)
     }
-  }, [selectedAsset, selectedTimeframe, fetchAssetData])
+  }, [selectedStock, selectedTimeframe, fetchStockData])
 
-  const handleAssetSelect = (asset) => {
-    setSelectedAsset(asset)
+  const handleStockSelect = (stock) => {
+    setSelectedStock(stock)
     setShowMobileWatchlist(false)
   }
 
-  const addToWatchlist = (asset) => {
-    if (!watchlist.find(a => a.id === asset.id)) {
-      setWatchlist(prev => [...prev, asset])
+  const addToWatchlist = (stock) => {
+    if (!watchlist.find(s => s.id === stock.id)) {
+      setWatchlist(prev => [...prev, stock])
     }
     setSearchOpen(false)
   }
 
-  const removeFromWatchlist = (e, assetId) => {
+  const removeFromWatchlist = (e, stockId) => {
     e.stopPropagation()
     setWatchlist(prev => {
-      const filtered = prev.filter(a => a.id !== assetId)
-      if (selectedAsset?.id === assetId && filtered.length > 0) {
-        setSelectedAsset(filtered[0])
+      const filtered = prev.filter(s => s.id !== stockId)
+      if (selectedStock?.id === stockId && filtered.length > 0) {
+        setSelectedStock(filtered[0])
       }
       return filtered
     })
   }
 
   const isPositive = priceChange >= 0
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value)
+  }
+
+  const formatNumber = (value) => {
+    if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
+    if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
+    if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
+    return value.toLocaleString()
+  }
 
   return (
     <div className="min-h-screen bg-background text-text overflow-hidden">
@@ -147,7 +198,7 @@ function App() {
           </div>
           <div className="hidden sm:block">
             <h1 className="text-lg font-semibold tracking-tight">MarketZen</h1>
-            <p className="text-xs text-textSecondary">Asset Tracker</p>
+            <p className="text-xs text-textSecondary">Indian Stock Tracker</p>
           </div>
         </div>
 
@@ -159,7 +210,7 @@ function App() {
             className="glass px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-surfaceLight transition-colors"
           >
             <Search className="w-4 h-4 text-textSecondary" />
-            <span className="hidden sm:inline text-sm text-textSecondary">Search assets...</span>
+            <span className="hidden sm:inline text-sm text-textSecondary">Search NSE stocks...</span>
             <kbd className="hidden md:inline px-2 py-0.5 text-xs bg-surfaceLight rounded text-textSecondary">⌘K</kbd>
           </motion.button>
           
@@ -193,16 +244,16 @@ function App() {
                 
                 <div className="space-y-2">
                   <AnimatePresence>
-                    {watchlist.map((asset, index) => (
+                    {watchlist.map((stock, index) => (
                       <motion.div
-                        key={asset.id}
+                        key={stock.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ delay: index * 0.05 }}
-                        onClick={() => handleAssetSelect(asset)}
-                        className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${
-                          selectedAsset?.id === asset.id 
+                        onClick={() => handleStockSelect(stock)}
+                        className={`p-4 rounded-xl cursor-pointer transition-all duration-200 group ${
+                          selectedStock?.id === stock.id 
                             ? 'bg-surfaceLight border border-primary/30' 
                             : 'hover:bg-surfaceLight border border-transparent'
                         }`}
@@ -210,27 +261,23 @@ function App() {
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                              selectedAsset?.id === asset.id 
+                              selectedStock?.id === stock.id 
                                 ? 'bg-primary/20 text-primary' 
                                 : 'bg-surface text-textSecondary'
                             }`}>
-                              {asset.symbol.substring(0, 2).toUpperCase()}
+                              {stock.symbol.substring(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className="font-medium">{asset.symbol.toUpperCase()}</p>
-                              <p className="text-xs text-textSecondary">{asset.name}</p>
+                              <p className="font-medium">{stock.symbol}</p>
+                              <p className="text-xs text-textSecondary truncate max-w-[120px]">{stock.name}</p>
                             </div>
                           </div>
                           <button
-                            onClick={(e) => removeFromWatchlist(e, asset.id)}
+                            onClick={(e) => removeFromWatchlist(e, stock.id)}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface rounded-lg transition-all"
                           >
                             <X className="w-4 h-4 text-textSecondary hover:text-negative" />
                           </button>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <span className="font-mono text-sm">--</span>
-                          <Sparkline assetId={asset.id} isPositive={true} />
                         </div>
                       </motion.div>
                     ))}
@@ -267,27 +314,27 @@ function App() {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    {watchlist.map((asset) => (
+                    {watchlist.map((stock) => (
                       <motion.div
-                        key={asset.id}
-                        onClick={() => handleAssetSelect(asset)}
+                        key={stock.id}
+                        onClick={() => handleStockSelect(stock)}
                         className={`p-4 rounded-xl cursor-pointer transition-all ${
-                          selectedAsset?.id === asset.id 
+                          selectedStock?.id === stock.id 
                             ? 'bg-surfaceLight border border-primary/30' 
                             : 'hover:bg-surfaceLight'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                            selectedAsset?.id === asset.id 
+                            selectedStock?.id === stock.id 
                               ? 'bg-primary/20 text-primary' 
                               : 'bg-surface text-textSecondary'
                           }`}>
-                            {asset.symbol.substring(0, 2).toUpperCase()}
+                            {stock.symbol.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium">{asset.symbol.toUpperCase()}</p>
-                            <p className="text-xs text-textSecondary">{asset.name}</p>
+                            <p className="font-medium">{stock.symbol}</p>
+                            <p className="text-xs text-textSecondary">{stock.name}</p>
                           </div>
                         </div>
                       </motion.div>
@@ -304,36 +351,54 @@ function App() {
           <AnimatePresence mode="wait">
             {loading ? (
               <LoadingSkeleton key="loading" />
-            ) : assetData ? (
+            ) : error ? (
               <motion.div
-                key={assetData.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center h-64"
+              >
+                <div className="text-negative mb-4">{error}</div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => fetchStockData(selectedStock)}
+                  className="glass px-4 py-2 rounded-lg flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
+                </motion.button>
+              </motion.div>
+            ) : stockData ? (
+              <motion.div
+                key={stockData.symbol}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="max-w-4xl mx-auto"
               >
-                {/* Asset Header */}
+                {/* Stock Header */}
                 <div className="mb-6">
                   <div className="flex items-center gap-4 mb-4">
-                    <img src={assetData.image} alt={assetData.name} className="w-16 h-16 rounded-full" />
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-primary">{stockData.symbol.substring(0, 2)}</span>
+                    </div>
                     <div>
-                      <h2 className="text-2xl font-semibold">{assetData.name}</h2>
+                      <h2 className="text-2xl font-semibold">{stockData.name}</h2>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg text-textSecondary">{assetData.symbol.toUpperCase()}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          isPositive ? 'bg-positive/20 text-positive' : 'bg-negative/20 text-negative'
-                        }`}>
-                          Rank #{assetData.market_cap_rank || '--'}
+                        <span className="text-lg text-textSecondary">{stockData.symbol}</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary">
+                          NSE
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Price Display */}
-                  <div className="flex items-baseline gap-4">
+                  <div className="flex items-baseline gap-4 flex-wrap">
                     <PriceCounter 
-                      value={assetData.current_price} 
+                      value={stockData.current_price} 
                       isPositive={isPositive}
+                      prefix="₹"
                     />
                     <motion.div 
                       initial={{ scale: 0.8, opacity: 0 }}
@@ -350,17 +415,17 @@ function App() {
                       <span className="font-mono font-medium">
                         {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
                       </span>
-                      <span className="text-xs opacity-70">24h</span>
+                      <span className="text-xs opacity-70">{selectedTimeframe.label}</span>
                     </motion.div>
                   </div>
 
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                     {[
-                      { label: 'Market Cap', value: `$${(assetData.market_cap / 1e9).toFixed(2)}B` },
-                      { label: '24h Volume', value: `$${(assetData.total_volume / 1e9).toFixed(2)}B` },
-                      { label: 'Circulating', value: `${(assetData.circulating_supply / 1e6).toFixed(0)}M` },
-                      { label: 'All Time High', value: `$${assetData.ath?.toLocaleString() || '--'}` }
+                      { label: 'Open', value: formatCurrency(stockData.open) },
+                      { label: 'Day High', value: formatCurrency(stockData.day_high) },
+                      { label: 'Day Low', value: formatCurrency(stockData.day_low) },
+                      { label: 'Volume', value: formatNumber(stockData.volume) }
                     ].map((stat, i) => (
                       <motion.div
                         key={stat.label}
@@ -378,7 +443,7 @@ function App() {
 
                 {/* Chart */}
                 <div className="glass rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                     <h3 className="text-lg font-medium">Price Chart</h3>
                     <TimeframeSelector 
                       timeframes={TIMEFRAMES}
@@ -402,13 +467,14 @@ function App() {
                           tickLine={false}
                           tick={{ fill: '#9ca3af', fontSize: 12 }}
                           interval="preserveStartEnd"
+                          minTickGap={50}
                         />
                         <YAxis 
                           domain={['auto', 'auto']}
                           axisLine={false}
                           tickLine={false}
                           tick={{ fill: '#9ca3af', fontSize: 12 }}
-                          tickFormatter={(value) => `$${value.toLocaleString()}`}
+                          tickFormatter={(value) => `₹${value.toLocaleString()}`}
                           width={80}
                         />
                         <Tooltip
@@ -419,7 +485,7 @@ function App() {
                             backdropFilter: 'blur(12px)'
                           }}
                           labelStyle={{ color: '#9ca3af' }}
-                          formatter={(value) => [`$${value.toLocaleString()}`, 'Price']}
+                          formatter={(value) => [formatCurrency(value), 'Price']}
                         />
                         <Area
                           type="monotone"
@@ -436,7 +502,7 @@ function App() {
               </motion.div>
             ) : (
               <div className="flex items-center justify-center h-64">
-                <p className="text-textSecondary">Select an asset to view details</p>
+                <p className="text-textSecondary">Select a stock to view details</p>
               </div>
             )}
           </AnimatePresence>
@@ -447,8 +513,8 @@ function App() {
       {isMobile && (
         <MobileNav 
           watchlist={watchlist}
-          selectedAsset={selectedAsset}
-          onSelect={handleAssetSelect}
+          selectedStock={selectedStock}
+          onSelect={handleStockSelect}
         />
       )}
 
