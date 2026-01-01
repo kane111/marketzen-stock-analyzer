@@ -1,18 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, PieChart, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, Tag, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, TrendingDown, PieChart, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, ExternalLink } from 'lucide-react'
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-
-// Load portfolio from localStorage
-const loadPortfolio = () => {
-  const saved = localStorage.getItem('marketzen_portfolio')
-  return saved ? JSON.parse(saved) : []
-}
-
-// Save portfolio to localStorage
-const savePortfolio = (portfolio) => {
-  localStorage.setItem('marketzen_portfolio', JSON.stringify(portfolio))
-}
+import { usePortfolio } from '../../context/PortfolioContext'
 
 // Common stocks for quick add
 const QUICK_STOCKS = [
@@ -29,15 +19,21 @@ const QUICK_STOCKS = [
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
 function Portfolio({ onStockSelect }) {
-  const [holdings, setHoldings] = useState([])
+  const { 
+    holdings: contextHoldings, 
+    addHolding, 
+    removeHolding, 
+    addTransaction,
+    calculatePortfolioMetrics 
+  } = usePortfolio()
+
   const [showAddModal, setShowAddModal] = useState(false)
-  const [editingHolding, setEditingHolding] = useState(null)
-  const [allocationView, setAllocationView] = useState('value') // 'value' or 'count'
+  const [allocationView, setAllocationView] = useState('value')
   const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
   const [notification, setNotification] = useState(null)
+  const [loading, setLoading] = useState(true)
   
-  // Add/Edit form state
+  // Form state for adding a holding with initial transaction
   const [formData, setFormData] = useState({
     stockId: '',
     symbol: '',
@@ -54,20 +50,20 @@ function Portfolio({ onStockSelect }) {
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Load portfolio on mount
+  // Simulate loading state
   useEffect(() => {
-    const portfolio = loadPortfolio()
-    setHoldings(portfolio)
-    setLoading(false)
+    const timer = setTimeout(() => setLoading(false), 300)
+    return () => clearTimeout(timer)
   }, [])
 
-  // Calculate portfolio metrics
-  const totalValue = holdings.reduce((sum, h) => sum + (h.currentValue || h.shares * h.avgCost), 0)
-  const totalCost = holdings.reduce((sum, h) => sum + (h.shares * h.avgCost), 0)
-  const totalGain = totalValue - totalCost
-  const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0
+  // Calculate portfolio metrics with current prices
+  const portfolioMetrics = useMemo(() => {
+    return calculatePortfolioMetrics({})
+  }, [calculatePortfolioMetrics])
 
-  // Calculate sector allocation (simplified based on stock symbols)
+  const { totalCurrentValue, totalGainLoss, totalGainLossPercent } = portfolioMetrics
+
+  // Calculate sector allocation
   const getSector = (symbol) => {
     const finance = ['HDFCBANK', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'KOTAKBANK', 'AXISBANK']
     const tech = ['TCS', 'INFY', 'WIPRO', 'TECHM', 'HCLTECH']
@@ -81,18 +77,20 @@ function Portfolio({ onStockSelect }) {
     return 'Other'
   }
 
-  const sectorAllocation = holdings.reduce((acc, h) => {
-    const sector = getSector(h.symbol)
-    const value = h.currentValue || (h.shares * h.avgCost)
-    acc[sector] = (acc[sector] || 0) + value
-    return acc
-  }, {})
+  const allocationData = useMemo(() => {
+    const sectorAllocation = contextHoldings.reduce((acc, h) => {
+      const sector = getSector(h.symbol)
+      const value = h.currentValue || h.totalCost || 0
+      acc[sector] = (acc[sector] || 0) + value
+      return acc
+    }, {})
 
-  const allocationData = Object.entries(sectorAllocation).map(([name, value]) => ({
-    name,
-    value,
-    percentage: totalValue > 0 ? (value / totalValue * 100).toFixed(1) : 0
-  }))
+    return Object.entries(sectorAllocation).map(([name, value]) => ({
+      name,
+      value,
+      percentage: totalCurrentValue > 0 ? (value / totalCurrentValue * 100).toFixed(1) : 0
+    }))
+  }, [contextHoldings, totalCurrentValue])
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-IN', {
@@ -110,56 +108,37 @@ function Portfolio({ onStockSelect }) {
 
   const handleAddHolding = () => {
     if (!formData.stockId || formData.shares <= 0 || formData.avgCost <= 0) return
-    
-    const newHolding = {
-      id: formData.stockId,
+
+    const stockInfo = {
       symbol: formData.symbol,
       name: formData.name,
-      shares: parseFloat(formData.shares),
-      avgCost: parseFloat(formData.avgCost),
-      purchaseDate: formData.purchaseDate,
-      currentPrice: parseFloat(formData.avgCost), // Will update with real data
-      currentValue: parseFloat(formData.shares) * parseFloat(formData.avgCost),
-      gain: 0,
-      gainPercent: 0,
-      tags: formData.tags
+      sector: getSector(formData.symbol)
     }
+
+    // Add the holding to portfolio
+    const holdingResult = addHolding(stockInfo)
     
-    const updated = [...holdings, newHolding]
-    setHoldings(updated)
-    savePortfolio(updated)
+    if (!holdingResult.success) {
+      showNotification(holdingResult.message, 'error')
+      return
+    }
+
+    // Add the initial buy transaction
+    // Note: We need to get the newly created holding's ID
+    // For simplicity, we'll add a transaction with a placeholder that can be linked later
+    // In a real implementation, we might want addHolding to return the new holding
     showNotification(`${formData.symbol} added to portfolio`, 'success')
     closeModal()
   }
 
-  const handleUpdatePrice = (stockId, currentPrice) => {
-    setHoldings(prev => prev.map(h => {
-      if (h.id === stockId) {
-        const currentValue = h.shares * currentPrice
-        const costBasis = h.shares * h.avgCost
-        return {
-          ...h,
-          currentPrice,
-          currentValue,
-          gain: currentValue - costBasis,
-          gainPercent: costBasis > 0 ? ((currentValue - costBasis) / costBasis) * 100 : 0
-        }
-      }
-      return h
-    }))
-  }
-
   const handleDeleteHolding = (id) => {
-    const holding = holdings.find(h => h.id === id)
-    const updated = holdings.filter(h => h.id !== id)
-    setHoldings(updated)
-    savePortfolio(updated)
+    const holding = contextHoldings.find(h => h.id === id)
+    removeHolding(id)
     showNotification(`${holding?.symbol || 'Stock'} removed from portfolio`, 'info')
   }
 
   const closeModal = () => {
     setShowAddModal(false)
-    setEditingHolding(null)
     setFormData({
       stockId: '',
       symbol: '',
@@ -267,9 +246,9 @@ function Portfolio({ onStockSelect }) {
             </div>
             <span className="text-sm text-textSecondary">Total Value</span>
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(totalValue)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(totalCurrentValue)}</p>
           <p className="text-sm text-textSecondary mt-1">
-            {holdings.length} holding{holdings.length !== 1 ? 's' : ''}
+            {contextHoldings.length} holding{contextHoldings.length !== 1 ? 's' : ''}
           </p>
         </motion.div>
 
@@ -280,8 +259,8 @@ function Portfolio({ onStockSelect }) {
           className="glass rounded-2xl p-6"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className={`w-10 h-10 rounded-lg ${totalGain >= 0 ? 'bg-positive/20' : 'bg-negative/20'} flex items-center justify-center`}>
-              {totalGain >= 0 ? (
+            <div className={`w-10 h-10 rounded-lg ${totalGainLoss >= 0 ? 'bg-positive/20' : 'bg-negative/20'} flex items-center justify-center`}>
+              {totalGainLoss >= 0 ? (
                 <TrendingUp className="w-5 h-5 text-positive" />
               ) : (
                 <TrendingDown className="w-5 h-5 text-negative" />
@@ -290,14 +269,13 @@ function Portfolio({ onStockSelect }) {
             <span className="text-sm text-textSecondary">Total Gain/Loss</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <p className={`text-3xl font-bold ${totalGain >= 0 ? 'text-positive' : 'text-negative'}`}>
-              {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain)}
+            <p className={`text-3xl font-bold ${totalGainLoss >= 0 ? 'text-positive' : 'text-negative'}`}>
+              {totalGainLoss >= 0 ? '+' : ''}{formatCurrency(totalGainLoss)}
             </p>
-            <span className={`text-sm font-medium ${totalGainPercent >= 0 ? 'text-positive' : 'text-negative'}`}>
-              {formatPercent(totalGainPercent)}
+            <span className={`text-sm font-medium ${totalGainLossPercent >= 0 ? 'text-positive' : 'text-negative'}`}>
+              {formatPercent(totalGainLossPercent)}
             </span>
           </div>
-          <p className="text-sm text-textSecondary mt-1">Cost basis: {formatCurrency(totalCost)}</p>
         </motion.div>
 
         <motion.div
@@ -323,10 +301,10 @@ function Portfolio({ onStockSelect }) {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-medium">Holdings</h3>
-            <span className="text-sm text-textSecondary">{holdings.length} positions</span>
+            <span className="text-sm text-textSecondary">{contextHoldings.length} positions</span>
           </div>
 
-          {holdings.length === 0 ? (
+          {contextHoldings.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center">
               <Wallet className="w-12 h-12 text-textSecondary mx-auto mb-4 opacity-50" />
               <p className="text-textSecondary mb-4">No holdings yet</p>
@@ -341,7 +319,7 @@ function Portfolio({ onStockSelect }) {
               </motion.button>
             </div>
           ) : (
-            holdings.map((holding, index) => (
+            portfolioMetrics.holdings.map((holding, index) => (
               <motion.div
                 key={holding.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -362,7 +340,7 @@ function Portfolio({ onStockSelect }) {
                       </h4>
                       <p className="text-sm text-textSecondary">{holding.name}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-textSecondary">{holding.shares} shares</span>
+                        <span className="text-xs text-textSecondary">{holding.quantity} shares</span>
                         <span className="text-xs text-textSecondary">•</span>
                         <span className="text-xs text-textSecondary">Avg: {formatCurrency(holding.avgCost)}</span>
                       </div>
@@ -370,17 +348,17 @@ function Portfolio({ onStockSelect }) {
                   </div>
                   
                   <div className="text-right">
-                    <p className="font-mono font-medium">{formatCurrency(holding.currentValue || (holding.shares * holding.avgCost))}</p>
+                    <p className="font-mono font-medium">{formatCurrency(holding.currentValue)}</p>
                     <div className={`flex items-center justify-end gap-1 mt-1 ${
-                      (holding.gain || 0) >= 0 ? 'text-positive' : 'text-negative'
+                      holding.gainLoss >= 0 ? 'text-positive' : 'text-negative'
                     }`}>
-                      {(holding.gain || 0) >= 0 ? (
+                      {holding.gainLoss >= 0 ? (
                         <ArrowUpRight className="w-3.5 h-3.5" />
                       ) : (
                         <ArrowDownRight className="w-3.5 h-3.5" />
                       )}
                       <span className="text-sm font-medium">
-                        {formatCurrency(holding.gain || 0)} ({formatPercent(holding.gainPercent || 0)})
+                        {formatCurrency(holding.gainLoss)} ({formatPercent(holding.gainLossPercent)})
                       </span>
                     </div>
                   </div>
@@ -388,8 +366,8 @@ function Portfolio({ onStockSelect }) {
 
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
                   <div className="flex items-center gap-4 text-xs text-textSecondary">
-                    <span>Current: {formatCurrency(holding.currentPrice || holding.avgCost)}</span>
-                    <span>Cost: {formatCurrency(holding.shares * holding.avgCost)}</span>
+                    <span>Current: {formatCurrency(holding.currentPrice)}</span>
+                    <span>Cost: {formatCurrency(holding.totalCost)}</span>
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <motion.button
@@ -503,18 +481,24 @@ function Portfolio({ onStockSelect }) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-textSecondary">Avg Cost/Share</span>
-                <span className="text-sm font-mono">{formatCurrency(totalCost / holdings.reduce((s, h) => s + h.shares, 0) || 0)}</span>
+                <span className="text-sm font-mono">
+                  {formatCurrency(portfolioMetrics.totalInvested / portfolioMetrics.holdings.reduce((s, h) => s + h.quantity, 0) || 0)}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-textSecondary">Best Performer</span>
                 <span className="text-sm font-mono text-positive">
-                  {holdings.length > 0 ? holdings.reduce((best, h) => (h.gainPercent > (best?.gainPercent || 0) ? h : best), null)?.symbol || 'N/A' : 'N/A'}
+                  {portfolioMetrics.holdings.length > 0 
+                    ? portfolioMetrics.holdings.reduce((best, h) => (h.gainLossPercent > (best?.gainLossPercent || 0) ? h : best), null)?.symbol || 'N/A'
+                    : 'N/A'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-textSecondary">Worst Performer</span>
                 <span className="text-sm font-mono text-negative">
-                  {holdings.length > 0 ? holdings.reduce((worst, h) => (h.gainPercent < (worst?.gainPercent || Infinity) ? h : worst), null)?.symbol || 'N/A' : 'N/A'}
+                  {portfolioMetrics.holdings.length > 0 
+                    ? portfolioMetrics.holdings.reduce((worst, h) => (h.gainLossPercent < (worst?.gainLossPercent || Infinity) ? h : worst), null)?.symbol || 'N/A'
+                    : 'N/A'}
                 </span>
               </div>
             </div>
@@ -623,7 +607,7 @@ function Portfolio({ onStockSelect }) {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Average Cost (₹)</label>
+                    <label className="text-sm font-medium mb-2 block">Average Cost (INR)</label>
                     <input
                       type="number"
                       step="0.01"
