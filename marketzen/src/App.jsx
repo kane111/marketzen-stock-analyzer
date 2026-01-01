@@ -433,6 +433,13 @@ function AppContent() {
     setMultiChartMode(false)
   }
 
+  const handleTimeframeChange = (timeframe) => {
+    setSelectedTimeframe(timeframe)
+    if (selectedStock) {
+      fetchStockData(selectedStock, timeframe, view === 'analysis')
+    }
+  }
+
   const toggleMultiTimeframe = (label) => {
     setSelectedMultiTimeframes(prev => {
       if (prev.includes(label)) {
@@ -1354,7 +1361,7 @@ function AppContent() {
                               <TimeframeSelector 
                                 timeframes={TIMEFRAMES}
                                 selected={selectedTimeframe}
-                                onSelect={setSelectedTimeframe}
+                                onSelect={handleTimeframeChange}
                               />
                             ) : (
                               <div className="flex items-center gap-2">
