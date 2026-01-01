@@ -15,7 +15,16 @@ import NewsFeed from './components/NewsFeed'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
-const CORS_PROXY = 'https://corsproxy.io/?'
+
+// Multiple CORS proxy options for better reliability in different regions
+// Ordered by reliability and speed for Indian users
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://justfetch.itsvg.in/?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.pages.dev/?',
+  'https://proxy.cors.sh/'
+]
 
 // Default Indian NSE stocks
 const DEFAULT_STOCKS = [
@@ -183,16 +192,46 @@ function App() {
     setError(null)
     setLoading(true)
     
-    try {
-      const tf = taMode ? timeframe : (multiTimeframe || effectiveTimeframe)
-      const url = `${YAHOO_BASE}/${stock.id}?range=${tf.range}&interval=${tf.interval}`
-      const response = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch data')
+    const tf = taMode ? timeframe : (multiTimeframe || effectiveTimeframe)
+    const url = `${YAHOO_BASE}/${stock.id}?range=${tf.range}&interval=${tf.interval}`
+    
+    // Try multiple proxies in sequence until one works
+    const tryFetchWithProxy = async (proxyIndex = 0) => {
+      if (proxyIndex >= CORS_PROXIES.length) {
+        throw new Error('All proxies failed')
       }
       
-      const data = await response.json()
+      const proxy = CORS_PROXIES[proxyIndex]
+      
+      try {
+        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': window.location.origin,
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Proxy ${proxyIndex + 1} returned ${response.status}`)
+        }
+        
+        // Check if response is valid JSON
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(`Proxy ${proxyIndex + 1} returned non-JSON response`)
+        }
+        
+        return await response.json()
+      } catch (err) {
+        console.warn(`Proxy ${proxyIndex + 1} failed:`, err.message)
+        return tryFetchWithProxy(proxyIndex + 1)
+      }
+    }
+    
+    try {
+      const data = await tryFetchWithProxy()
       
       if (data.chart?.result?.[0]) {
         const result = data.chart.result[0]
@@ -269,11 +308,11 @@ function App() {
         
         setLastUpdated(new Date())
       } else {
-        throw new Error('No data available')
+        throw new Error('No data available for this stock')
       }
     } catch (error) {
       console.error('Error fetching stock data:', error)
-      setError('Unable to fetch data. Please try again.')
+      setError('Unable to fetch data. Please try again later.')
     } finally {
       setLoading(false)
     }
