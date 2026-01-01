@@ -10,8 +10,9 @@ import {
   ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line as RechartsLine, 
   Bar, Cell 
 } from 'recharts'
-import TimeframeSelector from './TimeframeSelector'
+import TimeframeSelector from './charts/TimeframeSelector'
 import { TerminalTab, TerminalIndicatorToggle } from './UI'
+import { IndicatorToggleList, DEFAULT_INDICATORS } from './indicators'
 
 // ============================================================================
 // TECHNICAL INDICATOR CALCULATION FUNCTIONS

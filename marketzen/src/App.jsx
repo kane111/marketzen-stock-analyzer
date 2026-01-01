@@ -4,7 +4,7 @@ import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, A
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
-import TimeframeSelector from './components/TimeframeSelector'
+import TimeframeSelector from './components/charts/TimeframeSelector'
 import LoadingSkeleton from './components/LoadingSkeleton'
 import TechnicalAnalysis from './components/TechnicalAnalysis'
 import MarketStatus from './components/MarketStatus'

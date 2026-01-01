@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 
+// Re-export all components from new modular structure for backward compatibility
+// Components have been extracted to separate files in common/, charts/, and indicators/ directories
+
 // ==========================================
 // TERMINAL BUTTON - Primary CTA Component
 // ==========================================
