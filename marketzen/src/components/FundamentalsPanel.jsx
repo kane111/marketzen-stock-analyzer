@@ -197,10 +197,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="max-w-4xl mx-auto"
+        className="h-full flex flex-col"
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -210,15 +210,15 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               <X className="w-5 h-5" />
             </motion.button>
             <div>
-              <h2 className="text-2xl font-semibold">Fundamentals</h2>
+              <h2 className="text-xl font-semibold">Fundamentals</h2>
               <p className="text-terminal-dim text-sm">Loading...</p>
             </div>
           </div>
         </div>
-        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6">
-          <div className="animate-pulse space-y-4">
+        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4 flex-1">
+          <div className="animate-pulse space-y-3">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-12 bg-terminal-bg-light rounded" />
+              <div key={i} className="h-10 bg-terminal-bg-light rounded" />
             ))}
           </div>
         </div>
@@ -232,11 +232,11 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="max-w-4xl mx-auto"
+      className="h-full flex flex-col"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-3">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -246,8 +246,8 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             <X className="w-5 h-5" />
           </motion.button>
           <div>
-            <h2 className="text-2xl font-semibold">{stock?.name}</h2>
-            <div className="flex items-center gap-2 text-sm text-terminal-dim">
+            <h2 className="text-xl font-semibold">{stock?.name}</h2>
+            <div className="flex items-center gap-2 text-xs text-terminal-dim">
               <span>{stock?.symbol}</span>
               <span>•</span>
               <span className="px-2 py-0.5 bg-terminal-bg-light rounded-full">{getSector()}</span>
@@ -272,7 +272,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onAddToComparison}
-              className="px-4 py-2 bg-terminal-green/10 text-terminal-green rounded-lg flex items-center gap-2"
+              className="px-3 py-1.5 bg-terminal-green/10 text-terminal-green rounded-lg flex items-center gap-1.5 text-sm"
             >
               <PieChart className="w-4 h-4" />
               Compare
@@ -282,20 +282,20 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       </div>
 
       {/* Data Source & Last Updated */}
-      <div className="flex items-center justify-between text-xs text-terminal-dim mb-4">
+      <div className="flex items-center justify-between text-xs text-terminal-dim mb-3">
         <span>Data Source: {dataSource}</span>
         {lastUpdated && <span>Last Updated: {lastUpdated.toLocaleTimeString()}</span>}
       </div>
 
       {/* Current Price Card */}
       {stockData && (
-        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-xl p-4 mb-6 flex items-center justify-between">
+        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3 mb-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-terminal-dim">Current Price</p>
-            <p className="text-2xl font-bold">{formatCurrency(stockData.current_price)}</p>
+            <p className="text-xs text-terminal-dim">Current Price</p>
+            <p className="text-xl font-bold">{formatCurrency(stockData.current_price)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-terminal-dim">Day Change</p>
+            <p className="text-xs text-terminal-dim">Day Change</p>
             <p className={`text-lg font-semibold ${
               (stockData.current_price - stockData.previous_close) >= 0 ? 'text-terminal-green' : 'text-terminal-red'
             }`}>
@@ -306,14 +306,14 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
         {tabs.map((tab) => (
           <motion.button
             key={tab.id}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors text-sm ${
               activeTab === tab.id
                 ? 'bg-terminal-green text-terminal-bg'
                 : 'bg-terminal-bg-secondary border border-terminal-border hover:bg-terminal-bg-light'
@@ -326,17 +326,18 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       </div>
 
       {/* Tab Content */}
-      <AnimatePresence mode="wait">
+      <div className="flex-1 overflow-y-auto">
+        <AnimatePresence mode="wait">
         {activeTab === 'valuation' && (
           <motion.div
             key="valuation"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6"
+            className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
           >
-            <h3 className="text-lg font-semibold mb-4">Valuation Metrics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <h3 className="text-base font-semibold mb-3">Valuation Metrics</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <MetricCard
                 label="P/E Ratio"
                 value={getMetric('defaultKeyStatistics.trailingPE.raw', 'ratio')}
@@ -393,10 +394,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6"
+            className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
           >
-            <h3 className="text-lg font-semibold mb-4">Financial Performance</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <h3 className="text-base font-semibold mb-3">Financial Performance</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <MetricCard
                 label="Revenue (TTM)"
                 value={getMetric('financialData.totalRevenue.raw', 'number')}
@@ -452,10 +453,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6"
+            className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
           >
-            <h3 className="text-lg font-semibold mb-4">Price Performance</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <h3 className="text-base font-semibold mb-3">Price Performance</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <MetricCard
                 label="52 Week High"
                 value={getMetric('summaryDetail.fiftyTwoWeekHighRaw', 'currency')}
@@ -501,10 +502,11 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       {/* Disclaimer */}
-      <div className="mt-6 p-4 bg-terminal-bg-secondary border border-terminal-border rounded-xl flex items-start gap-3">
-        <Info className="w-5 h-5 text-terminal-dim flex-shrink-0 mt-0.5" />
+      <div className="mt-3 p-3 bg-terminal-bg-secondary border border-terminal-border rounded-lg flex items-start gap-2">
+        <Info className="w-4 h-4 text-terminal-dim flex-shrink-0 mt-0.5" />
         <p className="text-xs text-terminal-dim">
           <strong className="text-terminal-text">Disclaimer:</strong> Fundamental data is provided for informational purposes only and should not be considered as financial advice. 
           Always conduct your own research and consider consulting a financial advisor before making investment decisions.
@@ -520,7 +522,7 @@ function MetricCard({ label, value, tooltip, isLarge = false }) {
 
   return (
     <div 
-      className={`bg-terminal-bg-secondary border border-terminal-border rounded-xl p-4 relative ${isLarge ? 'col-span-2' : ''}`}
+      className={`bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3 relative ${isLarge ? 'col-span-2' : ''}`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -532,7 +534,7 @@ function MetricCard({ label, value, tooltip, isLarge = false }) {
           </span>
         )}
       </p>
-      <p className={`font-mono font-medium ${isLarge ? 'text-xl' : 'text-lg'}`}>
+      <p className={`font-mono font-medium ${isLarge ? 'text-lg' : 'text-base'}`}>
         {value || 'N/A'}
       </p>
       {showTooltip && tooltip && (
