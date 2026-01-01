@@ -25,6 +25,24 @@ const TIMEFRAME_PRESETS = {
   'ALL': 'month'
 }
 
+const MONTH_ABBREVIATIONS = {
+  'January': 'Jan', 'February': 'Feb', 'March': 'Mar', 'April': 'Apr',
+  'May': 'May', 'June': 'Jun', 'July': 'Jul', 'August': 'Aug',
+  'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'
+}
+
+// Format date with consistent 3-letter month abbreviations
+function formatDateLabel(date, includeYear = false) {
+  const day = date.getDate().toString().padStart(2, '0')
+  const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
+  
+  if (includeYear) {
+    const year = date.getFullYear().toString().slice(-2)
+    return `${day} ${month} '${year}`
+  }
+  return `${day} ${month}`
+}
+
 // Format currency for display
 function formatCurrency(value) {
   if (!value && value !== 0) return 'N/A'
@@ -61,11 +79,11 @@ function generateChartData(stock, timeframe) {
 
     let timeLabel
     if (preset === 'day') {
-      timeLabel = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+      timeLabel = formatDateLabel(date, false)
     } else if (preset === 'week') {
-      timeLabel = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+      timeLabel = formatDateLabel(date, false)
     } else {
-      timeLabel = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
+      timeLabel = formatDateLabel(date, true)
     }
 
     data.push({
@@ -119,8 +137,9 @@ const StockChartInner = memo(function StockChartInner({ data, isPositive, showFu
             axisLine={false}
             tickLine={false}
             tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'monospace' }}
-            interval="preserveStartEnd"
-            minTickGap={30}
+            interval="equidistantPreserveStartEnd"
+            minTickGap={50}
+            tickMargin={8}
           />
           <YAxis
             domain={['auto', 'auto']}
