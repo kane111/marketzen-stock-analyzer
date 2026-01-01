@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -18,9 +18,13 @@ import StockComparison from './components/StockComparison'
 import WatchlistPanel from './components/WatchlistPanel'
 import PerformanceChart from './components/PerformanceChart'
 import StockScreener from './components/StockScreener'
+import ThemeSettings from './components/ThemeSettings'
+import AdvancedCharting from './components/AdvancedCharting'
+import DataExport from './components/DataExport'
 import { AlertsProvider } from './context/AlertsContext'
 import { PortfolioProvider } from './context/PortfolioContext'
 import { WatchlistProvider } from './context/WatchlistContext'
+import { ThemeProvider } from './context/ThemeContext'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -91,7 +95,7 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_STOCKS
   })
   
-  // Main view state: dashboard, analysis, portfolio, sectors, news, alerts, fundamentals, comparison, watchlist, performance, screener
+  // Main view state: dashboard, analysis, portfolio, sectors, news, alerts, fundamentals, comparison, watchlist, performance, screener, theme, advancedChart, export
   const [view, setView] = useState('dashboard')
   const [selectedStock, setSelectedStock] = useState(null)
   const [stockData, setStockData] = useState(null)
@@ -476,10 +480,11 @@ function AppContent() {
   const isViewActive = (targetView) => view === targetView
 
   return (
-    <WatchlistProvider>
-      <PortfolioProvider watchlist={watchlist}>
-        <AlertsProvider stockData={stockData} marketStatus={marketStatus}>
-        <div className="min-h-screen bg-background text-text overflow-hidden">
+    <ThemeProvider>
+      <WatchlistProvider>
+        <PortfolioProvider watchlist={watchlist}>
+          <AlertsProvider stockData={stockData} marketStatus={marketStatus}>
+            <div className="min-h-screen bg-background text-text overflow-hidden">
           {/* Notification Toast */}
           <AnimatePresence>
             {notification && (
@@ -634,6 +639,45 @@ function AppContent() {
                 <span className="hidden sm:inline text-sm">Portfolio</span>
               </motion.button>
 
+              {/* Theme Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView(isViewActive('theme') ? 'dashboard' : 'theme')}
+                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+                  isViewActive('theme') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+                }`}
+              >
+                <Palette className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Theme</span>
+              </motion.button>
+
+              {/* Advanced Chart Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView(isViewActive('advancedChart') ? 'dashboard' : 'advancedChart')}
+                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+                  isViewActive('advancedChart') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+                }`}
+              >
+                <CandlestickChart className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Charts</span>
+              </motion.button>
+
+              {/* Export Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView(isViewActive('export') ? 'dashboard' : 'export')}
+                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+                  isViewActive('export') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+                }`}
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Export</span>
+              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -676,26 +720,6 @@ function AppContent() {
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setView('alerts')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'alerts' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <Bell className="w-5 h-5" />
-                <span className="text-xs">Alerts</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('comparison')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'comparison' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <BarChart2 className="w-5 h-5" />
-                <span className="text-xs">Compare</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
                 onClick={() => setView('sectors')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
                   view === 'sectors' ? 'text-primary' : 'text-textSecondary'
@@ -706,43 +730,23 @@ function AppContent() {
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setView('portfolio')}
+                onClick={() => setView('news')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'portfolio' ? 'text-primary' : 'text-textSecondary'
+                  view === 'news' ? 'text-primary' : 'text-textSecondary'
+                }`}
+              >
+                <Newspaper className="w-5 h-5" />
+                <span className="text-xs">News</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setView('watchlist')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+                  view === 'watchlist' ? 'text-primary' : 'text-textSecondary'
                 }`}
               >
                 <Eye className="w-5 h-5" />
                 <span className="text-xs">Watchlist</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('performance')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'performance' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <ChartIcon className="w-5 h-5" />
-                <span className="text-xs">Performance</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('screener')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'screener' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <Filter className="w-5 h-5" />
-                <span className="text-xs">Screener</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('sectors')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'sectors' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-                <span className="text-xs">Sectors</span>
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
@@ -757,7 +761,7 @@ function AppContent() {
             </motion.nav>
           )}
 
-          <div className={`pt-20 h-screen flex ${isMobile ? 'pb-16' : ''}`}>
+          <div className={`pt-20 h-screen flex ${isMobile ? 'pb-24' : ''}`}>
             <AnimatePresence>
               {!isMobile && view === 'dashboard' && (
                 <motion.aside
@@ -940,6 +944,28 @@ function AppContent() {
                   <StockScreener
                     key="screener"
                     onStockSelect={handleStockSelect}
+                  />
+                )}
+
+                {/* Theme Settings View */}
+                {view === 'theme' && (
+                  <ThemeSettings
+                    key="theme"
+                  />
+                )}
+
+                {/* Advanced Charting View */}
+                {view === 'advancedChart' && (
+                  <AdvancedCharting
+                    key="advancedChart"
+                    onStockSelect={handleStockSelect}
+                  />
+                )}
+
+                {/* Data Export View */}
+                {view === 'export' && (
+                  <DataExport
+                    key="export"
                   />
                 )}
 
@@ -1325,6 +1351,7 @@ function AppContent() {
       </AlertsProvider>
     </PortfolioProvider>
     </WatchlistProvider>
+    </ThemeProvider>
   )
 }
 
