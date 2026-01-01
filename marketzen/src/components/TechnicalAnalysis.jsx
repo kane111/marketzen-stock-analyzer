@@ -269,22 +269,28 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   }), [indicatorParams])
   
   const toggleIndicator = useCallback((indicator) => {
+    console.log('toggleIndicator called:', indicator)
     setIndicators(prev => ({ ...prev, [indicator]: !prev[indicator] }))
     
     // Trigger analysis after state update
     setTimeout(() => {
+      console.log('setTimeout callback - stockData exists:', !!stockData?.ohlc)
       if (stockData?.ohlc && stockData.ohlc.length > 0) {
+        console.log('Calling performAnalysis...')
         performAnalysis()
       }
     }, 0)
   }, [stockData, performAnalysis])
   
   const performAnalysis = useCallback(() => {
+    console.log('performAnalysis called')
     if (!stockData?.ohlc || stockData.ohlc.length === 0) {
+      console.log('No stockData, returning')
       return
     }
     
     try {
+      console.log('Calculating indicators...')
       const ohlc = stockData.ohlc
       const closes = ohlc.map(d => d.close)
       const highs = ohlc.map(d => d.high)
@@ -402,6 +408,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         chartDataStoch: chartData.map((d, i) => ({ time: d.date, k: d.stochK, d: d.stochD })),
         chartDataATR: chartData.map((d, i) => ({ time: d.date, value: d.atr }))
       })
+      console.log('Analysis data updated, chartData length:', chartData.length)
       
       setSignal({ type: overallSignal, strength: overallStrength, buyCount: buySignals, sellCount: sellSignals, total: totalSignals })
       setLocalLoading(false)
