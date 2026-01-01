@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { X, TrendingUp, PieChart, BarChart3 } from 'lucide-react'
 import { TerminalTab } from './UI'
 import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
@@ -121,7 +121,7 @@ function FundamentalsPanel({ stock, onClose }) {
             <div className="grid grid-cols-3 gap-1">
               <MetricCard
                 label="Revenue (TTM)"
-                value={formatNumber(getMetric(fundamentals, 'financialData.totalRevenue'))}
+                value={formatNumber(getMetric(fundamentals, 'financialData.totalData'))}
                 tooltip="Total revenue over trailing twelve months"
               />
               <MetricCard
@@ -222,4 +222,4 @@ function FundamentalsPanel({ stock, onClose }) {
   )
 }
 
-export default FundamentalsPanel
+export default memo(FundamentalsPanel)
