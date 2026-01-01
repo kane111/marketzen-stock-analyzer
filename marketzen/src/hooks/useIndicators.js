@@ -268,7 +268,24 @@ export function calculateATR(highs, lows, closes, period = 14) {
     trueRanges.push(tr)
   }
   
-  return calculateSMA(trueRanges, period)
+  // Calculate ATR using Wilder's smoothing method for better accuracy
+  const atr = []
+  
+  // First ATR is simple average of first 'period' true ranges
+  let sumTR = 0
+  for (let i = 0; i < period; i++) {
+    sumTR += trueRanges[i]
+  }
+  atr.push(sumTR / period)
+  
+  // Subsequent ATRs use smoothing formula
+  for (let i = period; i < trueRanges.length; i++) {
+    const prevATR = atr[atr.length - 1]
+    const currentATR = (prevATR * (period - 1) + trueRanges[i]) / period
+    atr.push(currentATR)
+  }
+  
+  return atr
 }
 
 // Stochastic Oscillator Calculation

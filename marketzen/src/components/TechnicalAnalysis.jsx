@@ -99,19 +99,19 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       const { k: stochK, d: stochD } = calculateStochastic(highs, lows, closes, params.stoch.kPeriod, params.stoch.dPeriod)
       const vwap = calculateVWAP(ohlc)
       
-      // Current values
+      // Current values (use the last valid values from the indicator arrays)
       const currentPrice = closes[closes.length - 1]
-      const currentRSI = rsi[rsi.length - 1]
-      const currentMACD = macdLine[macdLine.length - 1]
-      const currentSignal = signalLine[signalLine.length - 1]
-      const currentSMAShort = smaShort[smaShort.length - 1]
-      const currentSMALong = smaLong[smaLong.length - 1]
-      const currentEMAShort = emaShort[emaShort.length - 1]
-      const currentBBUpper = upperBand[upperBand.length - 1]
-      const currentBBLower = lowerBand[lowerBand.length - 1]
-      const currentATR = atr[atr.length - 1]
-      const currentStochK = stochK[stochK.length - 1]
-      const currentStochD = stochD[stochD.length - 1]
+      const currentRSI = rsi.length > 0 ? rsi[rsi.length - 1] : null
+      const currentMACD = macdLine.length > 0 ? macdLine[macdLine.length - 1] : null
+      const currentSignal = signalLine.length > 0 ? signalLine[signalLine.length - 1] : null
+      const currentSMAShort = smaShort.length > 0 ? smaShort[smaShort.length - 1] : null
+      const currentSMALong = smaLong.length > 0 ? smaLong[smaLong.length - 1] : null
+      const currentEMAShort = emaShort.length > 0 ? emaShort[emaShort.length - 1] : null
+      const currentBBUpper = upperBand.length > 0 ? upperBand[upperBand.length - 1] : null
+      const currentBBLower = lowerBand.length > 0 ? lowerBand[lowerBand.length - 1] : null
+      const currentATR = atr.length > 0 ? atr[atr.length - 1] : null
+      const currentStochK = stochK.length > 0 ? stochK[stochK.length - 1] : null
+      const currentStochD = stochD.length > 0 ? stochD[stochD.length - 1] : null
       
       // Generate signals
       const signals = []
@@ -165,30 +165,37 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         }
       }
       
-      // Build chart data
-      const chartData = ohlc.map((d, i) => ({
-        date: d.date,
-        close: d.close,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        volume: d.volume,
-        isGreen: d.close >= d.open,
-        smaShort: smaShort[i],
-        smaLong: smaLong[i],
-        emaShort: emaShort[i],
-        rsi: rsi[i],
-        macd: macdLine[i],
-        macdSignal: signalLine[i],
-        macdHist: histogram[i],
-        bbUpper: upperBand[i],
-        bbLower: lowerBand[i],
-        bbMid: bbSma[i],
-        vwap: vwap[i],
-        atr: atr[i],
-        stochK: stochK[i],
-        stochD: stochD[i]
-      }))
+      // Build chart data with proper alignment for indicators
+      const chartData = ohlc.map((d, i) => {
+        // ATR starts at index (period - 1) since it needs previous close
+        const atrIndex = i - (params.atr.period - 1)
+        // Stochastic starts at index (kPeriod - 1)
+        const stochIndex = i - (params.stoch.kPeriod - 1)
+        
+        return {
+          date: d.date,
+          close: d.close,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          volume: d.volume,
+          isGreen: d.close >= d.open,
+          smaShort: smaShort[i],
+          smaLong: smaLong[i],
+          emaShort: emaShort[i],
+          rsi: rsi[i],
+          macd: macdLine[i],
+          macdSignal: signalLine[i],
+          macdHist: histogram[i],
+          bbUpper: upperBand[i],
+          bbLower: lowerBand[i],
+          bbMid: bbSma[i],
+          vwap: vwap[i],
+          atr: atrIndex >= 0 && atrIndex < atr.length ? atr[atrIndex] : null,
+          stochK: stochIndex >= 0 && stochIndex < stochK.length ? stochK[stochIndex] : null,
+          stochD: stochIndex >= 0 && stochIndex < stochD.length ? stochD[stochIndex] : null
+        }
+      })
       
       setAnalysisData({
         chartData,
