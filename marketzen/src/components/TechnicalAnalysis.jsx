@@ -392,7 +392,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" />
+                      <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
                       <YAxis domain={['auto', 'auto']} tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `₹${v}`} />
                       <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <Area type="monotone" dataKey="close" stroke="none" fill="url(#priceGradientTA)" />
@@ -451,7 +454,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataRSI}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" />
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
                       <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
                       <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
@@ -468,7 +474,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataMACD}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" />
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
                       <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
                       <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <Bar dataKey="hist">
@@ -534,7 +543,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataRSI}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" />
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
                       <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
                       <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
@@ -551,7 +563,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataStoch}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" />
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
                       <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
                       <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="5 5" />
