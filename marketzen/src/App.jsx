@@ -1376,6 +1376,7 @@ function AppContent() {
                           {!multiChartMode ? (
                             <ChartWrapper
                               stock={stockData}
+                              chartData={chartData}
                               showFundamentalsPanel={showFundamentalsPanel}
                             />
                           ) : (

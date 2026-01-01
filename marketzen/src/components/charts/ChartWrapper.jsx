@@ -1,53 +1,22 @@
-import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { motion } from 'framer-motion'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 
 // Timeframe constants
 export const TIMEFRAMES = [
-  { label: '1D', value: '1D', days: 1 },
-  { label: '1W', value: '1W', days: 7 },
-  { label: '1M', value: '1M', days: 30 },
-  { label: '3M', value: '3M', days: 90 },
-  { label: '6M', value: '6M', days: 180 },
-  { label: '1Y', value: '1Y', days: 365 },
-  { label: '5Y', value: '5Y', days: 1825 },
-  { label: 'ALL', value: 'ALL', days: 3650 }
+  { label: '1D', value: '1D', range: '1d', interval: '5m' },
+  { label: '1W', value: '1W', range: '5d', interval: '15m' },
+  { label: '1M', value: '1M', range: '1mo', interval: '1h' },
+  { label: '3M', value: '3M', range: '3mo', interval: '1d' },
+  { label: '6M', value: '6M', range: '6mo', interval: '1d' },
+  { label: '1Y', value: '1Y', range: '1y', interval: '1d' },
+  { label: '5Y', value: '5Y', range: '5y', interval: '1wk' }
 ]
-
-const TIMEFRAME_PRESETS = {
-  '1D': 'day',
-  '1W': 'day',
-  '1M': 'day',
-  '3M': 'week',
-  '6M': 'week',
-  '1Y': 'month',
-  '5Y': 'month',
-  'ALL': 'month'
-}
 
 const MONTH_ABBREVIATIONS = {
   'January': 'Jan', 'February': 'Feb', 'March': 'Mar', 'April': 'Apr',
   'May': 'May', 'June': 'Jun', 'July': 'Jul', 'August': 'Aug',
   'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'
-}
-
-// Format date with consistent 3-letter month abbreviations
-function formatDateLabel(date, includeYear = false) {
-  const day = date.getDate().toString().padStart(2, '0')
-  const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
-  
-  if (includeYear) {
-    const year = date.getFullYear().toString().slice(-2)
-    return `${day} ${month} '${year}`
-  }
-  return `${day} ${month}`
-}
-
-// Format month-year for longer timeframes
-function formatMonthYearLabel(date) {
-  const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
-  const year = date.getFullYear().toString().slice(-2)
-  return `${month} '${year}`
 }
 
 // Format currency for display
@@ -60,173 +29,44 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-// Generate mock chart data with proper historical dates
-function generateChartData(stock, timeframe) {
-  if (!stock || !stock.current_price) return []
-
-  const days = timeframe.days || 365
-  const preset = TIMEFRAME_PRESETS[timeframe.value] || 'day'
+// Filter data based on timeframe using actual dates from the data
+function filterDataByTimeframe(data, timeframe) {
+  if (!data || data.length === 0) return []
   
-  const data = []
-  const today = new Date()
+  const now = new Date()
+  const days = {
+    '1D': 1,
+    '1W': 7,
+    '1M': 30,
+    '3M': 90,
+    '6M': 180,
+    '1Y': 365,
+    '5Y': 1825
+  }[timeframe.value] || 30
   
-  // Use the actual current price to ensure consistency with display
-  const actualCurrentPrice = stock.current_price
-  const volatility = 0.02
-  const trend = 0.0003 // Slight upward trend
-
-  // Calculate number of data points based on timeframe
-  let pointsNeeded
-  if (days <= 1) {
-    pointsNeeded = 78 // 15-min intervals for intraday
-  } else if (days <= 7) {
-    pointsNeeded = days === 1 ? 78 : days * 4 // 4 data points per day
-  } else if (days <= 30) {
-    pointsNeeded = days // 1 data point per day
-  } else if (days <= 90) {
-    pointsNeeded = Math.ceil(days / 3) // 1 data point per 3 days (weekly)
-  } else if (days <= 365) {
-    pointsNeeded = Math.ceil(days / 7) // 1 data point per week
-  } else if (days <= 1825) {
-    pointsNeeded = Math.ceil(days / 30) // 1 data point per month
-  } else {
-    pointsNeeded = 120 // For ALL timeframe
-  }
-
-  // Ensure minimum data points for visualization
-  pointsNeeded = Math.max(pointsNeeded, 30)
-
-  // Calculate starting price based on trend so that the last point ends at actualCurrentPrice
-  // If we have pointsNeeded data points and the price trend goes upward,
-  // we need to work backwards from current price
-  const totalTrend = trend * (pointsNeeded - 1)
+  const cutoffDate = new Date(now)
+  cutoffDate.setDate(cutoffDate.getDate() - days)
   
-  // Start from a price that, after applying trend, will reach actualCurrentPrice
-  let currentPrice = actualCurrentPrice / (1 + totalTrend)
-  
-  // Add some volatility spread to make it look realistic
-  const volatilityFactor = 0.5 // Reduce volatility for more realistic looking chart
-
-  // First pass: collect all dates to determine if we span multiple years
-  const dateRange = {
-    startYear: null,
-    endYear: null
-  }
-
-  for (let i = pointsNeeded - 1; i >= 0; i--) {
-    const date = new Date(today)
-    
-    // Calculate date going backwards
-    if (days <= 1) {
-      // Intraday - go back by hours
-      date.setHours(date.getHours() - (i * 0.5))
-    } else if (days <= 30) {
-      // Daily - go back by days
-      date.setDate(date.getDate() - i)
-    } else if (days <= 90) {
-      // Weekly - go back by weeks
-      date.setDate(date.getDate() - (i * 7))
-    } else {
-      // Monthly - go back by months
-      date.setMonth(date.getMonth() - i)
-    }
-
-    if (i === pointsNeeded - 1) {
-      dateRange.endYear = date.getFullYear()
-    }
-    if (i === 0) {
-      dateRange.startYear = date.getFullYear()
-    }
-  }
-
-  // Determine if we need to show years in labels
-  const showYear = dateRange.startYear !== dateRange.endYear
-
-  // Second pass: generate actual data with proper labels
-  for (let i = pointsNeeded - 1; i >= 0; i--) {
-    const date = new Date(today)
-    
-    // Calculate date going backwards
-    if (days <= 1) {
-      // Intraday - go back by hours
-      date.setHours(date.getHours() - (i * 0.5))
-    } else if (days <= 30) {
-      // Daily - go back by days
-      date.setDate(date.getDate() - i)
-    } else if (days <= 90) {
-      // Weekly - go back by weeks
-      date.setDate(date.getDate() - (i * 7))
-    } else {
-      // Monthly - go back by months
-      date.setMonth(date.getMonth() - i)
-    }
-
-    // Apply trend (price increases as we move forward in time)
-    const trendChange = trend * i
-    currentPrice = currentPrice * (1 + trendChange)
-    
-    // For the last data point (most recent), ensure it matches the actual current price
-    // For other points, add realistic randomness
-    if (i === pointsNeeded - 1) {
-      // Last point - exact match with current price
-      currentPrice = actualCurrentPrice
-    } else {
-      // Add some randomness for price movement
-      const randomChange = (Math.random() - 0.5) * 2 * volatility * volatilityFactor
-      currentPrice = currentPrice * (1 + randomChange)
-    }
-
-    // Generate time label based on preset and year boundary detection
-    let timeLabel
-    const dateYear = date.getFullYear()
-    const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
-    
-    if (preset === 'day' && days <= 7) {
-      // For short timeframes (1D, 1W), show time for intraday or day-month for week
-      if (days <= 1) {
-        timeLabel = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
-      } else {
-        // 1W shows day and month
-        const day = date.getDate().toString().padStart(2, '0')
-        timeLabel = `${day} ${month}`
-      }
-    } else if (preset === 'day' && days <= 30) {
-      // For 1M, show full date
-      const day = date.getDate().toString().padStart(2, '0')
-      const year = dateYear.toString().slice(-2)
-      timeLabel = `${day} ${month} '${year}`
-    } else if (preset === 'week') {
-      // For weekly (3M, 6M), show date and month
-      const day = date.getDate().toString().padStart(2, '0')
-      // Include year if spanning multiple years or if it's not the current year
-      if (showYear || dateYear !== dateRange.endYear) {
-        const year = dateYear.toString().slice(-2)
-        timeLabel = `${day} ${month} '${year}`
-      } else {
-        timeLabel = `${day} ${month}`
-      }
-    } else {
-      // For monthly (1Y, 5Y, ALL), show month and year
-      const year = dateYear.toString().slice(-2)
-      timeLabel = `${month} '${year}`
-    }
-
-    data.push({
-      time: timeLabel,
-      price: Math.round(currentPrice * 100) / 100,
-      date: date // Keep original date for debugging if needed
-    })
-  }
-
-  // Ensure the last data point exactly matches the current price
-  if (data.length > 0) {
-    data[data.length - 1].price = actualCurrentPrice
-  }
-
-  return data
+  return data.filter(item => {
+    const itemDate = new Date(item.timestamp || item.date)
+    return itemDate >= cutoffDate
+  })
 }
 
-// Timeframe Selector Component with improved UX
+// Format date label for x-axis
+function formatDateLabel(date) {
+  const day = date.getDate().toString().padStart(2, '0')
+  const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
+  const year = date.getFullYear().toString().slice(-2)
+  return `${day} ${month} '${year}`
+}
+
+// Format time label for intraday data
+function formatTimeLabel(date) {
+  return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+// Timeframe Selector Component
 function TimeframeSelector({ timeframes, selected, onSelect }) {
   return (
     <div className="flex items-center gap-1 p-1 bg-terminal-bg-secondary rounded-lg border border-terminal-border">
@@ -249,7 +89,7 @@ function TimeframeSelector({ timeframes, selected, onSelect }) {
   )
 }
 
-// Memoized Chart Component with improved UX
+// Memoized Chart Component
 const StockChartInner = memo(function StockChartInner({ data, isPositive, showFundamentalsPanel }) {
   return (
     <div className={`
@@ -309,37 +149,38 @@ const StockChartInner = memo(function StockChartInner({ data, isPositive, showFu
   )
 })
 
-// Main Chart Wrapper Component - Completely Isolated with improved UX
-function ChartWrapper({ stock, showFundamentalsPanel }) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1])
-  const [chartData, setChartData] = useState([])
-  const [loading, setLoading] = useState(true)
+// Main Chart Wrapper Component - Uses real data from parent
+function ChartWrapper({ stock, chartData, showFundamentalsPanel }) {
+  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[3]) // Default to 3M
 
-  // Track previous stock to avoid unnecessary re-fetches
-  const prevStockRef = useRef(null)
-
-  // Fetch chart data when timeframe or stock changes
-  useEffect(() => {
-    if (!stock || stock.id === prevStockRef.current?.id) {
-      // Just update the chart data without full loading state
-      const data = generateChartData(stock, selectedTimeframe)
-      setChartData(data)
-      setLoading(false)
-      return
-    }
-
-    prevStockRef.current = stock
-    setLoading(true)
-
-    // Simulate data fetch
-    const timer = setTimeout(() => {
-      const data = generateChartData(stock, selectedTimeframe)
-      setChartData(data)
-      setLoading(false)
-    }, 100)
-
-    return () => clearTimeout(timer)
-  }, [stock, selectedTimeframe])
+  // Process and format chart data based on selected timeframe
+  const processedData = useMemo(() => {
+    if (!chartData || chartData.length === 0) return []
+    
+    // Filter data based on timeframe
+    const filteredData = filterDataByTimeframe(chartData, selectedTimeframe)
+    
+    // Format the data for display
+    return filteredData.map(item => {
+      const date = new Date(item.timestamp || item.date)
+      
+      // For intraday (1D, 1W), show time
+      if (selectedTimeframe.value === '1D' || selectedTimeframe.value === '1W') {
+        return {
+          time: formatTimeLabel(date),
+          price: item.price,
+          timestamp: item.timestamp || item.date
+        }
+      }
+      
+      // For daily data, show date
+      return {
+        time: formatDateLabel(date),
+        price: item.price,
+        timestamp: item.timestamp || item.date
+      }
+    })
+  }, [chartData, selectedTimeframe])
 
   // Calculate if price is positive
   const isPositive = stock && stock.current_price >= stock.previous_close
@@ -350,7 +191,7 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
       transition-all duration-300
       ${showFundamentalsPanel ? 'pb-1 pt-2' : 'p-4'}
     `}>
-      {/* Header with improved spacing */}
+      {/* Header */}
       <div className={`
         flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0
         ${showFundamentalsPanel ? 'mb-2' : ''}
@@ -366,21 +207,20 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
         />
       </div>
 
-      {/* Chart or Loading State */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-12 h-12 border-4 border-terminal-green border-t-transparent rounded-full"
-          />
-        </div>
-      ) : (
+      {/* Chart */}
+      {processedData.length > 0 ? (
         <StockChartInner
-          data={chartData}
+          data={processedData}
           isPositive={isPositive}
           showFundamentalsPanel={showFundamentalsPanel}
         />
+      ) : (
+        <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
+          <div className="text-center">
+            <p className="text-terminal-dim mb-2 font-mono text-sm">No chart data available</p>
+            <p className="text-xs text-terminal-dim/50 font-mono">Try selecting a different timeframe</p>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -388,6 +228,8 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
 
 // Export memoized version with custom comparison
 export default memo(ChartWrapper, (prevProps, nextProps) => {
-  // Only re-render if stock.id changes
-  return prevProps.stock?.id === nextProps.stock?.id
+  // Only re-render if stock.id or chartData changes
+  return prevProps.stock?.id === nextProps.stock?.id && 
+         prevProps.chartData === nextProps.chartData &&
+         prevProps.showFundamentalsPanel === nextProps.showFundamentalsPanel
 })
