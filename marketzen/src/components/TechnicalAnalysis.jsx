@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ArrowLeft, Activity, TrendingUp, TrendingDown, Target, Zap, AlertTriangle, Info, 
@@ -12,232 +12,24 @@ import {
 } from 'recharts'
 import TimeframeSelector from './charts/TimeframeSelector'
 import { TerminalTab, TerminalIndicatorToggle } from './UI'
-import { IndicatorToggleList, DEFAULT_INDICATORS } from './indicators'
-
-// ============================================================================
-// TECHNICAL INDICATOR CALCULATION FUNCTIONS
-// ============================================================================
-
-const calculateSMA = (data, period) => {
-  const sma = []
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) {
-      sma.push(null)
-    } else {
-      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0)
-      sma.push(sum / period)
-    }
-  }
-  return sma
-}
-
-const calculateEMA = (data, period) => {
-  const ema = []
-  const multiplier = 2 / (period + 1)
-  
-  let sum = 0
-  for (let i = 0; i < period; i++) {
-    if (i < period - 1) {
-      ema.push(null)
-    } else {
-      sum = data.slice(0, period).reduce((a, b) => a + b, 0)
-      ema.push(sum / period)
-    }
-  }
-  
-  for (let i = period; i < data.length; i++) {
-    const prevEMA = ema[i - 1]
-    const currentEMA = (data[i] - prevEMA) * multiplier + prevEMA
-    ema.push(currentEMA)
-  }
-  
-  return ema
-}
-
-const calculateRSI = (data, period = 14) => {
-  const rsi = []
-  const gains = []
-  const losses = []
-  
-  for (let i = 0; i < data.length; i++) {
-    if (i === 0) {
-      gains.push(0)
-      losses.push(0)
-      rsi.push(50)
-      continue
-    }
-    
-    const change = data[i] - data[i - 1]
-    gains.push(change > 0 ? change : 0)
-    losses.push(change < 0 ? Math.abs(change) : 0)
-  }
-  
-  let avgGain = gains.slice(1, period + 1).reduce((a, b) => a + b, 0) / period
-  let avgLoss = losses.slice(1, period + 1).reduce((a, b) => a + b, 0) / period
-  
-  for (let i = 0; i < data.length; i++) {
-    if (i < period) {
-      rsi.push(null)
-    } else if (i === period) {
-      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss
-      rsi.push(100 - (100 / (1 + rs)))
-    } else {
-      avgGain = (avgGain * (period - 1) + gains[i]) / period
-      avgLoss = (avgLoss * (period - 1) + losses[i]) / period
-      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss
-      rsi.push(100 - (100 / (1 + rs)))
-    }
-  }
-  
-  return rsi
-}
-
-const calculateMACD = (data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) => {
-  const fastEMA = calculateEMA(data, fastPeriod)
-  const slowEMA = calculateEMA(data, slowPeriod)
-  
-  const macdLine = fastEMA.map((fast, i) => {
-    if (fast === null || slowEMA[i] === null) return null
-    return fast - slowEMA[i]
-  })
-  
-  const macdValues = macdLine.filter(v => v !== null)
-  const signalLineValues = calculateEMA(macdValues, signalPeriod)
-  
-  const signalLine = []
-  let signalIdx = 0
-  
-  for (let i = 0; i < macdLine.length; i++) {
-    if (macdLine[i] === null) {
-      signalLine.push(null)
-    } else {
-      signalLine.push(signalIdx < signalLineValues.length ? signalLineValues[signalIdx] : null)
-      signalIdx++
-    }
-  }
-  
-  const histogram = macdLine.map((macd, i) => {
-    if (macd === null || signalLine[i] === null) return null
-    return macd - signalLine[i]
-  })
-  
-  return { macdLine, signalLine, histogram }
-}
-
-const calculateBollingerBands = (data, period = 20, stdDev = 2) => {
-  const sma = calculateSMA(data, period)
-  const upperBand = []
-  const lowerBand = []
-  
-  for (let i = 0; i < data.length; i++) {
-    if (sma[i] === null) {
-      upperBand.push(null)
-      lowerBand.push(null)
-    } else {
-      const slice = data.slice(i - period + 1, i + 1)
-      const mean = sma[i]
-      const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period
-      const std = Math.sqrt(variance)
-      upperBand.push(mean + (stdDev * std))
-      lowerBand.push(mean - (stdDev * std))
-    }
-  }
-  
-  return { sma, upperBand, lowerBand }
-}
-
-const calculateATR = (highs, lows, closes, period = 14) => {
-  const trueRanges = []
-  
-  for (let i = 0; i < highs.length; i++) {
-    if (i === 0) {
-      trueRanges.push(highs[0] - lows[0])
-    } else {
-      const tr = Math.max(
-        highs[i] - lows[i],
-        Math.abs(highs[i] - closes[i - 1]),
-        Math.abs(lows[i] - closes[i - 1])
-      )
-      trueRanges.push(tr)
-    }
-  }
-  
-  const atr = []
-  for (let i = 0; i < trueRanges.length; i++) {
-    if (i < period - 1) {
-      atr.push(null)
-    } else if (i === period - 1) {
-      const sum = trueRanges.slice(0, period).reduce((a, b) => a + b, 0)
-      atr.push(sum / period)
-    } else {
-      atr.push((atr[i - 1] * (period - 1) + trueRanges[i]) / period)
-    }
-  }
-  
-  return atr
-}
-
-const calculateStochastic = (highs, lows, closes, kPeriod = 14, dPeriod = 3) => {
-  const stochK = []
-  const stochD = []
-  
-  for (let i = 0; i < closes.length; i++) {
-    if (i < kPeriod - 1) {
-      stochK.push(null)
-      stochD.push(null)
-      continue
-    }
-    
-    const highSlice = highs.slice(i - kPeriod + 1, i + 1)
-    const lowSlice = lows.slice(i - kPeriod + 1, i + 1)
-    
-    const highestHigh = Math.max(...highSlice)
-    const lowestLow = Math.min(...lowSlice)
-    const close = closes[i]
-    
-    if (highestHigh === lowestLow) {
-      stochK.push(50)
-    } else {
-      stochK.push(((close - lowestLow) / (highestHigh - lowestLow)) * 100)
-    }
-  }
-  
-  for (let i = 0; i < stochK.length; i++) {
-    if (i < kPeriod + dPeriod - 2) {
-      stochD.push(null)
-    } else {
-      const slice = stochK.slice(i - dPeriod + 1, i + 1).filter(v => v !== null)
-      if (slice.length === 0) {
-        stochD.push(null)
-      } else {
-        stochD.push(slice.reduce((a, b) => a + b, 0) / slice.length)
-      }
-    }
-  }
-  
-  return { k: stochK, d: stochD }
-}
-
-const calculateVWAP = (ohlc) => {
-  const vwap = []
-  let cumulativeTPV = 0
-  let cumulativeVolume = 0
-  
-  for (let i = 0; i < ohlc.length; i++) {
-    const typicalPrice = (ohlc[i].high + ohlc[i].low + ohlc[i].close) / 3
-    cumulativeTPV += typicalPrice * ohlc[i].volume
-    cumulativeVolume += ohlc[i].volume
-    vwap.push(cumulativeVolume > 0 ? cumulativeTPV / cumulativeVolume : null)
-  }
-  
-  return vwap
-}
+import { 
+  useIndicators, 
+  useIndicatorParams,
+  calculateSMA,
+  calculateEMA,
+  calculateRSI,
+  calculateMACD,
+  calculateBollingerBands,
+  calculateATR,
+  calculateStochastic,
+  calculateVWAP
+} from '../hooks'
 
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
-function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockData, loading, indicatorParams = {}, onOpenConfig }) {
+function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockData, loading: propLoading, indicatorParams = {}, onOpenConfig }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(taTimeframes[1])
   const [analysisData, setAnalysisData] = useState(null)
   const [signal, setSignal] = useState(null)
@@ -245,8 +37,12 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   const [localLoading, setLocalLoading] = useState(true)
   const [error, setError] = useState(null)
   
-  // Enhanced indicator toggles
-  const [indicators, setIndicators] = useState({
+  // Use the useIndicators hook for cleaner state management
+  const { 
+    indicators, 
+    toggleIndicator: _toggleIndicator,
+    resetIndicators 
+  } = useIndicators({
     smaShort: true,
     smaLong: true,
     emaShort: true,
@@ -269,29 +65,14 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     atr: { period: 14, ...indicatorParams.atr }
   }), [indicatorParams])
   
-  const toggleIndicator = useCallback((indicator) => {
-    console.log('toggleIndicator called:', indicator)
-    setIndicators(prev => ({ ...prev, [indicator]: !prev[indicator] }))
-    
-    // Trigger analysis after state update
-    setTimeout(() => {
-      console.log('setTimeout callback - stockData exists:', !!stockData?.ohlc)
-      if (stockData?.ohlc && stockData.ohlc.length > 0) {
-        console.log('Calling performAnalysis...')
-        performAnalysis()
-      }
-    }, 0)
-  }, [stockData, performAnalysis])
+  const analysisRef = useRef(null)
   
   const performAnalysis = useCallback(() => {
-    console.log('performAnalysis called')
     if (!stockData?.ohlc || stockData.ohlc.length === 0) {
-      console.log('No stockData, returning')
       return
     }
     
     try {
-      console.log('Calculating indicators...')
       const ohlc = stockData.ohlc
       const closes = ohlc.map(d => d.close)
       const highs = ohlc.map(d => d.high)
@@ -409,7 +190,6 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         chartDataStoch: chartData.map((d, i) => ({ time: d.date, k: d.stochK, d: d.stochD })),
         chartDataATR: chartData.map((d, i) => ({ time: d.date, value: d.atr }))
       })
-      console.log('Analysis data updated, chartData length:', chartData.length)
       
       setSignal({ type: overallSignal, strength: overallStrength, buyCount: buySignals, sellCount: sellSignals, total: totalSignals })
       setLocalLoading(false)
@@ -421,6 +201,23 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     }
   }, [stockData, params])
   
+  // Store analysis function in ref for access in event handlers
+  useEffect(() => {
+    analysisRef.current = performAnalysis
+  }, [performAnalysis])
+  
+  // Toggle indicator with proper analysis trigger
+  const toggleIndicator = useCallback((indicatorId) => {
+    _toggleIndicator(indicatorId)
+  }, [_toggleIndicator])
+  
+  // Effect to trigger analysis when indicators change
+  useEffect(() => {
+    if (stockData?.ohlc && stockData.ohlc.length > 0) {
+      performAnalysis()
+    }
+  }, [indicators, stockData])
+  
   // Initial data load
   useEffect(() => {
     if (!stockData?.ohlc || stockData.ohlc.length === 0) {
@@ -431,7 +228,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     } else {
       performAnalysis()
     }
-  }, [stockData, stock, fetchStockData, taTimeframes, performAnalysis])
+  }, [stockData, stock, fetchStockData, taTimeframes])
   
   const formatCurrency = (value) => {
     if (value === null || value === undefined) return 'N/A'
@@ -524,7 +321,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <p className="text-sm text-terminal-dim">Sell Signals</p>
                 <p className="text-2xl font-bold text-terminal-red">{signal.sellCount}</p>
               </div>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={performAnalysis} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-terminal-bg-light">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => analysisRef.current?.()} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-terminal-bg-light">
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </motion.button>
