@@ -1,137 +1,25 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TrendingUp, TrendingDown, Settings, ZoomIn, ZoomOut, MoveHorizontal, CandlestickChart, Activity, RefreshCw, X } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, BarChart, Bar } from 'recharts'
 import { useTheme } from '../context/ThemeContext'
 
-// Generate realistic candlestick-like data
-const generateCandlestickData = (days = 100) => {
-  const data = []
-  let price = 1000
-  const now = new Date()
-  
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - i)
-    
-    const volatility = 0.02 + Math.random() * 0.03
-    const change = (Math.random() - 0.48) * volatility * price
-    const open = price
-    const close = price + change
-    
-    const highExtra = Math.random() * volatility * price * 0.5
-    const lowExtra = Math.random() * volatility * price * 0.5
-    
-    const high = Math.max(open, close) + highExtra
-    const low = Math.min(open, close) - lowExtra
-    
-    const isBullish = close >= open
-    
-    const volume = Math.round(1000000 + Math.random() * 5000000)
-    
-    data.push({
-      date: date.toISOString().split('T')[0],
-      open,
-      high,
-      low,
-      close,
-      volume,
-      isBullish,
-      change: ((close - open) / open) * 100,
-      body: Math.abs(close - open),
-      bodyPosition: Math.min(open, close),
-      wickHigh: high,
-      wickLow: low
-    })
-    
-    price = close
-  }
-  
-  return data
-}
+// Yahoo Finance API endpoints
+const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://justfetch.itsvg.in/?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.pages.dev/?',
+  'https://proxy.cors.sh/'
+]
 
-// Simple moving average calculation
-const calculateSMA = (data, period) => {
-  return data.map((item, index, arr) => {
-    if (index < period - 1) return { ...item, sma: null }
-    const sum = arr.slice(index - period + 1, index + 1).reduce((acc, d) => acc + d.close, 0)
-    return { ...item, sma: sum / period }
-  })
-}
-
-// RSI calculation
-const calculateRSI = (data, period = 14) => {
-  const result = []
-  let gains = 0
-  let losses = 0
-  
-  for (let i = 0; i < data.length; i++) {
-    if (i === 0) {
-      result.push({ ...data[i], rsi: null })
-      continue
-    }
-    
-    const change = data[i].close - data[i - 1].close
-    const gain = change > 0 ? change : 0
-    const loss = change < 0 ? -change : 0
-    
-    if (i < period) {
-      gains = (gains * (i) + gain) / (i + 1)
-      losses = (losses * (i) + loss) / (i + 1)
-      result.push({ ...data[i], rsi: null })
-    } else if (i === period) {
-      gains = gain
-      losses = loss
-      const rs = losses === 0 ? 100 : gains / losses
-      result.push({ ...data[i], rsi: 100 - (100 / (1 + rs)) })
-    } else {
-      gains = (gains * (period - 1) + gain) / period
-      losses = (losses * (period - 1) + loss) / period
-      const rs = losses === 0 ? 100 : gains / losses
-      result.push({ ...data[i], rsi: 100 - (100 / (1 + rs)) })
-    }
-  }
-  
-  return result
-}
-
-// Custom candlestick component using SVG
-const Candlestick = ({ x, y, width, payload, positiveColor, negativeColor }) => {
-  if (!payload) return null
-  
-  const { body, bodyPosition, wickHigh, wickLow, isBullish } = payload
-  const color = isBullish ? positiveColor : negativeColor
-  
-  // Calculate positions based on Y-axis domain
-  // This is a simplified visualization
-  return (
-    <g>
-      {/* Wick (high-low line) */}
-      <line
-        x1={x + width / 2}
-        y1={y}
-        x2={x + width / 2}
-        y2={y + 50}
-        stroke={color}
-        strokeWidth={2}
-      />
-      {/* Body (open-close rectangle) */}
-      <rect
-        x={x}
-        y={y + 10}
-        width={width}
-        height={30}
-        fill={color}
-        stroke={color}
-        strokeWidth={1}
-      />
-    </g>
-  )
-}
+const DEFAULT_STOCK = { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries' }
 
 function AdvancedCharting({ onStockSelect }) {
   const { chartStyle, currentTheme } = useTheme()
-  const [candlestickData, setCandlestickData] = useState(() => generateCandlestickData(100))
+  const [selectedStock, setSelectedStock] = useState(DEFAULT_STOCK)
+  const [candlestickData, setCandlestickData] = useState([])
   const [loading, setLoading] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [indicators, setIndicators] = useState({
@@ -143,19 +31,155 @@ function AdvancedCharting({ onStockSelect }) {
   const [zoom, setZoom] = useState(1)
   const [selectedCandle, setSelectedCandle] = useState(null)
   const [hoveredData, setHoveredData] = useState(null)
+  const [error, setError] = useState(null)
 
   const theme = currentTheme()
+
+  // Fetch candlestick data from Yahoo Finance
+  const fetchCandlestickData = useCallback(async (stock) => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const url = `${YAHOO_BASE}/${stock.id}?range=3mo&interval=1d`
+      
+      const tryFetchWithProxy = async (proxyIndex = 0) => {
+        if (proxyIndex >= CORS_PROXIES.length) {
+          throw new Error('All proxies failed')
+        }
+        
+        const proxy = CORS_PROXIES[proxyIndex]
+        
+        try {
+          const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json'
+            }
+          })
+          
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          return await response.json()
+        } catch (err) {
+          return tryFetchWithProxy(proxyIndex + 1)
+        }
+      }
+
+      const data = await tryFetchWithProxy()
+      
+      if (data.chart?.result?.[0]) {
+        const result = data.chart.result[0]
+        const quote = result.indicators?.quote?.[0] || {}
+        const timestamps = result.timestamp || []
+        const opens = quote.open || []
+        const highs = quote.high || []
+        const lows = quote.low || []
+        const closes = quote.close || []
+        const volumes = quote.volume || []
+
+        const transformed = timestamps.map((ts, i) => {
+          const open = opens[i]
+          const high = highs[i]
+          const low = lows[i]
+          const close = closes[i]
+          const volume = volumes[i]
+
+          if (open === null || high === null || low === null || close === null) {
+            return null
+          }
+
+          const isBullish = close >= open
+          const change = ((close - open) / open) * 100
+
+          return {
+            date: new Date(ts * 1000).toISOString().split('T')[0],
+            timestamp: ts,
+            open,
+            high,
+            low,
+            close,
+            volume,
+            isBullish,
+            change,
+            body: Math.abs(close - open),
+            bodyPosition: Math.min(open, close)
+          }
+        }).filter(Boolean)
+
+        setCandlestickData(transformed)
+      } else {
+        throw new Error('No data available')
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setError('Unable to fetch chart data. Using cached data.')
+      // Fallback to empty array - no mock data
+      setCandlestickData([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch data when stock changes
+  useEffect(() => {
+    fetchCandlestickData(selectedStock)
+  }, [selectedStock, fetchCandlestickData])
+
+  // Simple moving average calculation
+  const calculateSMA = (data, period) => {
+    return data.map((item, index, arr) => {
+      if (index < period - 1) return { ...item, sma: null }
+      const sum = arr.slice(index - period + 1, index + 1).reduce((acc, d) => acc + d.close, 0)
+      return { ...item, sma: sum / period }
+    })
+  }
+
+  // RSI calculation
+  const calculateRSI = (data, period = 14) => {
+    const result = []
+    let gains = 0
+    let losses = 0
+    
+    for (let i = 0; i < data.length; i++) {
+      if (i === 0) {
+        result.push({ ...data[i], rsi: null })
+        continue
+      }
+      
+      const change = data[i].close - data[i - 1].close
+      const gain = change > 0 ? change : 0
+      const loss = change < 0 ? -change : 0
+      
+      if (i < period) {
+        gains = (gains * (i) + gain) / (i + 1)
+        losses = (losses * (i) + loss) / (i + 1)
+        result.push({ ...data[i], rsi: null })
+      } else if (i === period) {
+        gains = gain
+        losses = loss
+        const rs = losses === 0 ? 100 : gains / losses
+        result.push({ ...data[i], rsi: 100 - (100 / (1 + rs)) })
+      } else {
+        gains = (gains * (period - 1) + gain) / period
+        losses = (losses * (period - 1) + loss) / period
+        const rs = losses === 0 ? 100 : gains / losses
+        result.push({ ...data[i], rsi: 100 - (100 / (1 + rs)) })
+      }
+    }
+    
+    return result
+  }
 
   const chartData = useMemo(() => {
     let data = candlestickData
     
-    if (indicators.sma20) {
+    if (indicators.sma20 && data.length > 20) {
       data = calculateSMA(data, 20)
     }
-    if (indicators.sma50) {
+    if (indicators.sma50 && data.length > 50) {
       data = calculateSMA(data, 50)
     }
-    if (indicators.rsi) {
+    if (indicators.rsi && data.length > 14) {
       data = calculateRSI(data, 14)
     }
     
@@ -164,6 +188,7 @@ function AdvancedCharting({ onStockSelect }) {
 
   const priceRange = useMemo(() => {
     const prices = chartData.flatMap(d => [d.high, d.low]).filter(p => p !== null)
+    if (prices.length === 0) return { min: 0, max: 1000 }
     const min = Math.min(...prices)
     const max = Math.max(...prices)
     const padding = (max - min) * 0.1
@@ -176,15 +201,7 @@ function AdvancedCharting({ onStockSelect }) {
   }
 
   const formatPrice = (value) => {
-    return `₹${value.toFixed(0)}`
-  }
-
-  const refreshData = () => {
-    setLoading(true)
-    setTimeout(() => {
-      setCandlestickData(generateCandlestickData(100))
-      setLoading(false)
-    }, 500)
+    return `₹${value.toFixed(2)}`
   }
 
   const handleMouseMove = (data) => {
@@ -227,7 +244,7 @@ function AdvancedCharting({ onStockSelect }) {
                 {formatPrice(data.close)}
               </span>
             </div>
-            {indicators.volume && (
+            {indicators.volume && data.volume && (
               <div className="flex justify-between gap-4">
                 <span className="text-textSecondary">Volume:</span>
                 <span className="font-mono">{(data.volume / 1000000).toFixed(2)}M</span>
@@ -291,7 +308,7 @@ function AdvancedCharting({ onStockSelect }) {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={refreshData}
+            onClick={() => fetchCandlestickData(selectedStock)}
             className="p-2.5 rounded-lg bg-surfaceLight hover:bg-surfaceLight/80 transition-colors"
             title="Refresh Data"
           >
@@ -345,12 +362,19 @@ function AdvancedCharting({ onStockSelect }) {
         )}
       </AnimatePresence>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-negative/10 border border-negative/30 rounded-lg p-3 mb-4 text-sm text-negative">
+          {error}
+        </div>
+      )}
+
       {/* Main Chart */}
       <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
         {/* Chart Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <h3 className="text-lg font-medium">Candlestick Chart</h3>
+            <h3 className="text-lg font-medium">{selectedStock.symbol} - Candlestick Chart</h3>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-positive" />
               <span className="text-xs text-textSecondary">Bullish</span>
@@ -370,129 +394,148 @@ function AdvancedCharting({ onStockSelect }) {
           )}
         </div>
 
-        {/* Main Chart */}
-        <div 
-          className="h-80"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-          onMouseLeave={() => setHoveredData(null)}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              onMouseMove={handleMouseMove}
-              onClick={handleCandleClick}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDate}
-                stroke="rgba(255,255,255,0.2)"
-                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                domain={[priceRange.min, priceRange.max]}
-                tickFormatter={formatPrice}
-                stroke="rgba(255,255,255,0.2)"
-                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
-                width={60}
-              />
-              <Tooltip content={<CustomTooltip />} />
-
-              {/* Close price line */}
-              <Line
-                type="monotone"
-                dataKey="close"
-                stroke={theme.primary}
-                strokeWidth={2}
-                dot={false}
-                name="Close"
-              />
-
-              {/* SMA Lines */}
-              {indicators.sma20 && (
-                <Line
-                  type="monotone"
-                  dataKey="sma"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={false}
-                  name="SMA(20)"
-                />
-              )}
-
-              {/* RSI Reference Lines */}
-              {indicators.rsi && (
-                <>
-                  <ReferenceLine y={70} stroke="rgba(239,68,68,0.5)" strokeDasharray="5 5" />
-                  <ReferenceLine y={30} stroke="rgba(16,185,129,0.5)" strokeDasharray="5 5" />
-                </>
-              )}
-
-              {/* Hover indicator */}
-              {hoveredData && (
-                <ReferenceDot
-                  x={hoveredData.date}
-                  y={hoveredData.close}
-                  r={6}
-                  fill={theme.primary}
-                  stroke="white"
-                />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Volume Chart */}
-        {indicators.volume && (
-          <div className="mt-4 h-24">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData.slice(-50)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" hide />
-                <YAxis
-                  tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
-                  stroke="rgba(255,255,255,0.2)"
-                  tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                  width={40}
-                />
-                <Bar
-                  dataKey="volume"
-                  fill={d => d.isBullish ? theme.positive : theme.negative}
-                  opacity={0.5}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+        {loading ? (
+          <div className="h-80 flex items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
+            />
           </div>
-        )}
-
-        {/* RSI Indicator Panel */}
-        {indicators.rsi && chartData.length > 0 && (
-          <div className="mt-4 p-4 bg-surfaceLight rounded-xl">
-            <p className="text-sm font-medium mb-2">Relative Strength Index (14)</p>
-            <div className="h-20">
+        ) : chartData.length === 0 ? (
+          <div className="h-80 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-textSecondary mb-2">No data available for {selectedStock.symbol}</p>
+              <p className="text-xs text-textSecondary/50">Try selecting a different stock</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Main Chart */}
+            <div 
+              className="h-80"
+              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+              onMouseLeave={() => setHoveredData(null)}
+            >
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData.slice(-50)}>
+                <LineChart
+                  data={chartData}
+                  onMouseMove={handleMouseMove}
+                  onClick={handleCandleClick}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="date" hide />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                    width={30}
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={formatDate}
+                    stroke="rgba(255,255,255,0.2)"
+                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                    interval="preserveStartEnd"
                   />
-                  <ReferenceLine y={70} stroke="rgba(239,68,68,0.5)" strokeDasharray="3 3" />
-                  <ReferenceLine y={30} stroke="rgba(16,185,129,0.5)" strokeDasharray="3 3" />
+                  <YAxis
+                    domain={[priceRange.min, priceRange.max]}
+                    tickFormatter={formatPrice}
+                    stroke="rgba(255,255,255,0.2)"
+                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                    width={60}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+
+                  {/* Close price line */}
                   <Line
                     type="monotone"
-                    dataKey="rsi"
-                    stroke="#06b6d4"
+                    dataKey="close"
+                    stroke={theme.primary}
                     strokeWidth={2}
                     dot={false}
+                    name="Close"
                   />
+
+                  {/* SMA Lines */}
+                  {indicators.sma20 && (
+                    <Line
+                      type="monotone"
+                      dataKey="sma"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={false}
+                      name="SMA(20)"
+                    />
+                  )}
+
+                  {/* RSI Reference Lines */}
+                  {indicators.rsi && (
+                    <>
+                      <ReferenceLine y={70} stroke="rgba(239,68,68,0.5)" strokeDasharray="5 5" />
+                      <ReferenceLine y={30} stroke="rgba(16,185,129,0.5)" strokeDasharray="5 5" />
+                    </>
+                  )}
+
+                  {/* Hover indicator */}
+                  {hoveredData && (
+                    <ReferenceDot
+                      x={hoveredData.date}
+                      y={hoveredData.close}
+                      r={6}
+                      fill={theme.primary}
+                      stroke="white"
+                    />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
+
+            {/* Volume Chart */}
+            {indicators.volume && (
+              <div className="mt-4 h-24">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData.slice(-50)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="date" hide />
+                    <YAxis
+                      tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
+                      stroke="rgba(255,255,255,0.2)"
+                      tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                      width={40}
+                    />
+                    <Bar
+                      dataKey="volume"
+                      fill={d => d.isBullish ? theme.positive : theme.negative}
+                      opacity={0.5}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* RSI Indicator Panel */}
+            {indicators.rsi && chartData.length > 0 && (
+              <div className="mt-4 p-4 bg-surfaceLight rounded-xl">
+                <p className="text-sm font-medium mb-2">Relative Strength Index (14)</p>
+                <div className="h-20">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData.slice(-50)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="date" hide />
+                      <YAxis
+                        domain={[0, 100]}
+                        tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                        width={30}
+                      />
+                      <ReferenceLine y={70} stroke="rgba(239,68,68,0.5)" strokeDasharray="3 3" />
+                      <ReferenceLine y={30} stroke="rgba(16,185,129,0.5)" strokeDasharray="3 3" />
+                      <Line
+                        type="monotone"
+                        dataKey="rsi"
+                        stroke="#06b6d4"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

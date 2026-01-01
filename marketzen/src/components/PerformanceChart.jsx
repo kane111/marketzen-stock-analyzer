@@ -4,30 +4,6 @@ import { TrendingUp, TrendingDown, Calendar, ArrowRight, RefreshCw } from 'lucid
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { usePortfolio } from '../context/PortfolioContext'
 
-// Generate mock historical data for demonstration
-const generatePerformanceData = (days = 365) => {
-  const data = []
-  let value = 100000 // Starting portfolio value
-  const now = new Date()
-  
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - i)
-    
-    // Simulate realistic market movement
-    const dailyReturn = (Math.random() - 0.48) * 0.03 // Slight positive bias
-    value = value * (1 + dailyReturn)
-    
-    data.push({
-      date: date.toISOString().split('T')[0],
-      value: Math.round(value),
-      benchmark: Math.round(100000 * (1 + (days - i) * 0.0003 + (Math.random() - 0.5) * 0.02))
-    })
-  }
-  
-  return data
-}
-
 const COLORS = {
   portfolio: '#3b82f6',
   benchmark: '#6b7280'
@@ -41,16 +17,62 @@ function PerformanceChart({ onStockSelect }) {
   const [performanceData, setPerformanceData] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Generate data on mount and when time range changes
+  // Generate portfolio performance data based on actual holdings
   useEffect(() => {
     setLoading(true)
     const timer = setTimeout(() => {
       const days = timeRange === '1W' ? 7 : timeRange === '1M' ? 30 : timeRange === '3M' ? 90 : timeRange === '6M' ? 180 : 365
-      setPerformanceData(generatePerformanceData(days))
+      
+      // Generate data based on actual holdings metrics
+      const metrics = calculatePortfolioMetrics()
+      
+      // Build performance data from actual holdings
+      if (holdings.length > 0) {
+        const data = []
+        const now = new Date()
+        
+        // Calculate average metrics from holdings
+        const avgChange = holdings.reduce((sum, h) => sum + (h.currentValue - h.totalInvested) / h.totalInvested * 100, 0) / holdings.length
+        
+        let portfolioValue = metrics.totalCurrentValue
+        
+        for (let i = days; i >= 0; i--) {
+          const date = new Date(now)
+          date.setDate(date.getDate() - i)
+          
+          // Reverse calculate historical value
+          const progress = i / days
+          const historicalValue = portfolioValue / (1 + (avgChange / 100) * progress)
+          const benchmarkValue = 100000 * (1 + (days - i) * 0.0003)
+          
+          data.push({
+            date: date.toISOString().split('T')[0],
+            value: Math.round(historicalValue),
+            benchmark: Math.round(benchmarkValue)
+          })
+        }
+        
+        setPerformanceData(data)
+      } else {
+        // Empty portfolio - show zero growth
+        const data = []
+        const now = new Date()
+        for (let i = days; i >= 0; i--) {
+          const date = new Date(now)
+          date.setDate(date.getDate() - i)
+          data.push({
+            date: date.toISOString().split('T')[0],
+            value: 100000,
+            benchmark: Math.round(100000 * (1 + (days - i) * 0.0003))
+          })
+        }
+        setPerformanceData(data)
+      }
+      
       setLoading(false)
     }, 500)
     return () => clearTimeout(timer)
-  }, [timeRange])
+  }, [timeRange, holdings, calculatePortfolioMetrics])
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -346,24 +368,29 @@ function PerformanceChart({ onStockSelect }) {
         <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <h3 className="text-lg font-medium mb-4">Best Performers</h3>
           <div className="space-y-3">
-            {holdings.slice(0, 5).map((holding) => (
-              <div key={holding.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary">{holding.symbol.substring(0, 2)}</span>
+            {holdings.slice(0, 5).map((holding) => {
+              const returnPct = holding.totalInvested > 0 
+                ? ((holding.currentValue - holding.totalInvested) / holding.totalInvested * 100)
+                : 0
+              return (
+                <div key={holding.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">{holding.symbol.substring(0, 2)}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{holding.symbol}</p>
+                      <p className="text-xs text-textSecondary">{holding.name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">{holding.symbol}</p>
-                    <p className="text-xs text-textSecondary">{holding.name}</p>
+                  <div className="text-right">
+                    <p className={`text-sm font-medium ${returnPct >= 0 ? 'text-positive' : 'text-negative'}`}>
+                      {returnPct >= 0 ? '+' : ''}{returnPct.toFixed(2)}%
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-positive">
-                    +{(Math.random() * 20).toFixed(2)}%
-                  </p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
             {holdings.length === 0 && (
               <p className="text-sm text-textSecondary text-center py-4">
                 Add holdings to see performance data
@@ -373,7 +400,7 @@ function PerformanceChart({ onStockSelect }) {
         </div>
 
         <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-          <h3 className="text-lg font-medium mb-4">Recent Activity</h3>
+          <h3 className="text-lg font-medium mb-4">Portfolio Summary</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 bg-surfaceLight rounded-lg">
               <div className="w-8 h-8 rounded-full bg-positive/20 flex items-center justify-center">
@@ -381,10 +408,10 @@ function PerformanceChart({ onStockSelect }) {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Portfolio Value</p>
-                <p className="text-xs text-textSecondary">Updated today</p>
+                <p className="text-xs text-textSecondary">Based on your holdings</p>
               </div>
               <p className="text-sm font-medium text-positive">
-                +{(Math.random() * 5).toFixed(2)}%
+                {holdings.length > 0 ? '+' : ''}{(metrics?.changePercent || 0).toFixed(2)}%
               </p>
             </div>
             <div className="flex items-center gap-3 p-3 bg-surfaceLight rounded-lg">
@@ -392,20 +419,20 @@ function PerformanceChart({ onStockSelect }) {
                 <Calendar className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Market Sessions</p>
-                <p className="text-xs text-textSecondary">Last 30 days</p>
+                <p className="text-sm font-medium">Total Holdings</p>
+                <p className="text-xs text-textSecondary">{holdings.length} positions</p>
               </div>
-              <p className="text-sm font-mono">22/22</p>
+              <p className="text-sm font-mono">{holdings.length}</p>
             </div>
             <div className="flex items-center gap-3 p-3 bg-surfaceLight rounded-lg">
               <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-amber-500" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Best Day</p>
-                <p className="text-xs text-textSecondary">This month</p>
+                <p className="text-sm font-medium">Total Invested</p>
+                <p className="text-xs text-textSecondary">Initial investment</p>
               </div>
-              <p className="text-sm font-medium text-positive">+3.24%</p>
+              <p className="text-sm font-mono">{formatCurrency(holdings.reduce((sum, h) => sum + h.totalInvested, 0))}</p>
             </div>
           </div>
         </div>

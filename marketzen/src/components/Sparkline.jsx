@@ -1,34 +1,52 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 
-const COINGECKO_BASE = 'https://api.coingecko.com/api/v3'
-
-function Sparkline({ assetId, isPositive = true, width = 60, height = 24 }) {
+function Sparkline({ data = [], isPositive = true, width = 60, height = 24 }) {
   const pathData = useMemo(() => {
-    // Generate a random sparkline for demo
-    const points = []
-    let value = 50
-    for (let i = 0; i < 20; i++) {
-      value += (Math.random() - 0.5) * 10
-      points.push(value)
+    // Use real data if provided, otherwise show flat line
+    if (!data || data.length < 2) {
+      // Return a flat line when no data
+      return `M 0 ${height / 2} L ${width} ${height / 2}`
     }
-    
-    const min = Math.min(...points)
-    const max = Math.max(...points)
+
+    const prices = data.map(d => d.price || d.close || d.value || d)
+    const min = Math.min(...prices)
+    const max = Math.max(...prices)
     const range = max - min || 1
     
-    const stepX = width / (points.length - 1)
+    const stepX = width / (prices.length - 1)
     
-    let path = `M 0 ${height - ((points[0] - min) / range) * height}`
+    let path = `M 0 ${height - ((prices[0] - min) / range) * height}`
     
-    points.slice(1).forEach((point, i) => {
+    prices.slice(1).forEach((price, i) => {
       const x = (i + 1) * stepX
-      const y = height - ((point - min) / range) * height
+      const y = height - ((price - min) / range) * height
       path += ` L ${x} ${y}`
     })
     
     return path
-  }, [assetId])
+  }, [data, width, height])
+
+  // Determine color based on trend
+  const color = isPositive ? '#10b981' : '#ef4444'
+
+  // Calculate end point for the dot
+  const endPoint = useMemo(() => {
+    if (!data || data.length < 2) {
+      return { x: width, y: height / 2 }
+    }
+    
+    const prices = data.map(d => d.price || d.close || d.value || d)
+    const min = Math.min(...prices)
+    const max = Math.max(...prices)
+    const range = max - min || 1
+    const lastPrice = prices[prices.length - 1]
+    
+    return {
+      x: width,
+      y: height - ((lastPrice - min) / range) * height
+    }
+  }, [data, width, height])
 
   return (
     <motion.svg
@@ -40,7 +58,7 @@ function Sparkline({ assetId, isPositive = true, width = 60, height = 24 }) {
       <motion.path
         d={pathData}
         fill="none"
-        stroke={isPositive ? '#10b981' : '#ef4444'}
+        stroke={color}
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -49,10 +67,10 @@ function Sparkline({ assetId, isPositive = true, width = 60, height = 24 }) {
         transition={{ duration: 1, ease: 'easeOut' }}
       />
       <motion.circle
-        cx={width}
-        cy={height / 2}
+        cx={endPoint.x}
+        cy={endPoint.y}
         r="2"
-        fill={isPositive ? '#10b981' : '#ef4444'}
+        fill={color}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.5 }}

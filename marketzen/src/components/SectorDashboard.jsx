@@ -3,20 +3,20 @@ import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, BarChart3, PieChart, ArrowUpRight, ArrowDownRight, RefreshCw, X } from 'lucide-react'
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts'
 
-// Sector data with performance metrics
+// Note: Sector data is representative. For production, integrate with NSE India API
 const SECTOR_DATA = [
-  { id: 'nifty50', name: 'Nifty 50', change: 0.85, marketCap: 250000, constituents: 50 },
-  { id: 'niftybank', name: 'Nifty Bank', change: 1.24, marketCap: 120000, constituents: 12 },
-  { id: 'niftyit', name: 'Nifty IT', change: -0.42, marketCap: 85000, constituents: 10 },
-  { id: 'nifty pharma', name: 'Nifty Pharma', change: 2.15, marketCap: 45000, constituents: 10 },
-  { id: 'nifty auto', name: 'Nifty Auto', change: -1.12, marketCap: 65000, constituents: 15 },
-  { id: 'nifty fmcg', name: 'Nifty FMCG', change: 0.56, marketCap: 72000, constituents: 10 },
-  { id: 'nifty metal', name: 'Nifty Metal', change: -2.34, marketCap: 38000, constituents: 10 },
-  { id: 'nifty realty', name: 'Nifty Realty', change: 3.45, marketCap: 28000, constituents: 10 },
-  { id: 'nifty energy', name: 'Nifty Energy', change: 0.92, marketCap: 88000, constituents: 10 },
-  { id: 'nifty media', name: 'Nifty Media', change: -0.87, marketCap: 12000, constituents: 5 },
-  { id: 'nifty consumer', name: 'Nifty Consumer', change: 0.34, marketCap: 42000, constituents: 15 },
-  { id: 'nifty healthcare', name: 'Nifty Healthcare', change: 1.56, marketCap: 55000, constituents: 10 },
+  { id: 'nifty50', name: 'Nifty 50', change: 0.85, marketCap: 250000, constituents: 50, symbol: '^NIFTY' },
+  { id: 'niftybank', name: 'Nifty Bank', change: 1.24, marketCap: 120000, constituents: 12, symbol: '^NIFTYBANK' },
+  { id: 'niftyit', name: 'Nifty IT', change: -0.42, marketCap: 85000, constituents: 10, symbol: '^NIFTYIT' },
+  { id: 'nifty pharma', name: 'Nifty Pharma', change: 2.15, marketCap: 45000, constituents: 10, symbol: '^NIFTYPHARMA' },
+  { id: 'nifty auto', name: 'Nifty Auto', change: -1.12, marketCap: 65000, constituents: 15, symbol: '^NIFTYAUTO' },
+  { id: 'nifty fmcg', name: 'Nifty FMCG', change: 0.56, marketCap: 72000, constituents: 10, symbol: '^NIFTYFMCG' },
+  { id: 'nifty metal', name: 'Nifty Metal', change: -2.34, marketCap: 38000, constituents: 10, symbol: '^NIFTYMETAL' },
+  { id: 'nifty realty', name: 'Nifty Realty', change: 3.45, marketCap: 28000, constituents: 10, symbol: '^NIFTYREALTY' },
+  { id: 'nifty energy', name: 'Nifty Energy', change: 0.92, marketCap: 88000, constituents: 10, symbol: '^NIFTYENERGY' },
+  { id: 'nifty media', name: 'Nifty Media', change: -0.87, marketCap: 12000, constituents: 5, symbol: '^NIFTYMEDIA' },
+  { id: 'nifty consumer', name: 'Nifty Consumer', change: 0.34, marketCap: 42000, constituents: 15, symbol: '^NIFTYCONS' },
+  { id: 'nifty healthcare', name: 'Nifty Healthcare', change: 1.56, marketCap: 55000, constituents: 10, symbol: '^NIFTYHC' },
 ]
 
 // Get heatmap color based on performance - improved contrast
@@ -40,9 +40,10 @@ function SectorDashboard({ onSectorSelect }) {
   const [sortBy, setSortBy] = useState('change') // 'change', 'name', 'marketCap'
   const [hoveredSector, setHoveredSector] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [sectorData, setSectorData] = useState(SECTOR_DATA)
 
   // Sort sectors based on selected criteria
-  const sortedSectors = [...SECTOR_DATA].sort((a, b) => {
+  const sortedSectors = [...sectorData].sort((a, b) => {
     if (sortBy === 'change') return b.change - a.change
     if (sortBy === 'name') return a.name.localeCompare(b.name)
     if (sortBy === 'marketCap') return b.marketCap - a.marketCap
@@ -50,14 +51,21 @@ function SectorDashboard({ onSectorSelect }) {
   })
 
   // Calculate market summary
-  const totalGainers = SECTOR_DATA.filter(s => s.change > 0).length
-  const totalLosers = SECTOR_DATA.filter(s => s.change < 0).length
-  const avgChange = SECTOR_DATA.reduce((sum, s) => sum + s.change, 0) / SECTOR_DATA.length
-  const bestSector = SECTOR_DATA.reduce((best, s) => s.change > best.change ? s : best, SECTOR_DATA[0])
+  const totalGainers = sectorData.filter(s => s.change > 0).length
+  const totalLosers = sectorData.filter(s => s.change < 0).length
+  const avgChange = sectorData.reduce((sum, s) => sum + s.change, 0) / sectorData.length
+  const bestSector = sectorData.reduce((best, s) => s.change > best.change ? s : best, sectorData[0])
 
   const handleRefresh = () => {
     setIsRefreshing(true)
-    setTimeout(() => setIsRefreshing(false), 1500)
+    // Simulate data refresh
+    setTimeout(() => {
+      setSectorData(prev => prev.map(sector => ({
+        ...sector,
+        change: sector.change + (Math.random() - 0.5) * 0.5
+      })))
+      setIsRefreshing(false)
+    }, 1500)
   }
 
   const formatMarketCap = (value) => {
