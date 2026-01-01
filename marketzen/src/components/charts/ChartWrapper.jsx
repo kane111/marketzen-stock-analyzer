@@ -70,7 +70,8 @@ function generateChartData(stock, timeframe) {
   const data = []
   const today = new Date()
   
-  let currentPrice = stock.current_price * 0.7 // Start 30% lower for upward trend
+  // Use the actual current price to ensure consistency with display
+  const actualCurrentPrice = stock.current_price
   const volatility = 0.02
   const trend = 0.0003 // Slight upward trend
 
@@ -95,6 +96,17 @@ function generateChartData(stock, timeframe) {
   // Ensure minimum data points for visualization
   pointsNeeded = Math.max(pointsNeeded, 30)
 
+  // Calculate starting price based on trend so that the last point ends at actualCurrentPrice
+  // If we have pointsNeeded data points and the price trend goes upward,
+  // we need to work backwards from current price
+  const totalTrend = trend * (pointsNeeded - 1)
+  
+  // Start from a price that, after applying trend, will reach actualCurrentPrice
+  let currentPrice = actualCurrentPrice / (1 + totalTrend)
+  
+  // Add some volatility spread to make it look realistic
+  const volatilityFactor = 0.5 // Reduce volatility for more realistic looking chart
+
   for (let i = pointsNeeded - 1; i >= 0; i--) {
     const date = new Date(today)
     
@@ -113,10 +125,20 @@ function generateChartData(stock, timeframe) {
       date.setMonth(date.getMonth() - i)
     }
 
-    // Add some randomness for price movement
-    const randomChange = (Math.random() - 0.5) * 2 * volatility
+    // Apply trend (price increases as we move forward in time)
     const trendChange = trend * i
-    currentPrice = currentPrice * (1 + trendChange) * (1 + randomChange)
+    currentPrice = currentPrice * (1 + trendChange)
+    
+    // For the last data point (most recent), ensure it matches the actual current price
+    // For other points, add realistic randomness
+    if (i === pointsNeeded - 1) {
+      // Last point - exact match with current price
+      currentPrice = actualCurrentPrice
+    } else {
+      // Add some randomness for price movement
+      const randomChange = (Math.random() - 0.5) * 2 * volatility * volatilityFactor
+      currentPrice = currentPrice * (1 + randomChange)
+    }
 
     // Generate time label based on preset
     let timeLabel
@@ -139,6 +161,11 @@ function generateChartData(stock, timeframe) {
       price: Math.round(currentPrice * 100) / 100,
       date: date // Keep original date for debugging if needed
     })
+  }
+
+  // Ensure the last data point exactly matches the current price
+  if (data.length > 0) {
+    data[data.length - 1].price = actualCurrentPrice
   }
 
   return data
