@@ -1372,11 +1372,10 @@ function AppContent() {
                             )}
                           </div>
                           
-                          {/* Chart Container - Isolated Chart Wrapper */}
+                          {/* Chart Container - Chart Wrapper fetches its own data */}
                           {!multiChartMode ? (
                             <ChartWrapper
                               stock={stockData}
-                              chartData={chartData}
                               showFundamentalsPanel={showFundamentalsPanel}
                             />
                           ) : (

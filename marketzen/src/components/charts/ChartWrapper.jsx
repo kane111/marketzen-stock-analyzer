@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion } from 'framer-motion'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 
-// Timeframe constants
+// Timeframe constants - matches Yahoo Finance API
 export const TIMEFRAMES = [
   { label: '1D', value: '1D', range: '1d', interval: '5m' },
   { label: '1W', value: '1W', range: '5d', interval: '15m' },
@@ -19,6 +19,16 @@ const MONTH_ABBREVIATIONS = {
   'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'
 }
 
+// Yahoo Finance API configuration
+const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://justfetch.itsvg.in/?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.pages.dev/?',
+  'https://proxy.cors.sh/'
+]
+
 // Format currency for display
 function formatCurrency(value) {
   if (!value && value !== 0) return 'N/A'
@@ -27,30 +37,6 @@ function formatCurrency(value) {
     currency: 'INR',
     minimumFractionDigits: 2
   }).format(value)
-}
-
-// Filter data based on timeframe using actual dates from the data
-function filterDataByTimeframe(data, timeframe) {
-  if (!data || data.length === 0) return []
-  
-  const now = new Date()
-  const days = {
-    '1D': 1,
-    '1W': 7,
-    '1M': 30,
-    '3M': 90,
-    '6M': 180,
-    '1Y': 365,
-    '5Y': 1825
-  }[timeframe.value] || 30
-  
-  const cutoffDate = new Date(now)
-  cutoffDate.setDate(cutoffDate.getDate() - days)
-  
-  return data.filter(item => {
-    const itemDate = new Date(item.timestamp || item.date)
-    return itemDate >= cutoffDate
-  })
 }
 
 // Format date label for x-axis
@@ -149,38 +135,93 @@ const StockChartInner = memo(function StockChartInner({ data, isPositive, showFu
   )
 })
 
-// Main Chart Wrapper Component - Uses real data from parent
-function ChartWrapper({ stock, chartData, showFundamentalsPanel }) {
+// Main Chart Wrapper Component - Fetches its own data based on timeframe
+function ChartWrapper({ stock, showFundamentalsPanel }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[3]) // Default to 3M
+  const [chartData, setChartData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Process and format chart data based on selected timeframe
-  const processedData = useMemo(() => {
-    if (!chartData || chartData.length === 0) return []
-    
-    // Filter data based on timeframe
-    const filteredData = filterDataByTimeframe(chartData, selectedTimeframe)
-    
-    // Format the data for display
-    return filteredData.map(item => {
-      const date = new Date(item.timestamp || item.date)
-      
-      // For intraday (1D, 1W), show time
-      if (selectedTimeframe.value === '1D' || selectedTimeframe.value === '1W') {
-        return {
-          time: formatTimeLabel(date),
-          price: item.price,
-          timestamp: item.timestamp || item.date
+  // Fetch chart data from Yahoo Finance based on selected timeframe
+  const fetchChartData = useCallback(async (stockId, timeframe) => {
+    if (!stockId) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const url = `${YAHOO_BASE}/${stockId}?range=${timeframe.range}&interval=${timeframe.interval}`
+
+      const tryFetchWithProxy = async (proxyIndex = 0) => {
+        if (proxyIndex >= CORS_PROXIES.length) {
+          throw new Error('All proxies failed')
+        }
+
+        const proxy = CORS_PROXIES[proxyIndex]
+
+        try {
+          const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json'
+            }
+          })
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          return await response.json()
+        } catch (err) {
+          return tryFetchWithProxy(proxyIndex + 1)
         }
       }
-      
-      // For daily data, show date
-      return {
-        time: formatDateLabel(date),
-        price: item.price,
-        timestamp: item.timestamp || item.date
+
+      const data = await tryFetchWithProxy()
+
+      if (data.chart?.result?.[0]) {
+        const result = data.chart.result[0]
+        const quote = result.indicators?.quote?.[0] || {}
+        const timestamps = result.timestamp || []
+        const prices = quote.close || []
+
+        const transformed = timestamps.map((ts, i) => {
+          const price = prices[i]
+          if (price === null || price === undefined) return null
+
+          const date = new Date(ts * 1000)
+
+          // Format label based on timeframe
+          let timeLabel
+          if (timeframe.value === '1D' || timeframe.value === '1W') {
+            timeLabel = formatTimeLabel(date)
+          } else {
+            timeLabel = formatDateLabel(date)
+          }
+
+          return {
+            time: timeLabel,
+            price: price,
+            timestamp: ts
+          }
+        }).filter(Boolean)
+
+        setChartData(transformed)
+      } else {
+        throw new Error('No data available')
       }
-    })
-  }, [chartData, selectedTimeframe])
+    } catch (err) {
+      console.error('Error fetching chart data:', err)
+      setError('Unable to fetch chart data')
+      setChartData([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch data when timeframe or stock changes
+  useEffect(() => {
+    if (stock?.id) {
+      fetchChartData(stock.id, selectedTimeframe)
+    }
+  }, [stock?.id, selectedTimeframe, fetchChartData])
 
   // Calculate if price is positive
   const isPositive = stock && stock.current_price >= stock.previous_close
@@ -207,20 +248,41 @@ function ChartWrapper({ stock, chartData, showFundamentalsPanel }) {
         />
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
+          <div className="text-center">
+            <p className="text-negative mb-2 font-mono text-sm">{error}</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => fetchChartData(stock?.id, selectedTimeframe)}
+              className="px-3 py-1 rounded border border-terminal-border text-terminal-dim hover:text-terminal-text text-sm"
+            >
+              Retry
+            </motion.button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && !error && (
+        <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-12 h-12 border-4 border-terminal-green border-t-transparent rounded-full"
+          />
+        </div>
+      )}
+
       {/* Chart */}
-      {processedData.length > 0 ? (
+      {!loading && !error && (
         <StockChartInner
-          data={processedData}
+          data={chartData}
           isPositive={isPositive}
           showFundamentalsPanel={showFundamentalsPanel}
         />
-      ) : (
-        <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
-          <div className="text-center">
-            <p className="text-terminal-dim mb-2 font-mono text-sm">No chart data available</p>
-            <p className="text-xs text-terminal-dim/50 font-mono">Try selecting a different timeframe</p>
-          </div>
-        </div>
       )}
     </div>
   )
@@ -228,8 +290,6 @@ function ChartWrapper({ stock, chartData, showFundamentalsPanel }) {
 
 // Export memoized version with custom comparison
 export default memo(ChartWrapper, (prevProps, nextProps) => {
-  // Only re-render if stock.id or chartData changes
-  return prevProps.stock?.id === nextProps.stock?.id && 
-         prevProps.chartData === nextProps.chartData &&
-         prevProps.showFundamentalsPanel === nextProps.showFundamentalsPanel
+  // Re-render if stock.id changes (but not when showFundamentalsPanel changes)
+  return prevProps.stock?.id === nextProps.stock?.id
 })
