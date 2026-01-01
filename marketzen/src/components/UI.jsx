@@ -223,27 +223,28 @@ export function TerminalIndicatorToggle({
       whileTap={{ scale: disabled ? 1 : 0.98 }}
       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all border ${
         isActive
-          ? 'bg-terminal-green/20 border-terminal-green/50 text-terminal-green shadow-lg shadow-terminal-green/10'
-          : 'bg-terminal-bg-secondary/80 border-terminal-border text-terminal-dim hover:bg-terminal-bg-light hover:text-terminal-text hover:border-terminal-border'
+          ? 'bg-terminal-green/20 border-terminal-green text-terminal-green shadow-lg shadow-terminal-green/10'
+          : 'bg-terminal-bg-secondary/80 border-terminal-border text-terminal-dim hover:bg-terminal-bg-light hover:text-terminal-text hover:border-terminal-border/80'
       } ${className}`}
     >
       <span 
-        className="w-3 h-3 rounded-full shadow-sm" 
-        style={{ backgroundColor: isActive ? color : '#444' }}
+        className={`w-3 h-3 rounded-full shadow-sm transition-colors ${
+          isActive ? 'ring-1 ring-terminal-green/50' : ''
+        }`}
+        style={{ backgroundColor: isActive ? color : '#4a4f52' }}
       />
       <span className="text-sm font-mono">{label}</span>
       {isActive && (
-        <motion.svg
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="w-3.5 h-3.5 ml-1"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          className="ml-auto"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </motion.svg>
+          <span className="w-5 h-5 rounded-full bg-terminal-green text-terminal-bg flex items-center justify-center text-xs font-bold">
+            ✓
+          </span>
+        </motion.div>
       )}
     </motion.button>
   )
