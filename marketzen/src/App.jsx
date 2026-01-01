@@ -348,6 +348,7 @@ function AppContent() {
   const handleStockSelect = (stock) => {
     setSelectedStock(stock)
     setShowMobileWatchlist(false)
+    setView('dashboard')
     if (multiChartMode) {
       setMultiChartData({})
       const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
