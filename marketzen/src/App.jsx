@@ -446,6 +446,9 @@ function AppContent() {
   const isPositive = priceChange >= 0
 
   const formatCurrency = (value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '--'
+    }
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -455,6 +458,9 @@ function AppContent() {
   }
 
   const formatNumber = (value) => {
+    if (value === null || value === undefined || isNaN(value) || value === 0) {
+      return '--'
+    }
     if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
     if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
     if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
@@ -760,15 +766,15 @@ function AppContent() {
                   initial={{ x: -300, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: -300, opacity: 0 }}
-                  className="fixed md:relative left-0 top-20 bottom-0 w-72 glass border-r border-white/5 overflow-y-auto z-30"
+                  className="hidden lg:flex md:relative left-0 top-20 bottom-0 w-72 flex-col glass border-r border-white/5 z-30 h-[calc(100vh-5rem)]"
                 >
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="p-4 flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center justify-between mb-4 flex-shrink-0">
                       <h2 className="text-sm font-medium text-textSecondary uppercase tracking-wider">Watchlist</h2>
                       <span className="text-xs text-textSecondary bg-surfaceLight px-2 py-1 rounded-full">{watchlist.length}</span>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-2 -mr-2 scrollbar-thin">
                       <AnimatePresence>
                         {watchlist.map((stock, index) => (
                           <motion.div
@@ -778,7 +784,7 @@ function AppContent() {
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ delay: index * 0.05 }}
                             onClick={() => handleStockSelect(stock)}
-                            className={`p-4 rounded-xl cursor-pointer transition-all duration-200 group ${
+                            className={`p-4 rounded-xl cursor-pointer transition-all duration-200 group flex-shrink-0 ${
                               selectedStock?.id === stock.id 
                                 ? 'bg-surfaceLight border border-primary/30' 
                                 : 'hover:bg-surfaceLight border border-transparent'
@@ -893,7 +899,7 @@ function AppContent() {
             </AnimatePresence>
 
             {/* Main Content */}
-            <main className="flex-1 ml-0 md:ml-72 p-4 md:p-6 overflow-y-auto">
+            <main className="flex-1 ml-0 lg:ml-72 p-4 lg:p-6 overflow-y-auto h-[calc(100vh-5rem)]">
               <AnimatePresence mode="wait">
                 {/* Alerts View */}
                 {view === 'alerts' && (
@@ -1024,19 +1030,19 @@ function AppContent() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="max-w-6xl mx-auto"
+                    className="h-full flex flex-col"
                   >
                     {/* Stock Header */}
-                    <div className="mb-6">
+                    <div className="flex-shrink-0">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
                           <span className="text-2xl font-bold text-primary">{stockData.symbol.substring(0, 2)}</span>
                         </div>
-                        <div className="flex-1">
-                          <h2 className="text-2xl font-semibold">{stockData.name}</h2>
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-2xl font-semibold truncate">{stockData.name}</h2>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <span className="text-lg text-textSecondary">{stockData.symbol}</span>
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary">
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary flex-shrink-0">
                               NSE
                             </span>
                             
@@ -1045,7 +1051,7 @@ function AppContent() {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={() => setView('fundamentals')}
-                              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors ml-auto"
+                              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors ml-auto flex-shrink-0"
                             >
                               <PieChart className="w-4 h-4" />
                               Fundamentals
@@ -1117,7 +1123,7 @@ function AppContent() {
                       </div>
 
                       {/* Stats Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 flex-shrink-0">
                         {[
                           { label: 'Open', value: formatCurrency(stockData.open) },
                           { label: 'Day High', value: formatCurrency(stockData.day_high) },
@@ -1139,8 +1145,8 @@ function AppContent() {
                     </div>
 
                     {/* Chart Section */}
-                    <div className="glass rounded-2xl p-6">
-                      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+                    <div className="glass rounded-2xl p-6 flex-1 flex flex-col min-h-0">
+                      <div className="flex items-center justify-between mb-6 flex-wrap gap-4 flex-shrink-0">
                         <h3 className="text-lg font-medium">
                           {multiChartMode ? 'Multi-Timeframe Analysis' : 'Price Chart'}
                         </h3>
@@ -1175,7 +1181,7 @@ function AppContent() {
                       
                       {/* Single Chart View */}
                       {!multiChartMode ? (
-                        <div className="h-80">
+                        <div className="flex-1 min-h-0">
                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData}>
                               <defs>
@@ -1190,7 +1196,7 @@ function AppContent() {
                                 tickLine={false}
                                 tick={{ fill: '#9ca3af', fontSize: 12 }}
                                 interval="preserveStartEnd"
-                                minTickGap={50}
+                                minTickGap={30}
                               />
                               <YAxis 
                                 domain={['auto', 'auto']}
@@ -1198,7 +1204,7 @@ function AppContent() {
                                 tickLine={false}
                                 tick={{ fill: '#9ca3af', fontSize: 12 }}
                                 tickFormatter={(value) => `₹${value.toLocaleString()}`}
-                                width={80}
+                                width={70}
                               />
                               <Tooltip
                                 contentStyle={{
