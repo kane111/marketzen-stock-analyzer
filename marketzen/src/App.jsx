@@ -315,6 +315,7 @@ function AppContent() {
         
         const meta = result.meta
         const stockDataObj = {
+          id: stock.id,
           symbol: meta.symbol || stock.symbol,
           name: stock.name,
           current_price: currentPrice,
