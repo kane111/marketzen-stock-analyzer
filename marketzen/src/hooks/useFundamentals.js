@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 
 // ============================================================================
 // USE FUNDAMENTALS - Fundamental Data Hook
@@ -17,15 +17,25 @@ const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,in
 
 export function useFundamentals(symbol, options = {}) {
   const { autoRefresh = false, refreshInterval = 300000 } = options
-  
+
+  // Use refs to track previous symbol to prevent unnecessary re-fetches
+  const prevSymbolRef = useRef(null)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [dataSource, setDataSource] = useState('Yahoo Finance')
   const [lastUpdated, setLastUpdated] = useState(null)
 
-  const fetchData = useCallback(async () => {
+  // Memoize the fetch function to maintain stability
+  const fetchData = useCallback(async (forceRefresh = false) => {
     if (!symbol) return
+
+    // Skip if symbol hasn't changed and not forcing refresh
+    if (!forceRefresh && symbol === prevSymbolRef.current) {
+      return
+    }
+
+    prevSymbolRef.current = symbol
 
     setLoading(true)
     setDataSource('Yahoo Finance')
@@ -60,7 +70,7 @@ export function useFundamentals(symbol, options = {}) {
 
     try {
       const result = await tryFetchWithProxy()
-      
+
       if (result.quoteSummary?.result?.[0]) {
         setData(result.quoteSummary.result[0])
         setLastUpdated(new Date())
@@ -81,22 +91,24 @@ export function useFundamentals(symbol, options = {}) {
   }, [symbol])
 
   useEffect(() => {
-    fetchData()
+    // Only fetch on mount or when symbol changes
+    fetchData(true)
 
     if (autoRefresh) {
-      const interval = setInterval(fetchData, refreshInterval)
+      const interval = setInterval(() => fetchData(true), refreshInterval)
       return () => clearInterval(interval)
     }
   }, [fetchData, autoRefresh, refreshInterval])
 
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({
     data,
     loading,
     error,
     dataSource,
     lastUpdated,
-    refresh: fetchData
-  }
+    refresh: () => fetchData(true)
+  }), [data, loading, error, dataSource, lastUpdated, fetchData])
 }
 
 // ============================================================================
