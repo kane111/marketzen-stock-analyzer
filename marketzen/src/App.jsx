@@ -21,6 +21,7 @@ import ThemeSettings from './components/ThemeSettings'
 import AdvancedCharting from './components/AdvancedCharting'
 import DataExport from './components/DataExport'
 import ChartWrapper from './components/charts/ChartWrapper'
+import { TimeframeSelector, CHART_TIMEFRAMES, TA_TIMEFRAMES, MULTI_CHART_TIMEFRAMES } from './components/charts/TimeframeSelector'
 import { AlertsProvider } from './context/AlertsContext'
 import { PortfolioProvider } from './context/PortfolioContext'
 import { WatchlistProvider } from './context/WatchlistContext'
@@ -47,31 +48,8 @@ const DEFAULT_STOCKS = [
   { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India' }
 ]
 
-// Map timeframe labels to Yahoo Finance ranges and interval
-const TIMEFRAMES = [
-  { label: '1D', range: '1d', interval: '5m' },
-  { label: '1W', range: '5d', interval: '15m' },
-  { label: '1M', range: '1mo', interval: '1h' },
-  { label: '3M', range: '3mo', interval: '1d' },
-  { label: '1Y', range: '1y', interval: '1d' },
-  { label: '5Y', range: '5y', interval: '1wk' }
-]
-
-// Technical Analysis Timeframes
-const TA_TIMEFRAMES = [
-  { label: '1M', range: '1mo', interval: '1h' },
-  { label: '3M', range: '3mo', interval: '1d' },
-  { label: '6M', range: '6mo', interval: '1d' },
-  { label: '1Y', range: '1y', interval: '1d' }
-]
-
-// Multi-chart timeframes for comparison view
-const MULTI_CHART_TIMEFRAMES = [
-  { label: '1H', range: '1d', interval: '15m', type: 'intraday' },
-  { label: '4H', range: '5d', interval: '1h', type: 'intraday' },
-  { label: '1D', range: '1mo', interval: '1d', type: 'daily' },
-  { label: '1W', range: '3mo', interval: '1wk', type: 'weekly' }
-]
+// Map timeframe labels to Yahoo Finance ranges and interval (deprecated - use CHART_TIMEFRAMES)
+const TIMEFRAMES = CHART_TIMEFRAMES
 
 // Sector to stock mapping
 const SECTOR_STOCKS = {
@@ -769,10 +747,10 @@ function AppContent() {
         return
       }
       
-      // Ctrl/Cmd + / for shortcuts help
-      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+      // Ctrl/Cmd + K for search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setShowKeyboardShortcuts(true)
+        setSearchOpen(true)
         return
       }
       
@@ -1035,28 +1013,6 @@ function AppContent() {
                       title="Search (Ctrl+K)"
                     >
                       <Search className="w-4 h-4 text-terminal-dim" />
-                    </motion.button>
-                    
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setShowKeyboardShortcuts(true)}
-                      className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors"
-                      title="Shortcuts (Ctrl+/)"
-                    >
-                      <Command className="w-4 h-4 text-terminal-dim" />
-                    </motion.button>
-                    
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setAutoRefresh(!autoRefresh)}
-                      className={`p-2 rounded-lg border transition-colors ${
-                        autoRefresh ? 'bg-terminal-green/20 border-terminal-green text-terminal-green' : 'bg-terminal-bg border-terminal-border text-terminal-dim'
-                      }`}
-                      title="Toggle Auto-Refresh"
-                    >
-                      <RotateCcw className="w-4 h-4" />
                     </motion.button>
                     
                     <motion.button

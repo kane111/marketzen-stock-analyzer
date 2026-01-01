@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, TrendingUp, TrendingDown, Plus, Minus, Save, Download, BarChart2, LineChart, PieChart, ArrowRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine } from 'recharts'
 import { useAlerts } from '../context/AlertsContext'
+import { TimeframeSelector, COMPARE_TIMEFRAMES } from './charts/TimeframeSelector'
 
 // Yahoo Finance API endpoints
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -13,13 +14,6 @@ const CORS_PROXIES = [
   'https://api.allorigins.win/raw?url=',
   'https://corsproxy.pages.dev/?',
   'https://proxy.cors.sh/'
-]
-
-const COMPARE_TIMEFRAMES = [
-  { label: '1M', range: '1mo', interval: '1d' },
-  { label: '3M', range: '3mo', interval: '1d' },
-  { label: '6M', range: '6mo', interval: '1d' },
-  { label: '1Y', range: '1y', interval: '1d' }
 ]
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
@@ -267,23 +261,13 @@ function StockComparison({ onClose, watchlist = [] }) {
       </div>
 
       {/* Timeframe Selector */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
-        <span className="text-sm text-textSecondary">Timeframe:</span>
-        {COMPARE_TIMEFRAMES.map((tf) => (
-          <motion.button
-            key={tf.label}
-            onClick={() => setSelectedTimeframe(tf)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              selectedTimeframe.label === tf.label
-                ? 'bg-primary text-white'
-                : 'bg-surfaceLight text-textSecondary hover:bg-surface'
-            }`}
-          >
-            {tf.label}
-          </motion.button>
-        ))}
+      <div className="mb-6">
+        <TimeframeSelector
+          timeframes={COMPARE_TIMEFRAMES}
+          selected={selectedTimeframe}
+          onSelect={setSelectedTimeframe}
+          variant="comparison"
+        />
       </div>
 
       {/* Stock Selection */}

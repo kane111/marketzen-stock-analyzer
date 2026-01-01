@@ -342,10 +342,6 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <p className="text-sm text-terminal-dim">Sell Signals</p>
                 <p className="text-2xl font-bold text-terminal-red">{signal.sellCount}</p>
               </div>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => analysisRef.current?.()} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-terminal-bg-light">
-                <RefreshCw className="w-4 h-4" />
-                Refresh
-              </motion.button>
             </div>
           </div>
         </motion.div>
