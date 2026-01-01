@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Filter, ArrowUpDown, ChevronDown, X, Star, Plus, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react'
+import { Search, Filter, ArrowUpDown, ChevronDown, X, Star, BarChart2 } from 'lucide-react'
 import { useWatchlist } from '../context/WatchlistContext'
 import { TerminalCheckbox } from './UI'
+import { useToast } from '../components/common/Toast'
+import { formatCurrency, formatChange, formatCompactNumber } from '../utils/formatters'
 
 // Mock stock data for screening
 const STOCK_DATABASE = [
@@ -41,12 +43,13 @@ const SORT_OPTIONS = [
 
 function StockScreener({ onStockSelect }) {
   const { addToWatchlist, isInWatchlist } = useWatchlist()
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSector, setSelectedSector] = useState('All')
   const [sortBy, setSortBy] = useState('marketCap')
   const [sortDirection, setSortDirection] = useState('desc')
   const [showFilters, setShowFilters] = useState(false)
-  const [notification, setNotification] = useState(null)
   const [viewMode, setViewMode] = useState('table') // 'table' or 'cards'
 
   // Filter criteria
@@ -57,11 +60,6 @@ function StockScreener({ onStockSelect }) {
     showGainersOnly: false,
     showLosersOnly: false,
   })
-
-  const showNotification = (message, type = 'success') => {
-    setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
-  }
 
   // Filter and sort stocks
   const filteredStocks = useMemo(() => {
@@ -137,7 +135,11 @@ function StockScreener({ onStockSelect }) {
 
   const handleAddToWatchlist = (stock) => {
     const result = addToWatchlist(stock)
-    showNotification(result.message, result.success ? 'success' : 'error')
+    if (result.success) {
+      showSuccess(result.message)
+    } else {
+      showError(result.message)
+    }
   }
 
   const handleSelectStock = (stock) => {
@@ -150,29 +152,6 @@ function StockScreener({ onStockSelect }) {
     }
   }
 
-  const formatCurrency = (value) => {
-    if (value >= 1000000) {
-      return `₹${(value / 1000000).toFixed(1)}T`
-    }
-    if (value >= 1000) {
-      return `₹${(value / 1000).toFixed(1)}B`
-    }
-    return `₹${value.toFixed(0)}`
-  }
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(price)
-  }
-
-  const formatChange = (change) => {
-    const sign = change >= 0 ? '+' : ''
-    return `${sign}${change.toFixed(2)}%`
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -180,35 +159,43 @@ function StockScreener({ onStockSelect }) {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-7xl mx-auto"
     >
-      {/* Notification Toast */}
-      <AnimatePresence>
-        {notification && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
-              notification.type === 'success' ? 'bg-positive/20 text-positive border border-positive/30' :
-              notification.type === 'error' ? 'bg-negative/20 text-negative border border-negative/30' :
-              'bg-primary/20 text-primary border border-primary/30'
-            }`}
-          >
-            <p className="text-sm font-medium">{notification.message}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Toast Notifications */}
+      {toasts.length > 0 && (
+        <div className="fixed top-20 right-4 z-50 flex flex-col gap-2">
+          <AnimatePresence mode="popLayout">
+            {toasts.map(toast => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                className={`px-4 py-3 rounded-lg shadow-lg border flex items-center gap-2 ${
+                  toast.type === 'success' ? 'bg-terminal-green/20 text-terminal-green border-terminal-green/30' :
+                  toast.type === 'error' ? 'bg-terminal-red/20 text-terminal-red border-terminal-red/30' :
+                  'bg-terminal-blue/20 text-terminal-blue border-terminal-blue/30'
+                }`}
+              >
+                <span className="text-sm font-medium">{toast.message}</span>
+                <button onClick={() => removeToast(toast.id)} className="ml-2">
+                  <X className="w-3 h-3" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-semibold">Stock Screener</h2>
-          <p className="text-textSecondary text-sm">Find stocks that match your criteria</p>
+          <p className="text-terminal-dim text-sm">Find stocks that match your criteria</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode('table')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === 'table' ? 'bg-primary text-white' : 'bg-surfaceLight text-textSecondary'
+              viewMode === 'table' ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-bg-light text-terminal-dim'
             }`}
           >
             Table
@@ -216,7 +203,7 @@ function StockScreener({ onStockSelect }) {
           <button
             onClick={() => setViewMode('cards')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === 'cards' ? 'bg-primary text-white' : 'bg-surfaceLight text-textSecondary'
+              viewMode === 'cards' ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-bg-light text-terminal-dim'
             }`}
           >
             Cards
@@ -227,13 +214,13 @@ function StockScreener({ onStockSelect }) {
       {/* Search and Filter Bar */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="relative flex-1 min-w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textSecondary" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terminal-dim" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search stocks..."
-            className="w-full pl-10 pr-4 py-2.5 bg-surfaceLight rounded-lg outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full pl-10 pr-4 py-2.5 bg-terminal-bg-secondary rounded-lg outline-none focus:ring-2 focus:ring-terminal-green/50"
           />
         </div>
 
@@ -241,13 +228,13 @@ function StockScreener({ onStockSelect }) {
           <select
             value={selectedSector}
             onChange={(e) => setSelectedSector(e.target.value)}
-            className="appearance-none px-4 py-2.5 pr-10 bg-surfaceLight rounded-lg outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+            className="appearance-none px-4 py-2.5 pr-10 bg-terminal-bg-secondary rounded-lg outline-none focus:ring-2 focus:ring-terminal-green/50 cursor-pointer"
           >
             {SECTORS.map(sector => (
               <option key={sector} value={sector}>{sector}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textSecondary pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terminal-dim pointer-events-none" />
         </div>
 
         <motion.button
@@ -255,7 +242,7 @@ function StockScreener({ onStockSelect }) {
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowFilters(!showFilters)}
           className={`px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-            showFilters ? 'bg-primary text-white' : 'bg-surfaceLight text-textSecondary'
+            showFilters ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-bg-light text-terminal-dim'
           }`}
         >
           <Filter className="w-4 h-4" />
@@ -270,7 +257,7 @@ function StockScreener({ onStockSelect }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="glass rounded-2xl p-6 mb-6 overflow-hidden"
+            className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6 overflow-hidden"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
@@ -279,7 +266,7 @@ function StockScreener({ onStockSelect }) {
                   type="number"
                   value={filters.minMarketCap}
                   onChange={(e) => setFilters(prev => ({ ...prev, minMarketCap: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 bg-surfaceLight rounded-lg outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-3 py-2 bg-terminal-bg-secondary rounded-lg outline-none focus:ring-2 focus:ring-terminal-green/50"
                 />
               </div>
               <div>
@@ -288,7 +275,7 @@ function StockScreener({ onStockSelect }) {
                   type="number"
                   value={filters.maxPe}
                   onChange={(e) => setFilters(prev => ({ ...prev, maxPe: parseFloat(e.target.value) || 100 }))}
-                  className="w-full px-3 py-2 bg-surfaceLight rounded-lg outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-3 py-2 bg-terminal-bg-secondary rounded-lg outline-none focus:ring-2 focus:ring-terminal-green/50"
                 />
               </div>
               <div>
@@ -298,7 +285,7 @@ function StockScreener({ onStockSelect }) {
                   step="0.1"
                   value={filters.minDividend}
                   onChange={(e) => setFilters(prev => ({ ...prev, minDividend: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 bg-surfaceLight rounded-lg outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-3 py-2 bg-terminal-bg-secondary rounded-lg outline-none focus:ring-2 focus:ring-terminal-green/50"
                 />
               </div>
               <div className="flex items-center gap-4 pt-6">
@@ -320,14 +307,14 @@ function StockScreener({ onStockSelect }) {
 
       {/* Results Count */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-textSecondary">
-          Showing <span className="font-medium text-textPrimary">{filteredStocks.length}</span> stocks
+        <p className="text-sm text-terminal-dim">
+          Showing <span className="font-medium text-terminal-text">{filteredStocks.length}</span> stocks
         </p>
       </div>
 
       {/* Table View */}
       {viewMode === 'table' && (
-        <div className="glass rounded-2xl overflow-hidden">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -335,7 +322,7 @@ function StockScreener({ onStockSelect }) {
                   <th className="px-4 py-3 text-left">
                     <button
                       onClick={() => handleSort('symbol')}
-                      className="flex items-center gap-1 text-sm font-medium text-textSecondary hover:text-textPrimary"
+                      className="flex items-center gap-1 text-sm font-medium text-terminal-dim hover:text-terminal-text"
                     >
                       Stock
                       <ArrowUpDown className="w-3 h-3" />
@@ -344,7 +331,7 @@ function StockScreener({ onStockSelect }) {
                   <th className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleSort('price')}
-                      className="flex items-center justify-end gap-1 text-sm font-medium text-textSecondary hover:text-textPrimary"
+                      className="flex items-center justify-end gap-1 text-sm font-medium text-terminal-dim hover:text-terminal-text"
                     >
                       Price
                       <ArrowUpDown className="w-3 h-3" />
@@ -353,7 +340,7 @@ function StockScreener({ onStockSelect }) {
                   <th className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleSort('change')}
-                      className="flex items-center justify-end gap-1 text-sm font-medium text-textSecondary hover:text-textPrimary"
+                      className="flex items-center justify-end gap-1 text-sm font-medium text-terminal-dim hover:text-terminal-text"
                     >
                       Change
                       <ArrowUpDown className="w-3 h-3" />
@@ -362,7 +349,7 @@ function StockScreener({ onStockSelect }) {
                   <th className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleSort('marketCap')}
-                      className="flex items-center justify-end gap-1 text-sm font-medium text-textSecondary hover:text-textPrimary"
+                      className="flex items-center justify-end gap-1 text-sm font-medium text-terminal-dim hover:text-terminal-text"
                     >
                       Market Cap
                       <ArrowUpDown className="w-3 h-3" />
@@ -371,7 +358,7 @@ function StockScreener({ onStockSelect }) {
                   <th className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleSort('pe')}
-                      className="flex items-center justify-end gap-1 text-sm font-medium text-textSecondary hover:text-textPrimary"
+                      className="flex items-center justify-end gap-1 text-sm font-medium text-terminal-dim hover:text-terminal-text"
                     >
                       P/E
                       <ArrowUpDown className="w-3 h-3" />
@@ -380,7 +367,7 @@ function StockScreener({ onStockSelect }) {
                   <th className="px-4 py-3 text-right">
                     <button
                       onClick={() => handleSort('dividend')}
-                      className="flex items-center justify-end gap-1 text-sm font-medium text-textSecondary hover:text-textPrimary"
+                      className="flex items-center justify-end gap-1 text-sm font-medium text-terminal-dim hover:text-terminal-text"
                     >
                       Dividend
                       <ArrowUpDown className="w-3 h-3" />
@@ -396,29 +383,29 @@ function StockScreener({ onStockSelect }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className="border-b border-white/5 hover:bg-surfaceLight/30 transition-colors"
+                    className="border-b border-white/5 hover:bg-terminal-bg-light/30 transition-colors"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
+                        <div className="w-8 h-8 rounded-full bg-terminal-green/20 flex items-center justify-center">
+                          <span className="text-xs font-bold text-terminal-green">{stock.symbol.substring(0, 2)}</span>
                         </div>
                         <div>
-                          <p className="font-medium cursor-pointer hover:text-primary"
+                          <p className="font-medium cursor-pointer hover:text-terminal-green"
                              onClick={() => handleSelectStock(stock)}>
                             {stock.symbol}
                           </p>
-                          <p className="text-xs text-textSecondary">{stock.name}</p>
+                          <p className="text-xs text-terminal-dim">{stock.name}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono">{formatPrice(stock.price)}</td>
+                    <td className="px-4 py-3 text-right font-mono">{formatCurrency(stock.price)}</td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`font-medium ${stock.change >= 0 ? 'text-positive' : 'text-negative'}`}>
+                      <span className={`font-medium ${stock.change >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
                         {formatChange(stock.change)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono">{formatCurrency(stock.marketCap)}</td>
+                    <td className="px-4 py-3 text-right font-mono">{formatCompactNumber(stock.marketCap)}</td>
                     <td className="px-4 py-3 text-right font-mono">{stock.pe.toFixed(1)}</td>
                     <td className="px-4 py-3 text-right font-mono">{stock.dividend.toFixed(1)}%</td>
                     <td className="px-4 py-3">
@@ -427,7 +414,7 @@ function StockScreener({ onStockSelect }) {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => handleSelectStock(stock)}
-                          className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
+                          className="p-1.5 rounded-lg bg-terminal-green/10 text-terminal-green hover:bg-terminal-green/20"
                           title="View"
                         >
                           <BarChart2 className="w-4 h-4" />
@@ -439,8 +426,8 @@ function StockScreener({ onStockSelect }) {
                           disabled={isInWatchlist(stock.symbol)}
                           className={`p-1.5 rounded-lg ${
                             isInWatchlist(stock.symbol)
-                              ? 'bg-surfaceLight text-textSecondary cursor-not-allowed'
-                              : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                              ? 'bg-terminal-bg-light text-terminal-dim cursor-not-allowed'
+                              : 'bg-terminal-green/10 text-terminal-green hover:bg-terminal-green/20'
                           }`}
                           title="Add to watchlist"
                         >
@@ -465,38 +452,38 @@ function StockScreener({ onStockSelect }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
-              className="glass rounded-xl p-4 hover:bg-surfaceLight/30 transition-colors"
+              className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4 hover:bg-terminal-bg-light/30 transition-colors"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
+                  <div className="w-10 h-10 rounded-full bg-terminal-green/20 flex items-center justify-center">
+                    <span className="text-sm font-bold text-terminal-green">{stock.symbol.substring(0, 2)}</span>
                   </div>
                   <div>
-                    <h4 className="font-medium cursor-pointer hover:text-primary"
+                    <h4 className="font-medium cursor-pointer hover:text-terminal-green"
                         onClick={() => handleSelectStock(stock)}>
                       {stock.symbol}
                     </h4>
-                    <p className="text-xs text-textSecondary">{stock.sector}</p>
+                    <p className="text-xs text-terminal-dim">{stock.sector}</p>
                   </div>
                 </div>
-                <span className={`text-sm font-medium ${stock.change >= 0 ? 'text-positive' : 'text-negative'}`}>
+                <span className={`text-sm font-medium ${stock.change >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
                   {formatChange(stock.change)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xl font-bold">{formatPrice(stock.price)}</p>
-                <p className="text-sm text-textSecondary">{formatCurrency(stock.marketCap)}</p>
+                <p className="text-xl font-bold">{formatCurrency(stock.price)}</p>
+                <p className="text-sm text-terminal-dim">{formatCompactNumber(stock.marketCap)}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                <div className="bg-surfaceLight rounded-lg p-2">
-                  <p className="text-xs text-textSecondary">P/E</p>
+                <div className="bg-terminal-bg-light rounded-lg p-2">
+                  <p className="text-xs text-terminal-dim">P/E</p>
                   <p className="font-mono">{stock.pe.toFixed(1)}</p>
                 </div>
-                <div className="bg-surfaceLight rounded-lg p-2">
-                  <p className="text-xs text-textSecondary">Dividend</p>
+                <div className="bg-terminal-bg-light rounded-lg p-2">
+                  <p className="text-xs text-terminal-dim">Dividend</p>
                   <p className="font-mono">{stock.dividend.toFixed(1)}%</p>
                 </div>
               </div>
@@ -506,7 +493,7 @@ function StockScreener({ onStockSelect }) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleSelectStock(stock)}
-                  className="flex-1 px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium"
+                  className="flex-1 px-3 py-2 rounded-lg bg-terminal-green text-terminal-bg text-sm font-medium"
                 >
                   View Chart
                 </motion.button>
@@ -517,8 +504,8 @@ function StockScreener({ onStockSelect }) {
                   disabled={isInWatchlist(stock.symbol)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium ${
                     isInWatchlist(stock.symbol)
-                      ? 'bg-surfaceLight text-textSecondary'
-                      : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                      ? 'bg-terminal-bg-light text-terminal-dim'
+                      : 'bg-terminal-green/10 text-terminal-green hover:bg-terminal-green/20'
                   }`}
                 >
                   <Star className="w-4 h-4" />
@@ -530,10 +517,10 @@ function StockScreener({ onStockSelect }) {
       )}
 
       {filteredStocks.length === 0 && (
-        <div className="glass rounded-2xl p-8 text-center">
-          <Search className="w-12 h-12 text-textSecondary mx-auto mb-4 opacity-50" />
-          <p className="text-textSecondary mb-2">No stocks match your criteria</p>
-          <p className="text-sm text-textSecondary">Try adjusting your filters or search query</p>
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-8 text-center">
+          <Search className="w-12 h-12 text-terminal-dim mx-auto mb-4 opacity-50" />
+          <p className="text-terminal-dim mb-2">No stocks match your criteria</p>
+          <p className="text-sm text-terminal-dim">Try adjusting your filters or search query</p>
         </div>
       )}
     </motion.div>

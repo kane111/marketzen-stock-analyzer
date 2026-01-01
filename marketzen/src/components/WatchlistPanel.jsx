@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Star, TrendingUp, TrendingDown, Eye, MoreVertical, X, Check, Edit2, FolderPlus, Folder, GripVertical } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, Eye, X, Check, Edit2, FolderPlus, Folder } from 'lucide-react'
 import { useWatchlist } from '../context/WatchlistContext'
+import { useToast } from '../components/common/Toast'
+import { formatCurrency, formatChange } from '../utils/formatters'
 
 // Common stocks for quick add
 const QUICK_STOCKS = [
@@ -29,42 +31,37 @@ function WatchlistPanel({ onStockSelect }) {
     isInWatchlist
   } = useWatchlist()
 
+  const { toasts, removeToast, showSuccess, showError, showInfo } = useToast()
+  
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showContextMenu, setShowContextMenu] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [notification, setNotification] = useState(null)
-  const [newWatchlistName, setNewWatchlistName] = useState('')
   const [renameMode, setRenameMode] = useState(null)
   const [renameValue, setRenameValue] = useState('')
-
-  const showNotification = (message, type = 'success') => {
-    setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
-  }
+  const [searchQuery, setSearchQuery] = useState('')
+  const [newWatchlistName, setNewWatchlistName] = useState('')
 
   const watchlistNames = getWatchlistNames()
   const currentStocks = watchlists[activeWatchlist] || []
 
   const handleCreateWatchlist = () => {
     if (!newWatchlistName.trim()) {
-      showNotification('Please enter a watchlist name', 'error')
+      showError('Please enter a watchlist name')
       return
     }
     const result = createWatchlist(newWatchlistName.trim())
     if (result.success) {
       setActiveWatchlist(newWatchlistName.trim())
-      showNotification(result.message, 'success')
+      showSuccess(result.message)
       setNewWatchlistName('')
       setShowCreateModal(false)
     } else {
-      showNotification(result.message, 'error')
+      showError(result.message)
     }
   }
 
   const handleDeleteWatchlist = (name) => {
     const result = deleteWatchlist(name)
-    showNotification(result.message, result.success ? 'info' : 'error')
-    setShowContextMenu(null)
+    showInfo(result.message)
+    setRenameMode(null)
   }
 
   const handleRenameWatchlist = (oldName) => {
@@ -74,23 +71,27 @@ function WatchlistPanel({ onStockSelect }) {
     }
     const result = renameWatchlist(oldName, renameValue.trim())
     if (result.success) {
-      showNotification(result.message, 'success')
+      showSuccess(result.message)
       setRenameMode(null)
       setRenameValue('')
     } else {
-      showNotification(result.message, 'error')
+      showError(result.message)
     }
   }
 
   const handleAddStock = (stock) => {
     const result = addToWatchlist(stock)
-    showNotification(result.message, result.success ? 'success' : 'error')
-    setSearchQuery('')
+    if (result.success) {
+      showSuccess(result.message)
+      setSearchQuery('')
+    } else {
+      showError(result.message)
+    }
   }
 
   const handleRemoveStock = (symbol) => {
     removeFromWatchlist(symbol)
-    showNotification('Removed from watchlist', 'info')
+    showInfo('Removed from watchlist')
   }
 
   const handleSelectStock = (stock) => {
@@ -103,19 +104,6 @@ function WatchlistPanel({ onStockSelect }) {
     }
   }
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(price)
-  }
-
-  const formatChange = (change) => {
-    const sign = change >= 0 ? '+' : ''
-    return `${sign}${change.toFixed(2)}%`
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -123,23 +111,31 @@ function WatchlistPanel({ onStockSelect }) {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl mx-auto"
     >
-      {/* Notification Toast */}
-      <AnimatePresence>
-        {notification && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
-              notification.type === 'success' ? 'bg-terminal-green/20 text-terminal-green border border-terminal-green/30' :
-              notification.type === 'error' ? 'bg-terminal-red/20 text-terminal-red border border-terminal-red/30' :
-              'bg-terminal-green/20 text-terminal-green border border-terminal-green/30'
-            }`}
-          >
-            <p className="text-sm font-medium">{notification.message}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Toast Notifications */}
+      {toasts.length > 0 && (
+        <div className="fixed top-20 right-4 z-50 flex flex-col gap-2">
+          <AnimatePresence mode="popLayout">
+            {toasts.map(toast => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                className={`px-4 py-3 rounded-lg shadow-lg border flex items-center gap-2 ${
+                  toast.type === 'success' ? 'bg-terminal-green/20 text-terminal-green border-terminal-green/30' :
+                  toast.type === 'error' ? 'bg-terminal-red/20 text-terminal-red border-terminal-red/30' :
+                  'bg-terminal-blue/20 text-terminal-blue border-terminal-blue/30'
+                }`}
+              >
+                <span className="text-sm font-medium">{toast.message}</span>
+                <button onClick={() => removeToast(toast.id)} className="ml-2">
+                  <X className="w-3 h-3" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
@@ -147,17 +143,15 @@ function WatchlistPanel({ onStockSelect }) {
           <h2 className="text-2xl font-semibold">Watchlist</h2>
           <p className="text-terminal-dim text-sm">Track stocks you're watching</p>
         </div>
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 rounded-lg bg-terminal-green text-terminal-bg font-medium flex items-center gap-2 hover:bg-terminal-green/90 transition-colors"
-          >
-            <FolderPlus className="w-4 h-4" />
-            New List
-          </motion.button>
-        </div>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2.5 rounded-lg bg-terminal-green text-terminal-bg font-medium flex items-center gap-2 hover:bg-terminal-green/90 transition-colors"
+        >
+          <FolderPlus className="w-4 h-4" />
+          New List
+        </motion.button>
       </div>
 
       {/* Watchlist Tabs */}
@@ -225,7 +219,7 @@ function WatchlistPanel({ onStockSelect }) {
       </div>
 
       {/* Add Stock Section */}
-      <div className="mb-6">
+      <div className="mb-6 relative">
         <div className="relative">
           <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terminal-dim" />
           <input
@@ -258,7 +252,7 @@ function WatchlistPanel({ onStockSelect }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-mono">{formatPrice(stock.price)}</p>
+                  <p className="text-sm font-mono">{formatCurrency(stock.price)}</p>
                   <p className={`text-xs ${stock.change >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
                     {formatChange(stock.change)}
                   </p>
@@ -302,7 +296,7 @@ function WatchlistPanel({ onStockSelect }) {
                   {/* Simulated price data */}
                   <div className="text-right hidden sm:block">
                     <p className="font-mono font-medium">
-                      {formatPrice(stock.price || 1500 + Math.random() * 2000)}
+                      {formatCurrency(stock.price || 1500 + Math.random() * 2000)}
                     </p>
                     <p className={`text-sm font-medium ${(stock.change || (Math.random() - 0.5) * 3) >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
                       {formatChange(stock.change || (Math.random() - 0.5) * 3)}

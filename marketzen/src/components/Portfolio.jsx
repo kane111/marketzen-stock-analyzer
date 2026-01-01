@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, TrendingUp, TrendingDown, PieChart, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, TrendingDown, PieChart as PieChartIcon, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, ExternalLink } from 'lucide-react'
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { usePortfolio } from '../context/PortfolioContext'
+import { useToast } from '../components/common/Toast'
+import { formatCurrency, formatChange } from '../utils/formatters'
 
 // Common stocks for quick add
 const QUICK_STOCKS = [
@@ -23,14 +25,14 @@ function Portfolio({ onStockSelect }) {
     holdings: contextHoldings, 
     addHolding, 
     removeHolding, 
-    addTransaction,
     calculatePortfolioMetrics 
   } = usePortfolio()
 
+  const { toasts, removeToast, showSuccess, showInfo, showError } = useToast()
+  
   const [showAddModal, setShowAddModal] = useState(false)
   const [allocationView, setAllocationView] = useState('value')
   const [searchQuery, setSearchQuery] = useState('')
-  const [notification, setNotification] = useState(null)
   const [loading, setLoading] = useState(true)
   
   // Form state for adding a holding with initial transaction
@@ -43,12 +45,6 @@ function Portfolio({ onStockSelect }) {
     purchaseDate: new Date().toISOString().split('T')[0],
     tags: []
   })
-
-  // Show notification helper
-  const showNotification = (message, type = 'success') => {
-    setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
-  }
 
   // Simulate loading state
   useEffect(() => {
@@ -92,15 +88,6 @@ function Portfolio({ onStockSelect }) {
     }))
   }, [contextHoldings, totalCurrentValue])
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value)
-  }
-
   const formatPercent = (value) => {
     const sign = value >= 0 ? '+' : ''
     return `${sign}${value.toFixed(2)}%`
@@ -115,26 +102,20 @@ function Portfolio({ onStockSelect }) {
       sector: getSector(formData.symbol)
     }
 
-    // Add the holding to portfolio
-    const holdingResult = addHolding(stockInfo)
+    const result = addHolding(stockInfo)
     
-    if (!holdingResult.success) {
-      showNotification(holdingResult.message, 'error')
-      return
+    if (result.success) {
+      showSuccess(`${formData.symbol} added to portfolio`)
+      closeModal()
+    } else {
+      showError(result.message)
     }
-
-    // Add the initial buy transaction
-    // Note: We need to get the newly created holding's ID
-    // For simplicity, we'll add a transaction with a placeholder that can be linked later
-    // In a real implementation, we might want addHolding to return the new holding
-    showNotification(`${formData.symbol} added to portfolio`, 'success')
-    closeModal()
   }
 
   const handleDeleteHolding = (id) => {
     const holding = contextHoldings.find(h => h.id === id)
     removeHolding(id)
-    showNotification(`${holding?.symbol || 'Stock'} removed from portfolio`, 'info')
+    showInfo(`${holding?.symbol || 'Stock'} removed from portfolio`)
   }
 
   const closeModal = () => {
@@ -198,23 +179,31 @@ function Portfolio({ onStockSelect }) {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-6xl mx-auto"
     >
-      {/* Notification Toast */}
-      <AnimatePresence>
-        {notification && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
-              notification.type === 'success' ? 'bg-terminal-green/20 text-terminal-green border border-terminal-green/30' :
-              notification.type === 'info' ? 'bg-terminal-green/20 text-terminal-green border border-terminal-green/30' :
-              'bg-terminal-bg-light text-terminal-dim'
-            }`}
-          >
-            <p className="text-sm font-medium">{notification.message}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Toast Notifications */}
+      {toasts.length > 0 && (
+        <div className="fixed top-20 right-4 z-50 flex flex-col gap-2">
+          <AnimatePresence mode="popLayout">
+            {toasts.map(toast => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                className={`px-4 py-3 rounded-lg shadow-lg border flex items-center gap-2 ${
+                  toast.type === 'success' ? 'bg-terminal-green/20 text-terminal-green border-terminal-green/30' :
+                  toast.type === 'error' ? 'bg-terminal-red/20 text-terminal-red border-terminal-red/30' :
+                  'bg-terminal-blue/20 text-terminal-blue border-terminal-blue/30'
+                }`}
+              >
+                <span className="text-sm font-medium">{toast.message}</span>
+                <button onClick={() => removeToast(toast.id)} className="ml-2">
+                  <X className="w-3 h-3" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
@@ -247,7 +236,7 @@ function Portfolio({ onStockSelect }) {
             <span className="text-sm text-terminal-dim">Total Value</span>
           </div>
           <p className="text-3xl font-bold">{formatCurrency(totalCurrentValue)}</p>
-          <p className="text-sm text-textSecondary mt-1">
+          <p className="text-sm text-terminal-dim mt-1">
             {contextHoldings.length} holding{contextHoldings.length !== 1 ? 's' : ''}
           </p>
         </motion.div>
@@ -286,7 +275,7 @@ function Portfolio({ onStockSelect }) {
         >
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-              <PieChart className="w-5 h-5 text-amber-500" />
+              <PieChartIcon className="w-5 h-5 text-amber-500" />
             </div>
             <span className="text-sm text-terminal-dim">Diversification</span>
           </div>
@@ -340,9 +329,9 @@ function Portfolio({ onStockSelect }) {
                       </h4>
                       <p className="text-sm text-terminal-dim">{holding.name}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-textSecondary">{holding.quantity} shares</span>
-                        <span className="text-xs text-textSecondary">•</span>
-                        <span className="text-xs text-textSecondary">Avg: {formatCurrency(holding.avgCost)}</span>
+                        <span className="text-xs text-terminal-dim">{holding.quantity} shares</span>
+                        <span className="text-xs text-terminal-dim">•</span>
+                        <span className="text-xs text-terminal-dim">Avg: {formatCurrency(holding.avgCost)}</span>
                       </div>
                     </div>
                   </div>
@@ -537,7 +526,7 @@ function Portfolio({ onStockSelect }) {
                 <div className="relative">
                   <label className="text-sm font-medium mb-2 block">Select Stock</label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textSecondary" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terminal-dim" />
                     <input
                       type="text"
                       value={searchQuery}
@@ -578,7 +567,7 @@ function Portfolio({ onStockSelect }) {
                         </div>
                         <div>
                           <p className="font-medium text-sm">{formData.symbol}</p>
-                          <p className="text-xs text-textSecondary">{formData.name}</p>
+                          <p className="text-xs text-terminal-dim">{formData.name}</p>
                         </div>
                       </div>
                       <button
@@ -623,7 +612,7 @@ function Portfolio({ onStockSelect }) {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Purchase Date</label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textSecondary" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terminal-dim" />
                     <input
                       type="date"
                       value={formData.purchaseDate}

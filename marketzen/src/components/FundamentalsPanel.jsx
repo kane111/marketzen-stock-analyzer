@@ -1,19 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, TrendingDown, PieChart, BarChart3, RefreshCw, Download, ExternalLink, Info } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, PieChart, BarChart3, RefreshCw, Info } from 'lucide-react'
 import { TerminalTab } from './UI'
-
-// Yahoo Finance quote summary endpoint
-const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
-const CORS_PROXIES = [
-  'https://corsproxy.io/?',
-  'https://justfetch.itsvg.in/?url=',
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.pages.dev/?',
-  'https://proxy.cors.sh/'
-]
-
-const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
+import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
+import { MetricCard } from './common/MetricCard'
 
 // Sector mapping for Indian stocks
 const SECTOR_MAPPING = {
@@ -71,118 +61,16 @@ const SECTOR_MAPPING = {
 }
 
 function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
-  const [fundamentals, setFundamentals] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('valuation')
-  const [lastUpdated, setLastUpdated] = useState(null)
-  const [dataSource, setDataSource] = useState('yahoo')
-
-  // Fetch fundamentals
-  useEffect(() => {
-    if (stock) {
-      fetchFundamentals(stock.id)
-    }
-  }, [stock])
-
-  const fetchFundamentals = async (symbol) => {
-    setLoading(true)
-    setDataSource('yahoo')
-    const url = `${YAHOO_QUOTE_SUMMARY}/${symbol}?modules=${FUNDAMENTAL_MODULES}`
-    
-    const tryFetchWithProxy = async (proxyIndex = 0, attempts = 0) => {
-      if (proxyIndex >= CORS_PROXIES.length) {
-        throw new Error('All proxies failed')
-      }
-      
-      const proxy = CORS_PROXIES[proxyIndex]
-      
-      try {
-        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json'
-          }
-        })
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return await response.json()
-      } catch (err) {
-        if (attempts < 3) {
-          return tryFetchWithProxy(proxyIndex, attempts + 1)
-        }
-        return tryFetchWithProxy(proxyIndex + 1, 0)
-      }
-    }
-
-    try {
-      const data = await tryFetchWithProxy()
-      if (data.quoteSummary?.result?.[0]) {
-        setFundamentals(data.quoteSummary.result[0])
-        setLastUpdated(new Date())
-        setDataSource('Yahoo Finance')
-      } else {
-        // Use mock data if API fails
-        setFundamentals(getMockFundamentals(symbol))
-        setDataSource('Demo Data')
-      }
-    } catch (error) {
-      console.error('Error fetching fundamentals:', error)
-      setFundamentals(getMockFundamentals(symbol))
-      setDataSource('Demo Data (API unavailable)')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getMetric = (path, formatter = null) => {
-    if (!fundamentals) return null
-    const keys = path.split('.')
-    let value = fundamentals
-    for (const key of keys) {
-      value = value?.[key]
-      if (value === undefined || value === null) return null
-    }
-    
-    const raw = value?.raw !== undefined ? value.raw : value
-    if (raw === undefined || raw === null) return null
-    
-    if (formatter === 'currency') {
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        minimumFractionDigits: 2
-      }).format(raw)
-    }
-    if (formatter === 'number') {
-      return new Intl.NumberFormat('en-IN').format(raw)
-    }
-    if (formatter === 'percent') {
-      return `${raw.toFixed(2)}%`
-    }
-    if (formatter === 'ratio') {
-      return raw.toFixed(2)
-    }
-    return raw
-  }
-
-  const formatCurrency = (value) => {
-    if (!value) return 'N/A'
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(value)
-  }
-
-  const formatNumber = (value) => {
-    if (!value) return 'N/A'
-    if (value >= 1e15) return `${(value / 1e15).toFixed(2)}Q`
-    if (value >= 1e12) return `${(value / 1e12).toFixed(2)}T`
-    if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
-    if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
-    if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
-    return value.toLocaleString('en-US')
-  }
+  
+  // Use the new fundamentals hook
+  const { 
+    data: fundamentals, 
+    loading, 
+    dataSource, 
+    lastUpdated, 
+    refresh: fetchFundamentals 
+  } = useFundamentals(stock?.id)
 
   const getSector = () => {
     return SECTOR_MAPPING[stock?.id] || 'Other'
@@ -194,6 +82,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
     { id: 'performance', label: 'Performance', icon: TrendingUp }
   ]
 
+  // Loading state
   if (loading) {
     return (
       <motion.div
@@ -263,7 +152,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => fetchFundamentals(stock?.id)}
+            onClick={fetchFundamentals}
             className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
             title="Refresh data"
           >
@@ -319,180 +208,181 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       <div className="flex-1 overflow-y-auto">
         {/* Tab Content */}
         <AnimatePresence mode="wait">
-        {activeTab === 'valuation' && (
-          <motion.div
-            key="valuation"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
-          >
-            <h3 className="text-base font-semibold mb-3">Valuation Metrics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <MetricCard
-                label="P/E Ratio"
-                value={getMetric('defaultKeyStatistics.trailingPE.raw', 'ratio')}
-                tooltip="Price to Earnings Ratio - Lower may indicate undervaluation"
-              />
-              <MetricCard
-                label="Forward P/E"
-                value={getMetric('defaultKeyStatistics.forwardPE.raw', 'ratio')}
-                tooltip="Forward P/E based on estimated earnings"
-              />
-              <MetricCard
-                label="P/B Ratio"
-                value={getMetric('defaultKeyServices.priceToBookRaw.raw', 'ratio')}
-                tooltip="Price to Book Ratio"
-              />
-              <MetricCard
-                label="P/S Ratio"
-                value={getMetric('defaultKeyStatistics.priceToSalesTrailing12Months.raw', 'ratio')}
-                tooltip="Price to Sales Ratio"
-              />
-              <MetricCard
-                label="EPS (TTM)"
-                value={getMetric('defaultKeyStatistics.trailingEps.raw', 'currency')}
-                tooltip="Earnings Per Share - Trailing Twelve Months"
-              />
-              <MetricCard
-                label="Dividend Yield"
-                value={getMetric('summaryDetail.dividendYieldRaw', 'percent')}
-                tooltip="Annual dividend as percentage of stock price"
-              />
-              <MetricCard
-                label="Beta"
-                value={getMetric('defaultKeyStatistics.beta.raw', 'ratio')}
-                tooltip="Measure of volatility relative to market"
-              />
-              <MetricCard
-                label="Market Cap"
-                value={getMetric('summaryDetail.marketCap.raw', 'number')}
-                tooltip="Total market value"
-                isLarge
-              />
-              <MetricCard
-                label="Enterprise Value"
-                value={getMetric('defaultKeyStatistics.enterpriseValue.raw', 'number')}
-                tooltip="Total company value including debt"
-              />
-            </div>
-          </motion.div>
-        )}
+          {activeTab === 'valuation' && (
+            <motion.div
+              key="valuation"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
+            >
+              <h3 className="text-base font-semibold mb-3">Valuation Metrics</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <MetricCard
+                  label="P/E Ratio"
+                  value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.trailingPE'))}
+                  tooltip="Price to Earnings Ratio - Lower may indicate undervaluation"
+                />
+                <MetricCard
+                  label="Forward P/E"
+                  value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.forwardPE'))}
+                  tooltip="Forward P/E based on estimated earnings"
+                />
+                <MetricCard
+                  label="P/B Ratio"
+                  value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.priceToBookRaw'))}
+                  tooltip="Price to Book Ratio"
+                />
+                <MetricCard
+                  label="P/S Ratio"
+                  value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.priceToSalesTrailing12Months'))}
+                  tooltip="Price to Sales Ratio"
+                />
+                <MetricCard
+                  label="EPS (TTM)"
+                  value={formatCurrency(getMetric(fundamentals, 'defaultKeyStatistics.trailingEps'))}
+                  tooltip="Earnings Per Share - Trailing Twelve Months"
+                />
+                <MetricCard
+                  label="Dividend Yield"
+                  value={formatPercent(getMetric(fundamentals, 'summaryDetail.dividendYieldRaw'))}
+                  tooltip="Annual dividend as percentage of stock price"
+                />
+                <MetricCard
+                  label="Beta"
+                  value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.beta'))}
+                  tooltip="Measure of volatility relative to market"
+                />
+                <MetricCard
+                  label="Market Cap"
+                  value={formatNumber(getMetric(fundamentals, 'summaryDetail.marketCap'))}
+                  tooltip="Total market value"
+                  isLarge
+                />
+                <MetricCard
+                  label="Enterprise Value"
+                  value={formatNumber(getMetric(fundamentals, 'defaultKeyStatistics.enterpriseValue'))}
+                  tooltip="Total company value including debt"
+                />
+              </div>
+            </motion.div>
+          )}
 
-        {activeTab === 'financials' && (
-          <motion.div
-            key="financials"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
-          >
-            <h3 className="text-base font-semibold mb-3">Financial Performance</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <MetricCard
-                label="Revenue (TTM)"
-                value={getMetric('financialData.totalRevenue.raw', 'number')}
-                tooltip="Total revenue over trailing twelve months"
-              />
-              <MetricCard
-                label="Net Income (TTM)"
-                value={getMetric('financialData.netIncomeToCommon.raw', 'number')}
-                tooltip="Net profit available to common shareholders"
-              />
-              <MetricCard
-                label="Gross Margin"
-                value={getMetric('financialData.grossMargins.raw', 'percent')}
-                tooltip="Revenue minus cost of goods sold as percentage"
-              />
-              <MetricCard
-                label="Operating Margin"
-                value={getMetric('financialData.operatingMargins.raw', 'percent')}
-                tooltip="Operating income as percentage of revenue"
-              />
-              <MetricCard
-                label="Profit Margin"
-                value={getMetric('financialData.profitMargins.raw', 'percent')}
-                tooltip="Net profit as percentage of revenue"
-              />
-              <MetricCard
-                label="ROE"
-                value={getMetric('financialData.returnOnEquity.raw', 'percent')}
-                tooltip="Return on Equity - How efficiently equity is used"
-              />
-              <MetricCard
-                label="ROA"
-                value={getMetric('financialData.returnOnAssets.raw', 'percent')}
-                tooltip="Return on Assets"
-              />
-              <MetricCard
-                label="Debt/Equity"
-                value={getMetric('financialData.debtToEquity.raw', 'ratio')}
-                tooltip="Total debt divided by shareholder equity"
-              />
-              <MetricCard
-                label="Current Ratio"
-                value={getMetric('financialData.currentRatio.raw', 'ratio')}
-                tooltip="Current assets divided by current liabilities"
-              />
-            </div>
-          </motion.div>
-        )}
+          {activeTab === 'financials' && (
+            <motion.div
+              key="financials"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
+            >
+              <h3 className="text-base font-semibold mb-3">Financial Performance</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <MetricCard
+                  label="Revenue (TTM)"
+                  value={formatNumber(getMetric(fundamentals, 'financialData.totalRevenue'))}
+                  tooltip="Total revenue over trailing twelve months"
+                />
+                <MetricCard
+                  label="Net Income (TTM)"
+                  value={formatNumber(getMetric(fundamentals, 'financialData.netIncomeToCommon'))}
+                  tooltip="Net profit available to common shareholders"
+                />
+                <MetricCard
+                  label="Gross Margin"
+                  value={formatPercent(getMetric(fundamentals, 'financialData.grossMargins'))}
+                  tooltip="Revenue minus cost of goods sold as percentage"
+                />
+                <MetricCard
+                  label="Operating Margin"
+                  value={formatPercent(getMetric(fundamentals, 'financialData.operatingMargins'))}
+                  tooltip="Operating income as percentage of revenue"
+                />
+                <MetricCard
+                  label="Profit Margin"
+                  value={formatPercent(getMetric(fundamentals, 'financialData.profitMargins'))}
+                  tooltip="Net profit as percentage of revenue"
+                />
+                <MetricCard
+                  label="ROE"
+                  value={formatPercent(getMetric(fundamentals, 'financialData.returnOnEquity'))}
+                  tooltip="Return on Equity - How efficiently equity is used"
+                />
+                <MetricCard
+                  label="ROA"
+                  value={formatPercent(getMetric(fundamentals, 'financialData.returnOnAssets'))}
+                  tooltip="Return on Assets"
+                />
+                <MetricCard
+                  label="Debt/Equity"
+                  value={formatRatio(getMetric(fundamentals, 'financialData.debtToEquity'))}
+                  tooltip="Total debt divided by shareholder equity"
+                />
+                <MetricCard
+                  label="Current Ratio"
+                  value={formatRatio(getMetric(fundamentals, 'financialData.currentRatio'))}
+                  tooltip="Current assets divided by current liabilities"
+                />
+              </div>
+            </motion.div>
+          )}
 
-        {activeTab === 'performance' && (
-          <motion.div
-            key="performance"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
-          >
-            <h3 className="text-base font-semibold mb-3">Price Performance</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <MetricCard
-                label="52 Week High"
-                value={getMetric('summaryDetail.fiftyTwoWeekHighRaw', 'currency')}
-              />
-              <MetricCard
-                label="52 Week Low"
-                value={getMetric('summaryDetail.fiftyTwoWeekLowRaw', 'currency')}
-              />
-              <MetricCard
-                label="50 Day MA"
-                value={getMetric('summaryDetail.fiftyDayAverage.raw', 'currency')}
-                tooltip="Average closing price over last 50 days"
-              />
-              <MetricCard
-                label="200 Day MA"
-                value={getMetric('summaryDetail.twoHundredDayAverage.raw', 'currency')}
-                tooltip="Average closing price over last 200 days"
-              />
-              <MetricCard
-                label="52 Week Change"
-                value={getMetric('defaultKeyStatistics.fiftyTwoWeekChange.raw', 'percent')}
-              />
-              <MetricCard
-                label="Volume (Avg)"
-                value={getMetric('summaryDetail.averageVolume.raw', 'number')}
-              />
-              <MetricCard
-                label="Shares Outstanding"
-                value={getMetric('summaryDetail.sharesOutstanding.raw', 'number')}
-                tooltip="Total number of shares held by all shareholders"
-              />
-              <MetricCard
-                label="Float Shares"
-                value={getMetric('defaultKeyStatistics.floatShares.raw', 'number')}
-                tooltip="Shares available for public trading"
-              />
-              <MetricCard
-                label="Insider Ownership"
-                value={getMetric('defaultKeyStatistics.insiderHoldings.raw', 'percent')}
-                tooltip="Percentage owned by company insiders"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {activeTab === 'performance' && (
+            <motion.div
+              key="performance"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
+            >
+              <h3 className="text-base font-semibold mb-3">Price Performance</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <MetricCard
+                  label="52 Week High"
+                  value={formatCurrency(getMetric(fundamentals, 'summaryDetail.fiftyTwoWeekHighRaw'))}
+                />
+                <MetricCard
+                  label="52 Week Low"
+                  value={formatCurrency(getMetric(fundamentals, 'summaryDetail.fiftyTwoWeekLowRaw'))}
+                />
+                <MetricCard
+                  label="50 Day MA"
+                  value={formatCurrency(getMetric(fundamentals, 'summaryDetail.fiftyDayAverage'))}
+                  tooltip="Average closing price over last 50 days"
+                />
+                <MetricCard
+                  label="200 Day MA"
+                  value={formatCurrency(getMetric(fundamentals, 'summaryDetail.twoHundredDayAverage'))}
+                  tooltip="Average closing price over last 200 days"
+                />
+                <MetricCard
+                  label="52 Week Change"
+                  value={formatPercent(getMetric(fundamentals, 'defaultKeyStatistics.fiftyTwoWeekChange'))}
+                  variant={getMetric(fundamentals, 'defaultKeyStatistics.fiftyTwoWeekChange') >= 0 ? 'positive' : 'negative'}
+                />
+                <MetricCard
+                  label="Volume (Avg)"
+                  value={formatNumber(getMetric(fundamentals, 'summaryDetail.averageVolume'))}
+                />
+                <MetricCard
+                  label="Shares Outstanding"
+                  value={formatNumber(getMetric(fundamentals, 'summaryDetail.sharesOutstanding'))}
+                  tooltip="Total number of shares held by all shareholders"
+                />
+                <MetricCard
+                  label="Float Shares"
+                  value={formatNumber(getMetric(fundamentals, 'defaultKeyStatistics.floatShares'))}
+                  tooltip="Shares available for public trading"
+                />
+                <MetricCard
+                  label="Insider Ownership"
+                  value={formatPercent(getMetric(fundamentals, 'defaultKeyStatistics.insiderHoldings'))}
+                  tooltip="Percentage owned by company insiders"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Disclaimer */}
@@ -506,80 +396,6 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       </div>
     </motion.div>
   )
-}
-
-function MetricCard({ label, value, tooltip, isLarge = false }) {
-  const [showTooltip, setShowTooltip] = useState(false)
-
-  return (
-    <div 
-      className={`bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3 relative ${isLarge ? 'col-span-2' : ''}`}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      <p className="text-xs text-terminal-dim mb-1 flex items-center gap-1">
-        {label}
-        {tooltip && (
-          <span className="cursor-help">
-            <Info className="w-3 h-3" />
-          </span>
-        )}
-      </p>
-      <p className={`font-mono font-medium ${isLarge ? 'text-lg' : 'text-base'}`}>
-        {value || 'N/A'}
-      </p>
-      {showTooltip && tooltip && (
-        <div className="absolute bottom-full left-0 mb-2 w-48 bg-terminal-bg-light border border-terminal-border rounded-lg p-2 text-xs text-terminal-dim z-10">
-          {tooltip}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Mock data for when API is unavailable
-function getMockFundamentals(symbol) {
-  const mockData = {
-    'RELIANCE.NS': {
-      summaryDetail: {
-        marketCap: { raw: 16000000000000 },
-        fiftyTwoWeekHighRaw: { raw: 3200 },
-        fiftyTwoWeekLowRaw: { raw: 2400 },
-        dividendYieldRaw: { raw: 0.0035 },
-        averageVolume: { raw: 5000000 },
-        volume: { raw: 6000000 },
-        sharesOutstanding: { raw: 6800000000 },
-        twoHundredDayAverage: { raw: 2800 },
-        fiftyDayAverage: { raw: 2950 }
-      },
-      defaultKeyStatistics: {
-        trailingPE: { raw: 28.5 },
-        forwardPE: { raw: 22.3 },
-        priceToBookRaw: { raw: 3.2 },
-        priceToSalesTrailing12Months: { raw: 2.1 },
-        trailingEps: { raw: 98.5 },
-        beta: { raw: 0.85 },
-        fiftyTwoWeekChange: { raw: 0.15 },
-        floatShares: { raw: 5000000000 },
-        insiderHoldings: { raw: 0.45 }
-      },
-      financialData: {
-        totalRevenue: { raw: 800000000000 },
-        netIncomeToCommon: { raw: 95000000000 },
-        grossMargins: { raw: 0.52 },
-        operatingMargins: { raw: 0.18 },
-        profitMargins: { raw: 0.12 },
-        returnOnEquity: { raw: 0.13 },
-        returnOnAssets: { raw: 0.08 },
-        debtToEquity: { raw: 0.4 },
-        currentRatio: { raw: 1.2 },
-        currentPrice: { raw: 2850 }
-      }
-    }
-  }
-  
-  // Return stock-specific mock data or generic fallback
-  return mockData[symbol] || mockData['RELIANCE.NS']
 }
 
 export default FundamentalsPanel
