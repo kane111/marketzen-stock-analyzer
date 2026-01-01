@@ -378,7 +378,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {activeTab === 'summary' && analysisData && (
           <motion.div key="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="lg:col-span-2 border border-terminal-border rounded-lg bg-terminal-panel p-4">
                 <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
                   <Activity className="w-5 h-5 text-terminal-green" />
                   Price Chart
@@ -411,7 +411,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
                 <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
                   <Target className="w-5 h-5 text-terminal-green" />
                   Trading Signals
@@ -446,7 +446,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {activeTab === 'indicators' && analysisData && (
           <motion.div key="indicators" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
                 <h3 className="text-lg font-mono mb-4 text-terminal-text">RSI ({params.rsi.period})</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -463,7 +463,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
                 <h3 className="text-lg font-mono mb-4 text-terminal-text">MACD</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -529,7 +529,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
                 <h3 className="text-lg font-mono mb-4 text-terminal-text">RSI Momentum</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -546,7 +546,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
                 <h3 className="text-lg font-mono mb-4 text-terminal-text">Stochastic</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
