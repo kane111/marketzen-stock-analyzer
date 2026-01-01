@@ -66,7 +66,17 @@ function generateChartData(stock, timeframe) {
   const trend = 0.0005
 
   // Generate enough data points based on timeframe
-  const pointsNeeded = days <= 1 ? 78 : days <= 7 ? 28 : days <= 30 ? 30 : days <= 90 ? 26 : days <= 180 ? 52 : 60
+  // Using trading days approximation (~252 trading days per year)
+  const pointsNeeded = days <= 1 ? 78 
+    : days <= 7 ? 28 
+    : days <= 30 ? 30 
+    : days <= 90 ? 65 
+    : days <= 180 ? 126 
+    : days <= 365 ? 252 
+    : days <= 730 ? 504 
+    : days <= 1095 ? 756 
+    : days <= 1825 ? 1260 
+    : 2000
 
   for (let i = pointsNeeded; i >= 0; i--) {
     const date = new Date()
