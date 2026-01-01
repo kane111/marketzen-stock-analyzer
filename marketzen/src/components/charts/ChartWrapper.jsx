@@ -107,6 +107,42 @@ function generateChartData(stock, timeframe) {
   // Add some volatility spread to make it look realistic
   const volatilityFactor = 0.5 // Reduce volatility for more realistic looking chart
 
+  // First pass: collect all dates to determine if we span multiple years
+  const dateRange = {
+    startYear: null,
+    endYear: null
+  }
+
+  for (let i = pointsNeeded - 1; i >= 0; i--) {
+    const date = new Date(today)
+    
+    // Calculate date going backwards
+    if (days <= 1) {
+      // Intraday - go back by hours
+      date.setHours(date.getHours() - (i * 0.5))
+    } else if (days <= 30) {
+      // Daily - go back by days
+      date.setDate(date.getDate() - i)
+    } else if (days <= 90) {
+      // Weekly - go back by weeks
+      date.setDate(date.getDate() - (i * 7))
+    } else {
+      // Monthly - go back by months
+      date.setMonth(date.getMonth() - i)
+    }
+
+    if (i === pointsNeeded - 1) {
+      dateRange.endYear = date.getFullYear()
+    }
+    if (i === 0) {
+      dateRange.startYear = date.getFullYear()
+    }
+  }
+
+  // Determine if we need to show years in labels
+  const showYear = dateRange.startYear !== dateRange.endYear
+
+  // Second pass: generate actual data with proper labels
   for (let i = pointsNeeded - 1; i >= 0; i--) {
     const date = new Date(today)
     
@@ -140,20 +176,39 @@ function generateChartData(stock, timeframe) {
       currentPrice = currentPrice * (1 + randomChange)
     }
 
-    // Generate time label based on preset
+    // Generate time label based on preset and year boundary detection
     let timeLabel
+    const dateYear = date.getFullYear()
+    const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
+    
     if (preset === 'day' && days <= 7) {
-      // For short timeframes, show day and month
-      timeLabel = formatDateLabel(date, false)
+      // For short timeframes (1D, 1W), show time for intraday or day-month for week
+      if (days <= 1) {
+        timeLabel = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+      } else {
+        // 1W shows day and month
+        const day = date.getDate().toString().padStart(2, '0')
+        timeLabel = `${day} ${month}`
+      }
     } else if (preset === 'day' && days <= 30) {
       // For 1M, show full date
-      timeLabel = formatDateLabel(date, true)
+      const day = date.getDate().toString().padStart(2, '0')
+      const year = dateYear.toString().slice(-2)
+      timeLabel = `${day} ${month} '${year}`
     } else if (preset === 'week') {
-      // For weekly, show date and month
-      timeLabel = formatDateLabel(date, false)
+      // For weekly (3M, 6M), show date and month
+      const day = date.getDate().toString().padStart(2, '0')
+      // Include year if spanning multiple years or if it's not the current year
+      if (showYear || dateYear !== dateRange.endYear) {
+        const year = dateYear.toString().slice(-2)
+        timeLabel = `${day} ${month} '${year}`
+      } else {
+        timeLabel = `${day} ${month}`
+      }
     } else {
-      // For monthly (1Y, 5Y, ALL), show month and year only
-      timeLabel = formatMonthYearLabel(date)
+      // For monthly (1Y, 5Y, ALL), show month and year
+      const year = dateYear.toString().slice(-2)
+      timeLabel = `${month} '${year}`
     }
 
     data.push({
