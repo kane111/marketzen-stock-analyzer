@@ -204,20 +204,20 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onClose}
-              className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+              className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
             >
               <X className="w-5 h-5" />
             </motion.button>
             <div>
               <h2 className="text-2xl font-semibold">Fundamentals</h2>
-              <p className="text-textSecondary text-sm">Loading...</p>
+              <p className="text-terminal-dim text-sm">Loading...</p>
             </div>
           </div>
         </div>
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-12 bg-surfaceLight rounded" />
+              <div key={i} className="h-12 bg-terminal-bg-light rounded" />
             ))}
           </div>
         </div>
@@ -239,16 +239,16 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onClose}
-            className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+            className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
           >
             <X className="w-5 h-5" />
           </motion.button>
           <div>
             <h2 className="text-2xl font-semibold">{stock?.name}</h2>
-            <div className="flex items-center gap-2 text-sm text-textSecondary">
+            <div className="flex items-center gap-2 text-sm text-terminal-dim">
               <span>{stock?.symbol}</span>
               <span>•</span>
-              <span className="px-2 py-0.5 bg-surfaceLight rounded-full">{getSector()}</span>
+              <span className="px-2 py-0.5 bg-terminal-bg-light rounded-full">{getSector()}</span>
               <span>•</span>
               <span>NSE</span>
             </div>
@@ -260,7 +260,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => fetchFundamentals(stock?.id)}
-            className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+            className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
             title="Refresh data"
           >
             <RefreshCw className="w-4 h-4" />
@@ -270,7 +270,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onAddToComparison}
-              className="px-4 py-2 bg-primary/10 text-primary rounded-lg flex items-center gap-2"
+              className="px-4 py-2 bg-terminal-green/10 text-terminal-green rounded-lg flex items-center gap-2"
             >
               <PieChart className="w-4 h-4" />
               Compare
@@ -280,22 +280,22 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       </div>
 
       {/* Data Source & Last Updated */}
-      <div className="flex items-center justify-between text-xs text-textSecondary mb-4">
+      <div className="flex items-center justify-between text-xs text-terminal-dim mb-4">
         <span>Data Source: {dataSource}</span>
         {lastUpdated && <span>Last Updated: {lastUpdated.toLocaleTimeString()}</span>}
       </div>
 
       {/* Current Price Card */}
       {stockData && (
-        <div className="glass rounded-xl p-4 mb-6 flex items-center justify-between">
+        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-xl p-4 mb-6 flex items-center justify-between">
           <div>
-            <p className="text-sm text-textSecondary">Current Price</p>
+            <p className="text-sm text-terminal-dim">Current Price</p>
             <p className="text-2xl font-bold">{formatCurrency(stockData.current_price)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-textSecondary">Day Change</p>
+            <p className="text-sm text-terminal-dim">Day Change</p>
             <p className={`text-lg font-semibold ${
-              (stockData.current_price - stockData.previous_close) >= 0 ? 'text-positive' : 'text-negative'
+              (stockData.current_price - stockData.previous_close) >= 0 ? 'text-terminal-green' : 'text-terminal-red'
             }`}>
               {((stockData.current_price - stockData.previous_close) / stockData.previous_close * 100).toFixed(2)}%
             </p>
@@ -313,8 +313,8 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
               activeTab === tab.id
-                ? 'bg-primary text-white'
-                : 'glass hover:bg-surfaceLight'
+                ? 'bg-terminal-green text-terminal-bg'
+                : 'bg-terminal-bg-secondary border border-terminal-border hover:bg-terminal-bg-light'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -331,7 +331,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="glass rounded-2xl p-6"
+            className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6"
           >
             <h3 className="text-lg font-semibold mb-4">Valuation Metrics</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -391,7 +391,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="glass rounded-2xl p-6"
+            className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6"
           >
             <h3 className="text-lg font-semibold mb-4">Financial Performance</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -450,7 +450,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="glass rounded-2xl p-6"
+            className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-6"
           >
             <h3 className="text-lg font-semibold mb-4">Price Performance</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -501,10 +501,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       </AnimatePresence>
 
       {/* Disclaimer */}
-      <div className="mt-6 p-4 glass rounded-xl flex items-start gap-3">
-        <Info className="w-5 h-5 text-textSecondary flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-textSecondary">
-          <strong className="text-text">Disclaimer:</strong> Fundamental data is provided for informational purposes only and should not be considered as financial advice. 
+      <div className="mt-6 p-4 bg-terminal-bg-secondary border border-terminal-border rounded-xl flex items-start gap-3">
+        <Info className="w-5 h-5 text-terminal-dim flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-terminal-dim">
+          <strong className="text-terminal-text">Disclaimer:</strong> Fundamental data is provided for informational purposes only and should not be considered as financial advice. 
           Always conduct your own research and consider consulting a financial advisor before making investment decisions.
           {dataSource.includes('Demo') && ' Some data shown is demo data as the live API is currently unavailable.'}
         </p>
@@ -518,11 +518,11 @@ function MetricCard({ label, value, tooltip, isLarge = false }) {
 
   return (
     <div 
-      className={`glass rounded-xl p-4 relative ${isLarge ? 'col-span-2' : ''}`}
+      className={`bg-terminal-bg-secondary border border-terminal-border rounded-xl p-4 relative ${isLarge ? 'col-span-2' : ''}`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <p className="text-xs text-textSecondary mb-1 flex items-center gap-1">
+      <p className="text-xs text-terminal-dim mb-1 flex items-center gap-1">
         {label}
         {tooltip && (
           <span className="cursor-help">
@@ -534,7 +534,7 @@ function MetricCard({ label, value, tooltip, isLarge = false }) {
         {value || 'N/A'}
       </p>
       {showTooltip && tooltip && (
-        <div className="absolute bottom-full left-0 mb-2 w-48 bg-surfaceLight border border-white/10 rounded-lg p-2 text-xs text-textSecondary z-10">
+        <div className="absolute bottom-full left-0 mb-2 w-48 bg-terminal-bg-light border border-terminal-border rounded-lg p-2 text-xs text-terminal-dim z-10">
           {tooltip}
         </div>
       )}
