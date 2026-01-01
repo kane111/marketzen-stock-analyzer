@@ -379,7 +379,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           <motion.div key="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
                   <Activity className="w-5 h-5 text-terminal-green" />
                   Price Chart
                 </h3>
@@ -412,7 +412,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               </div>
               
               <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
                   <Target className="w-5 h-5 text-terminal-green" />
                   Trading Signals
                 </h3>
@@ -447,7 +447,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           <motion.div key="indicators" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">RSI ({params.rsi.period})</h3>
+                <h3 className="text-lg font-mono mb-4 text-terminal-text">RSI ({params.rsi.period})</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataRSI}>
@@ -464,7 +464,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               </div>
               
               <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">MACD</h3>
+                <h3 className="text-lg font-mono mb-4 text-terminal-text">MACD</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataMACD}>
@@ -487,8 +487,8 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {/* Oscillators Tab */}
         {activeTab === 'oscillators' && analysisData && (
           <motion.div key="oscillators" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-            <div className="glass rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">Oscillator Values</h3>
+            <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
+              <h3 className="text-lg font-mono mb-4 text-terminal-text">Oscillator Values</h3>
               {(() => {
                 const currentRSI = analysisData.chartData[analysisData.chartData.length - 1]?.rsi
                 const currentStochK = analysisData.chartData[analysisData.chartData.length - 1]?.stochK
@@ -530,7 +530,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">RSI Momentum</h3>
+                <h3 className="text-lg font-mono mb-4 text-terminal-text">RSI Momentum</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataRSI}>
@@ -547,7 +547,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               </div>
               
               <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Stochastic</h3>
+                <h3 className="text-lg font-mono mb-4 text-terminal-text">Stochastic</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataStoch}>
@@ -569,8 +569,8 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {/* Patterns Tab */}
         {activeTab === 'patterns' && analysisData && (
           <motion.div key="patterns" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
                 <Grid3X3 className="w-5 h-5 text-terminal-green" />
                 Technical Patterns
               </h3>
