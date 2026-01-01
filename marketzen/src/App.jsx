@@ -130,6 +130,7 @@ function AppContent() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [cursorBlink, setCursorBlink] = useState(true)
+  const [rightPanelTab, setRightPanelTab] = useState('depth')
   
   // Panel sizing
   const [leftPanelWidth, setLeftPanelWidth] = useState(280)
@@ -861,7 +862,7 @@ function AppContent() {
                     <div className={`flex items-center bg-terminal-bg rounded-lg border transition-all duration-200 ${
                       commandMode ? 'border-terminal-green shadow-lg shadow-terminal-green/20' : 'border-terminal-border focus-within:border-terminal-dim'
                     }`}>
-                      pl-3 text<span className="-terminal-dim">
+                      <span className="pl-3 text-terminal-dim">
                         <Command className="w-4 h-4" />
                       </span>
                       <input
@@ -879,7 +880,7 @@ function AppContent() {
                       {commandInput && (
                         <button
                           onClick={() => executeCommand()}
-                          className="pr-3 text-terminal-green hover:text-terminal-bright"
+                          className="pr-3 text-terminal-green hover:text-terminal-text transition-colors"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -1521,65 +1522,88 @@ function AppContent() {
                   
                   {/* Panel Tabs */}
                   <div className="flex border-b border-terminal-border bg-terminal-header">
-                    <button className="flex-1 px-4 py-3 text-xs font-bold text-terminal-green border-b-2 border-terminal-green bg-terminal-bg">
+                    <button 
+                      onClick={() => setRightPanelTab('depth')}
+                      className={`flex-1 px-4 py-3 text-xs font-bold transition-all ${
+                        rightPanelTab === 'depth' 
+                          ? 'text-terminal-green border-b-2 border-terminal-green bg-terminal-bg' 
+                          : 'text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg'
+                      }`}
+                    >
                       MARKET DEPTH
                     </button>
-                    <button className="flex-1 px-4 py-3 text-xs font-bold text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg transition-colors">
+                    <button 
+                      onClick={() => setRightPanelTab('stats')}
+                      className={`flex-1 px-4 py-3 text-xs font-bold transition-all ${
+                        rightPanelTab === 'stats' 
+                          ? 'text-terminal-green border-b-2 border-terminal-green bg-terminal-bg' 
+                          : 'text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg'
+                      }`}
+                    >
                       STATS
                     </button>
-                    <button className="flex-1 px-4 py-3 text-xs font-bold text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg transition-colors">
+                    <button 
+                      onClick={() => setRightPanelTab('orders')}
+                      className={`flex-1 px-4 py-3 text-xs font-bold transition-all ${
+                        rightPanelTab === 'orders' 
+                          ? 'text-terminal-green border-b-2 border-terminal-green bg-terminal-bg' 
+                          : 'text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg'
+                      }`}
+                    >
                       ORDERS
                     </button>
                   </div>
                   
                   {/* Market Depth Content */}
                   <div className="flex-1 overflow-y-auto p-4">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs text-terminal-dim font-mono">BID / ASK</span>
-                      <span className="text-xs text-terminal-dim font-mono">QTY</span>
-                    </div>
-                    
-                    {/* Asks (Sell Orders) - Top */}
-                    <div className="space-y-1 mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={`ask-${i}`} className="flex items-center justify-between text-xs font-mono">
-                          <span className="text-negative flex items-center gap-1">
-                            <span className="w-1 h-1 bg-negative rounded-full"></span>
-                            {stockData ? formatCurrency(stockData.day_high - (i * 0.5)) : '--'}
-                          </span>
-                          <span className="text-terminal-dim">{Math.floor(Math.random() * 5000 + 1000)}</span>
+                    {/* MARKET DEPTH Tab */}
+                    {rightPanelTab === 'depth' && (
+                      <>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs text-terminal-dim font-mono">BID / ASK</span>
+                          <span className="text-xs text-terminal-dim font-mono">QTY</span>
                         </div>
-                      ))}
-                    </div>
-                    
-                    {/* Current Price */}
-                    {stockData && (
-                      <div className="py-3 border-y border-terminal-border bg-terminal-bg my-4">
-                        <p className="text-center font-mono text-lg font-bold text-terminal-text">
-                          {formatCurrency(stockData.current_price)}
-                        </p>
-                      </div>
+                        
+                        <div className="space-y-1 mb-4">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={`ask-${i}`} className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-negative flex items-center gap-1">
+                                <span className="w-1 h-1 bg-negative rounded-full"></span>
+                                {stockData ? formatCurrency(stockData.day_high - (i * 0.5)) : '--'}
+                              </span>
+                              <span className="text-terminal-dim">{Math.floor(Math.random() * 5000 + 1000)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {stockData && (
+                          <div className="py-3 border-y border-terminal-border bg-terminal-bg my-4">
+                            <p className="text-center font-mono text-lg font-bold text-terminal-text">
+                              {formatCurrency(stockData.current_price)}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-1">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={`bid-${i}`} className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-terminal-green flex items-center gap-1">
+                                <span className="w-1 h-1 bg-terminal-green rounded-full"></span>
+                                {stockData ? formatCurrency(stockData.day_low + (i * 0.5)) : '--'}
+                              </span>
+                              <span className="text-terminal-dim">{Math.floor(Math.random() * 5000 + 1000)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                     
-                    {/* Bids (Buy Orders) - Bottom */}
-                    <div className="space-y-1">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={`bid-${i}`} className="flex items-center justify-between text-xs font-mono">
-                          <span className="text-terminal-green flex items-center gap-1">
-                            <span className="w-1 h-1 bg-terminal-green rounded-full"></span>
-                            {stockData ? formatCurrency(stockData.day_low + (i * 0.5)) : '--'}
-                          </span>
-                          <span className="text-terminal-dim">{Math.floor(Math.random() * 5000 + 1000)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* OHLC Bar */}
-                    {stockData && (
-                      <div className="mt-6">
-                        <p className="text-xs text-terminal-dim font-mono mb-2">OHLC</p>
-                        <div className="space-y-2 text-xs font-mono">
+                    {/* STATS Tab */}
+                    {rightPanelTab === 'stats' && stockData && (
+                      <>
+                        <p className="text-xs text-terminal-dim font-mono mb-4">KEY METRICS</p>
+                        
+                        <div className="space-y-3 text-xs font-mono">
                           <div className="flex justify-between">
                             <span className="text-terminal-dim">Open:</span>
                             <span>{formatCurrency(stockData.open)}</span>
@@ -1602,9 +1626,8 @@ function AppContent() {
                           </div>
                         </div>
                         
-                        {/* Price Change Bar */}
-                        <div className="mt-4">
-                          <p className="text-xs text-terminal-dim font-mono mb-1">CHANGE</p>
+                        <div className="mt-6">
+                          <p className="text-xs text-terminal-dim font-mono mb-2">CHANGE</p>
                           <div className="h-2 bg-terminal-bg rounded-full overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
@@ -1612,42 +1635,50 @@ function AppContent() {
                               className={`h-full ${isPositive ? 'bg-terminal-green' : 'bg-negative'}`}
                             />
                           </div>
-                          <p className={`text-xs font-mono mt-1 ${isPositive ? 'text-terminal-green' : 'text-negative'}`}>
+                          <p className={`text-xs font-mono mt-2 ${isPositive ? 'text-terminal-green' : 'text-negative'}`}>
                             {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
                           </p>
                         </div>
-                      </div>
+                        
+                        <div className="mt-6 pt-4 border-t border-terminal-border">
+                          <p className="text-xs text-terminal-dim font-mono mb-3">QUICK STATS</p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="bg-terminal-bg rounded p-2">
+                              <p className="text-terminal-dim mb-1">52W High</p>
+                              <p className="font-mono text-terminal-green">{formatCurrency(stockData.day_high * 1.3)}</p>
+                            </div>
+                            <div className="bg-terminal-bg rounded p-2">
+                              <p className="text-terminal-dim mb-1">52W Low</p>
+                              <p className="font-mono text-negative">{formatCurrency(stockData.day_low * 0.7)}</p>
+                            </div>
+                            <div className="bg-terminal-bg rounded p-2">
+                              <p className="text-terminal-dim mb-1">Mkt Cap</p>
+                              <p className="font-mono">--</p>
+                            </div>
+                            <div className="bg-terminal-bg rounded p-2">
+                              <p className="text-terminal-dim mb-1">P/E</p>
+                              <p className="font-mono">--</p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     )}
                     
-                    {/* Quick Stats */}
-                    <div className="mt-6 pt-4 border-t border-terminal-border">
-                      <p className="text-xs text-terminal-dim font-mono mb-3">QUICK STATS</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-terminal-bg rounded p-2">
-                          <p className="text-terminal-dim mb-1">52W High</p>
-                          <p className="font-mono text-terminal-green">{stockData ? formatCurrency(stockData.day_high * 1.3) : '--'}</p>
-                        </div>
-                        <div className="bg-terminal-bg rounded p-2">
-                          <p className="text-terminal-dim mb-1">52W Low</p>
-                          <p className="font-mono text-negative">{stockData ? formatCurrency(stockData.day_low * 0.7) : '--'}</p>
-                        </div>
-                        <div className="bg-terminal-bg rounded p-2">
-                          <p className="text-terminal-dim mb-1">Mkt Cap</p>
-                          <p className="font-mono">--</p>
-                        </div>
-                        <div className="bg-terminal-bg rounded p-2">
-                          <p className="text-terminal-dim mb-1">P/E</p>
-                          <p className="font-mono">--</p>
-                        </div>
+                    {/* ORDERS Tab */}
+                    {rightPanelTab === 'orders' && (
+                      <div className="text-center py-8">
+                        <p className="text-xs text-terminal-dim font-mono mb-2">ORDER BOOK</p>
+                        <p className="text-sm text-terminal-text">Coming Soon</p>
+                        <p className="text-xs text-terminal-dim mt-2">Real-time order flow integration</p>
                       </div>
-                    </div>
+                    )}
                   </div>
                   
                   {/* Panel Footer */}
                   <div className="px-4 py-2 border-t border-terminal-border bg-terminal-header">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-terminal-dim font-mono">
-                        <span className="text-terminal-green">$</span> workspace:depth
+                        <span className="text-terminal-green">$</span> workspace:{rightPanelTab}
                       </p>
                       <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${cursorBlink ? 'bg-terminal-green' : 'bg-terminal-green/30'}`}></span>
