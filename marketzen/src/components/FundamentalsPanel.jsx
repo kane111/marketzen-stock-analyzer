@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { X, TrendingUp, PieChart, BarChart3 } from 'lucide-react'
 import { TerminalTab } from './UI'
 import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
@@ -6,10 +6,10 @@ import { MetricCard } from './common/MetricCard'
 
 function FundamentalsPanel({ stock, onClose }) {
   const [activeTab, setActiveTab] = useState('valuation')
-  
-  const { 
-    data: fundamentals, 
-    loading 
+
+  const {
+    data: fundamentals,
+    loading
   } = useFundamentals(stock?.id)
 
   const tabs = [
@@ -222,9 +222,8 @@ function FundamentalsPanel({ stock, onClose }) {
   )
 }
 
+// Custom comparison to prevent unnecessary re-renders
 export default memo(FundamentalsPanel, (prevProps, nextProps) => {
-  // Only re-render if stock.id changes or onClose reference changes
-  // This prevents re-renders when stock object reference changes but id stays same
   return (
     prevProps.stock?.id === nextProps.stock?.id &&
     prevProps.onClose === nextProps.onClose

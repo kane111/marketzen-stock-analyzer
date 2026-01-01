@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu, Terminal, Command, ChevronRight, ChevronDown, Copy, Check, RotateCcw, Play, Pause, Maximize2, Minimize2, GripVertical } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
-import TimeframeSelector from './components/charts/TimeframeSelector'
 import LoadingSkeleton from './components/LoadingSkeleton'
 import TechnicalAnalysis from './components/TechnicalAnalysis'
 import MarketStatus from './components/MarketStatus'
@@ -21,6 +19,7 @@ import StockScreener from './components/StockScreener'
 import ThemeSettings from './components/ThemeSettings'
 import AdvancedCharting from './components/AdvancedCharting'
 import DataExport from './components/DataExport'
+import ChartWrapper from './components/charts/ChartWrapper'
 import { AlertsProvider } from './context/AlertsContext'
 import { PortfolioProvider } from './context/PortfolioContext'
 import { WatchlistProvider } from './context/WatchlistContext'
@@ -101,7 +100,6 @@ function AppContent() {
   const [stockData, setStockData] = useState(null)
   const [chartData, setChartData] = useState([])
   const [multiChartData, setMultiChartData] = useState({})
-  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1])
   const [selectedMultiTimeframes, setSelectedMultiTimeframes] = useState(['1D', '1W'])
   const [multiChartMode, setMultiChartMode] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -435,15 +433,7 @@ function AppContent() {
 
   const handleBackToDashboard = () => {
     setView('dashboard')
-    setSelectedTimeframe(TIMEFRAMES[1])
     setMultiChartMode(false)
-  }
-
-  const handleTimeframeChange = (timeframe) => {
-    setSelectedTimeframe(timeframe)
-    if (selectedStock) {
-      fetchStockData(selectedStock, timeframe, view === 'analysis')
-    }
   }
 
   const toggleMultiTimeframe = (label) => {
@@ -1356,17 +1346,14 @@ function AppContent() {
                           }`}>
                             <div className="flex items-center gap-2">
                               <span className="text-terminal-green font-bold text-sm">CHART</span>
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bg text-terminal-dim border border-terminal-border">
-                                {multiChartMode ? 'MULTI-TF' : selectedTimeframe.label}
-                              </span>
                             </div>
-                            
+
                             {!multiChartMode ? (
-                              <TimeframeSelector 
-                                timeframes={TIMEFRAMES}
-                                selected={selectedTimeframe}
-                                onSelect={handleTimeframeChange}
-                              />
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bg text-terminal-dim border border-terminal-border">
+                                  Managed by ChartWrapper
+                                </span>
+                              </div>
                             ) : (
                               <div className="flex items-center gap-2">
                                 {MULTI_CHART_TIMEFRAMES.map((tf) => (
@@ -1388,57 +1375,12 @@ function AppContent() {
                             )}
                           </div>
                           
-                          {/* Chart Container */}
+                          {/* Chart Container - Isolated Chart Wrapper */}
                           {!multiChartMode ? (
-                            <div className={`flex-1 min-h-0 border border-terminal-border rounded-lg bg-terminal-panel p-4 transition-all duration-300 ${
-                              showFundamentalsPanel ? 'p-2' : ''
-                            }`}>
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
-                                  <defs>
-                                    <linearGradient id="colorPriceTerminal" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0.2}/>
-                                      <stop offset="95%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0}/>
-                                    </linearGradient>
-                                  </defs>
-                                  <XAxis 
-                                    dataKey="time" 
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'monospace' }}
-                                    interval="preserveStartEnd"
-                                    minTickGap={30}
-                                  />
-                                  <YAxis 
-                                    domain={['auto', 'auto']}
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'monospace' }}
-                                    tickFormatter={(value) => `₹${value.toLocaleString()}`}
-                                    width={70}
-                                  />
-                                  <Tooltip
-                                    contentStyle={{
-                                      background: 'rgba(3, 7, 18, 0.95)',
-                                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                                      borderRadius: '4px',
-                                      backdropFilter: 'blur(12px)',
-                                      fontFamily: 'monospace'
-                                    }}
-                                    labelStyle={{ color: '#6b7280', fontFamily: 'monospace' }}
-                                    formatter={(value) => [formatCurrency(value), 'PRICE']}
-                                  />
-                                  <Area
-                                    type="monotone"
-                                    dataKey="price"
-                                    stroke={isPositive ? '#22c55e' : '#ef4444'}
-                                    strokeWidth={2}
-                                    fill="url(#colorPriceTerminal)"
-                                    animationDuration={800}
-                                  />
-                                </AreaChart>
-                              </ResponsiveContainer>
-                            </div>
+                            <ChartWrapper
+                              stock={stockData}
+                              showFundamentalsPanel={showFundamentalsPanel}
+                            />
                           ) : (
                             /* Multi-Chart Grid View */
                             <div className={`flex-1 min-h-0 grid gap-3 transition-all duration-300 ${
