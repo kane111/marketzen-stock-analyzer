@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, TrendingUp, TrendingDown, PieChart, Wallet, ArrowUpRight, ArrowDownRight, X, Search, Calendar, ExternalLink } from 'lucide-react'
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { usePortfolio } from '../../context/PortfolioContext'
+import { usePortfolio } from '../context/PortfolioContext'
 
 // Common stocks for quick add
 const QUICK_STOCKS = [

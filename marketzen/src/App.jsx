@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -15,8 +15,12 @@ import NewsFeed from './components/NewsFeed'
 import AlertsManager from './components/AlertsManager'
 import FundamentalsPanel from './components/FundamentalsPanel'
 import StockComparison from './components/StockComparison'
+import WatchlistPanel from './components/WatchlistPanel'
+import PerformanceChart from './components/PerformanceChart'
+import StockScreener from './components/StockScreener'
 import { AlertsProvider } from './context/AlertsContext'
 import { PortfolioProvider } from './context/PortfolioContext'
+import { WatchlistProvider } from './context/WatchlistContext'
 
 // Yahoo Finance API for Indian stocks (NSE)
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -87,7 +91,7 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_STOCKS
   })
   
-  // Main view state: dashboard, analysis, portfolio, sectors, news, alerts, fundamentals, comparison
+  // Main view state: dashboard, analysis, portfolio, sectors, news, alerts, fundamentals, comparison, watchlist, performance, screener
   const [view, setView] = useState('dashboard')
   const [selectedStock, setSelectedStock] = useState(null)
   const [stockData, setStockData] = useState(null)
@@ -472,8 +476,9 @@ function AppContent() {
   const isViewActive = (targetView) => view === targetView
 
   return (
-    <PortfolioProvider watchlist={watchlist}>
-      <AlertsProvider stockData={stockData} marketStatus={marketStatus}>
+    <WatchlistProvider>
+      <PortfolioProvider watchlist={watchlist}>
+        <AlertsProvider stockData={stockData} marketStatus={marketStatus}>
         <div className="min-h-screen bg-background text-text overflow-hidden">
           {/* Notification Toast */}
           <AnimatePresence>
@@ -549,6 +554,45 @@ function AppContent() {
               >
                 <BarChart2 className="w-4 h-4" />
                 <span className="hidden sm:inline text-sm">Compare</span>
+              </motion.button>
+
+              {/* Performance Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView(isViewActive('performance') ? 'dashboard' : 'performance')}
+                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+                  isViewActive('performance') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+                }`}
+              >
+                <ChartIcon className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Performance</span>
+              </motion.button>
+
+              {/* Screener Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView(isViewActive('screener') ? 'dashboard' : 'screener')}
+                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+                  isViewActive('screener') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Screener</span>
+              </motion.button>
+
+              {/* Watchlist Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView(isViewActive('watchlist') ? 'dashboard' : 'watchlist')}
+                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
+                  isViewActive('watchlist') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
+                }`}
+              >
+                <Eye className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Watchlist</span>
               </motion.button>
 
               {/* Sectors Button */}
@@ -667,6 +711,46 @@ function AppContent() {
                   view === 'portfolio' ? 'text-primary' : 'text-textSecondary'
                 }`}
               >
+                <Eye className="w-5 h-5" />
+                <span className="text-xs">Watchlist</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setView('performance')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+                  view === 'performance' ? 'text-primary' : 'text-textSecondary'
+                }`}
+              >
+                <ChartIcon className="w-5 h-5" />
+                <span className="text-xs">Performance</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setView('screener')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+                  view === 'screener' ? 'text-primary' : 'text-textSecondary'
+                }`}
+              >
+                <Filter className="w-5 h-5" />
+                <span className="text-xs">Screener</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setView('sectors')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+                  view === 'sectors' ? 'text-primary' : 'text-textSecondary'
+                }`}
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span className="text-xs">Sectors</span>
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setView('portfolio')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
+                  view === 'portfolio' ? 'text-primary' : 'text-textSecondary'
+                }`}
+              >
                 <Wallet className="w-5 h-5" />
                 <span className="text-xs">Portfolio</span>
               </motion.button>
@@ -674,7 +758,6 @@ function AppContent() {
           )}
 
           <div className={`pt-20 h-screen flex ${isMobile ? 'pb-16' : ''}`}>
-            {/* Watchlist Sidebar */}
             <AnimatePresence>
               {!isMobile && view === 'dashboard' && (
                 <motion.aside
@@ -833,6 +916,30 @@ function AppContent() {
                     stock={selectedStock}
                     stockData={stockData}
                     onClose={() => setView('dashboard')}
+                  />
+                )}
+
+                {/* Watchlist View */}
+                {view === 'watchlist' && (
+                  <WatchlistPanel
+                    key="watchlist"
+                    onStockSelect={handleStockSelect}
+                  />
+                )}
+
+                {/* Performance View */}
+                {view === 'performance' && (
+                  <PerformanceChart
+                    key="performance"
+                    onStockSelect={handleStockSelect}
+                  />
+                )}
+
+                {/* Stock Screener View */}
+                {view === 'screener' && (
+                  <StockScreener
+                    key="screener"
+                    onStockSelect={handleStockSelect}
                   />
                 )}
 
@@ -1217,6 +1324,7 @@ function AppContent() {
         </div>
       </AlertsProvider>
     </PortfolioProvider>
+    </WatchlistProvider>
   )
 }
 
