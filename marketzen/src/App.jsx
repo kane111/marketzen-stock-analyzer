@@ -1533,9 +1533,9 @@ function AppContent() {
                           {showFundamentalsPanel && stockData && (
                             <motion.div
                               key="fundamentals-panel"
-                              initial={{ height: 0 }}
-                              animate={{ height: '45%' }}
-                              exit={{ height: 0 }}
+                              initial={{ maxHeight: 0, opacity: 0 }}
+                              animate={{ maxHeight: 500, opacity: 1 }}
+                              exit={{ maxHeight: 0, opacity: 0 }}
                               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                               className="bg-terminal-panel border-t border-terminal-border overflow-hidden"
                             >
