@@ -699,9 +699,14 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       overallStrength = `${sellSignals} bearish vs ${buySignals} bullish signals`
     }
     
-    // Prepare chart data
+    // Prepare chart data with Heikin Ashi
+    let prevHeikinClose = null
     const chartData = ohlc.map((d, i) => {
       const isGreen = d.close >= d.open
+      const heikinClose = (d.open + d.high + d.low + d.close) / 4
+      const heikinOpen = i > 0 ? (prevHeikinClose || (d.open + d.close) / 2) : (d.open + d.close) / 2
+      prevHeikinClose = heikinClose
+      
       return {
         ...d,
         smaShort: smaShort[i],
@@ -727,8 +732,8 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         ichimokuSpanB: ichimoku.leadingSpanB[i],
         ichimokuLagging: ichimoku.laggingSpan[i],
         isGreen,
-        heikinClose: (d.open + d.high + d.low + d.close) / 4,
-        heikinOpen: i > 0 ? (chartData[i - 1]?.heikinClose || (d.open + d.close) / 2) : (d.open + d.close) / 2,
+        heikinClose,
+        heikinOpen,
         heikinHigh: Math.max(d.high, d.open, d.close),
         heikinLow: Math.min(d.low, d.open, d.close)
       }
