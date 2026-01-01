@@ -399,6 +399,11 @@ function AppContent() {
     setSelectedStock(stock)
     setShowMobileWatchlist(false)
     setView('dashboard')
+    
+    // Always fetch data for the selected stock
+    const timeframe = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
+    fetchStockData(stock, timeframe, view === 'analysis')
+    
     if (multiChartMode) {
       setMultiChartData({})
       const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
