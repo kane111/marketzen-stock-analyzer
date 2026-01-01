@@ -35,9 +35,9 @@ const MOCK_NEWS = {
 }
 
 const SENTIMENT_COLORS = {
-  positive: { bg: 'bg-positive/10', text: 'text-positive', border: 'border-positive/30', icon: 'bg-emerald-500/20' },
-  negative: { bg: 'bg-negative/10', text: 'text-negative', border: 'border-negative/30', icon: 'bg-red-500/20' },
-  neutral: { bg: 'bg-surfaceLight', text: 'text-textSecondary', border: 'border-white/10', icon: 'bg-gray-500/20' }
+  positive: { bg: 'bg-terminal-green/10', text: 'text-terminal-green', border: 'border-terminal-green/30', icon: 'bg-terminal-green/20' },
+  negative: { bg: 'bg-terminal-red/10', text: 'text-terminal-red', border: 'border-terminal-red/30', icon: 'bg-terminal-red/20' },
+  neutral: { bg: 'bg-terminal-bg-light', text: 'text-terminal-dim', border: 'border-terminal-border', icon: 'bg-terminal-dim/20' }
 }
 
 const SENTIMENT_ICONS = {
@@ -108,9 +108,9 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1 hover:bg-surface rounded transition-colors"
+              className="p-1 hover:bg-terminal-bg-light rounded transition-colors"
             >
-              <X className="w-4 h-4 text-textSecondary" />
+              <X className="w-4 h-4 text-terminal-dim" />
             </button>
           )}
         </div>
@@ -119,8 +119,8 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-4 bg-surfaceLight rounded w-3/4 mb-2" />
-                <div className="h-3 bg-surfaceLight rounded w-1/2" />
+                <div className="h-4 bg-terminal-bg-light rounded w-3/4 mb-2" />
+                <div className="h-3 bg-terminal-bg-light rounded w-1/2" />
               </div>
             ))}
           </div>
@@ -132,12 +132,12 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => handleNewsClick(item)}
-                className={`p-3 rounded-lg border cursor-pointer transition-all hover:bg-surfaceLight/50 ${
+                className={`p-3 rounded-lg border cursor-pointer transition-all hover:bg-terminal-bg-light/50 ${
                   SENTIMENT_COLORS[item.sentiment].border
                 }`}
               >
                 <p className="text-sm font-medium line-clamp-2">{item.title}</p>
-                <div className="flex items-center gap-2 mt-2 text-xs text-textSecondary">
+                <div className="flex items-center gap-2 mt-2 text-xs text-terminal-dim">
                   <span>{item.source}</span>
                   <span>•</span>
                   <span>{item.time}</span>
@@ -165,14 +165,14 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onBack}
-              className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+              className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
             >
               <X className="w-5 h-5" />
             </motion.button>
           )}
           <div>
             <h2 className="text-2xl font-semibold">Market News</h2>
-            <p className="text-textSecondary text-sm">
+            <p className="text-terminal-dim text-sm">
               {stockId ? `Latest updates for ${stockId.replace('.NS', '')}` : 'Top market headlines'}
             </p>
           </div>
@@ -183,7 +183,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleRefresh}
-          className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+          className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
           title="Refresh news"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -192,7 +192,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
 
       {/* Last Updated Timestamp */}
       {lastUpdated && (
-        <p className="text-xs text-textSecondary mb-4">
+        <p className="text-xs text-terminal-dim mb-4">
           Last updated: {lastUpdated.toLocaleTimeString()}
         </p>
       )}
@@ -200,15 +200,15 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
       {/* Filters */}
       {showFilters && (
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          <Filter className="w-4 h-4 text-textSecondary flex-shrink-0" />
+          <Filter className="w-4 h-4 text-terminal-dim flex-shrink-0" />
           {['all', 'positive', 'negative', 'neutral'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                 filter === f 
-                  ? 'bg-primary text-white' 
-                  : 'bg-surfaceLight text-textSecondary hover:bg-surface'
+                  ? 'bg-terminal-green text-terminal-bg' 
+                  : 'bg-terminal-bg-light text-terminal-dim hover:bg-terminal-bg'
               }`}
             >
               {f === 'all' ? 'All News' : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -226,14 +226,14 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="glass rounded-xl p-6"
+              className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-6"
             >
               <div className="animate-pulse space-y-3">
-                <div className="h-5 bg-surfaceLight rounded w-3/4" />
-                <div className="h-4 bg-surfaceLight rounded w-1/2" />
+                <div className="h-5 bg-terminal-bg-light rounded w-3/4" />
+                <div className="h-4 bg-terminal-bg-light rounded w-1/2" />
                 <div className="flex gap-2 mt-4">
-                  <div className="h-6 bg-surfaceLight rounded w-16" />
-                  <div className="h-6 bg-surfaceLight rounded w-16" />
+                  <div className="h-6 bg-terminal-bg-light rounded w-16" />
+                  <div className="h-6 bg-terminal-bg-light rounded w-16" />
                 </div>
               </div>
             </motion.div>
@@ -244,11 +244,11 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl p-12 text-center"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-12 text-center"
         >
-          <AlertCircle className="w-12 h-12 text-textSecondary mx-auto mb-4 opacity-50" />
+          <AlertCircle className="w-12 h-12 text-terminal-dim mx-auto mb-4 opacity-50" />
           <h3 className="text-lg font-medium mb-2">No News Found</h3>
-          <p className="text-textSecondary text-sm mb-4">
+          <p className="text-terminal-dim text-sm mb-4">
             {filter === 'all' 
               ? 'No news articles available at the moment.' 
               : `No ${filter} news articles found.`}
@@ -257,7 +257,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setFilter('all')}
-            className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium"
+            className="px-4 py-2 rounded-lg bg-terminal-green text-terminal-bg text-sm font-medium"
           >
             View All News
           </motion.button>
@@ -277,8 +277,8 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`glass rounded-xl overflow-hidden border transition-all ${
-                    isExpanded ? 'border-primary/30' : 'border-white/5'
+                  className={`bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl overflow-hidden transition-all ${
+                    isExpanded ? 'border-terminal-green/30' : 'border-terminal-border'
                   }`}
                 >
                   {/* Main Content */}
@@ -297,13 +297,13 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                           <h3 className="text-lg font-medium leading-snug">
                             {item.title}
                           </h3>
-                          <ChevronRight className={`w-5 h-5 text-textSecondary flex-shrink-0 transition-transform ${
+                          <ChevronRight className={`w-5 h-5 text-terminal-dim flex-shrink-0 transition-transform ${
                             isExpanded ? 'rotate-90' : ''
                           }`} />
                         </div>
 
-                        <div className="flex items-center gap-3 mt-3 text-sm text-textSecondary">
-                          <span className="font-medium text-text">{item.source}</span>
+                        <div className="flex items-center gap-3 mt-3 text-sm text-terminal-dim">
+                          <span className="font-medium text-terminal-text">{item.source}</span>
                           <span>•</span>
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
@@ -316,7 +316,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                           {item.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="px-2 py-0.5 bg-surfaceLight rounded text-xs text-textSecondary"
+                              className="px-2 py-0.5 bg-terminal-bg-light rounded text-xs text-terminal-dim"
                             >
                               {tag}
                             </span>
@@ -356,7 +356,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                                 href={item.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-terminal-green text-terminal-bg rounded-lg text-sm font-medium hover:bg-terminal-green/90 transition-colors"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 Read Full Article
@@ -366,19 +366,19 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                           </div>
 
                           {/* Key Points (simulated AI analysis) */}
-                          <div className="mt-4 p-4 bg-surfaceLight rounded-lg">
+                          <div className="mt-4 p-4 bg-terminal-bg-light rounded-lg">
                             <h4 className="text-sm font-medium mb-2">Key Takeaways</h4>
-                            <ul className="space-y-2 text-sm text-textSecondary">
+                            <ul className="space-y-2 text-sm text-terminal-dim">
                               <li className="flex items-start gap-2">
                                 <span className={`mt-1 ${colors.text}`}>•</span>
                                 <span>News impacts {item.sentiment === 'positive' ? 'positively' : item.sentiment === 'negative' ? 'negatively' : 'neutrally'} on stock price movement</span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="text-primary mt-1">•</span>
+                                <span className="text-terminal-green mt-1">•</span>
                                 <span>{item.tags.join(', ')} are key themes in this update</span>
                               </li>
                               <li className="flex items-start gap-2">
-                                <span className="text-primary mt-1">•</span>
+                                <span className="text-terminal-green mt-1">•</span>
                                 <span>Market reaction expected in upcoming trading sessions</span>
                               </li>
                             </ul>
@@ -401,7 +401,7 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
           animate={{ opacity: 1 }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full mt-6 py-3 rounded-xl bg-surfaceLight text-textSecondary hover:bg-surface transition-colors"
+          className="w-full mt-6 py-3 rounded-xl bg-terminal-bg-light text-terminal-dim hover:bg-terminal-bg transition-colors"
         >
           Load More News
         </motion.button>

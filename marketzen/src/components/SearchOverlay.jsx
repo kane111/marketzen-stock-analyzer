@@ -142,24 +142,24 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-xl glass rounded-2xl overflow-hidden shadow-2xl"
+            className="relative w-full max-w-xl bg-terminal-panel border border-terminal-border rounded-xl overflow-hidden shadow-2xl"
           >
             {/* Search Input */}
-            <div className="flex items-center gap-3 p-4 border-b border-white/5">
-              <Search className="w-5 h-5 text-textSecondary" />
+            <div className="flex items-center gap-3 p-4 border-b border-terminal-border">
+              <Search className="w-5 h-5 text-terminal-dim" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search NSE/BSE stocks..."
-                className="flex-1 bg-transparent text-lg outline-none placeholder:text-textSecondary"
+                className="flex-1 bg-transparent text-lg outline-none placeholder:text-terminal-dim font-mono"
               />
               <button
                 onClick={onClose}
-                className="p-1.5 hover:bg-surface rounded-lg transition-colors"
+                className="p-1.5 hover:bg-terminal-bg rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-textSecondary" />
+                <X className="w-5 h-5 text-terminal-dim" />
               </button>
             </div>
 
@@ -170,14 +170,14 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
+                    className="w-6 h-6 border-2 border-terminal-green border-t-transparent rounded-full"
                   />
                 </div>
               )}
 
               {!loading && query.length < 2 && recentSearches.length > 0 && (
                 <div className="p-4">
-                  <div className="flex items-center gap-2 text-sm text-textSecondary mb-3">
+                  <div className="flex items-center gap-2 text-sm text-terminal-dim mb-3 font-mono">
                     <Clock className="w-4 h-4" />
                     <span>Recent Searches</span>
                   </div>
@@ -187,16 +187,16 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                         key={stock.id}
                         onClick={() => handleSelect(stock)}
                         whileHover={{ x: 4 }}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors text-left"
+                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-terminal-bg transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
+                        <div className="w-8 h-8 rounded bg-terminal-green/20 flex items-center justify-center">
+                          <span className="text-xs font-bold font-mono text-terminal-green">{stock.symbol.substring(0, 2)}</span>
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{stock.name}</p>
-                          <p className="text-sm text-textSecondary">{stock.symbol}</p>
+                          <p className="font-medium text-sm">{stock.name}</p>
+                          <p className="text-sm text-terminal-dim font-mono">{stock.symbol}</p>
                         </div>
-                        <span className="text-xs px-2 py-0.5 bg-surface rounded text-textSecondary">
+                        <span className="text-xs px-2 py-0.5 bg-terminal-bg rounded text-terminal-dim font-mono">
                           {stock.exchange || 'NSE'}
                         </span>
                       </motion.button>
@@ -207,7 +207,7 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
 
               {!loading && results.length > 0 && (
                 <div className="p-2">
-                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-textSecondary">
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-terminal-dim font-mono">
                     <Building2 className="w-4 h-4" />
                     <span>Indian Stocks</span>
                   </div>
@@ -219,20 +219,20 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleSelect(stock)}
                       whileHover={{ x: 4 }}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors text-left"
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-terminal-bg transition-colors text-left"
                     >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                        <span className="text-sm font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
+                      <div className="w-10 h-10 rounded bg-terminal-green/20 flex items-center justify-center">
+                        <span className="text-sm font-bold font-mono text-terminal-green">{stock.symbol.substring(0, 2)}</span>
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{stock.name}</p>
-                        <p className="text-sm text-textSecondary">{stock.symbol}</p>
+                        <p className="font-medium text-sm">{stock.name}</p>
+                        <p className="text-sm text-terminal-dim font-mono">{stock.symbol}</p>
                       </div>
                       <motion.div
                         whileHover={{ scale: 1.1 }}
-                        className="p-2 rounded-lg bg-primary/10"
+                        className="p-2 rounded-lg bg-terminal-green/20"
                       >
-                        <Plus className="w-4 h-4 text-primary" />
+                        <Plus className="w-4 h-4 text-terminal-green" />
                       </motion.div>
                     </motion.button>
                   ))}
@@ -240,17 +240,17 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
               )}
 
               {!loading && query.length >= 2 && results.length === 0 && (
-                <div className="p-8 text-center text-textSecondary">
-                  <p>No stocks found for "{query}"</p>
-                  <p className="text-sm mt-2">Try searching with stock symbol or company name</p>
+                <div className="p-8 text-center text-terminal-dim">
+                  <p className="font-mono">No stocks found for "{query}"</p>
+                  <p className="text-sm mt-2 font-mono">Try searching with stock symbol or company name</p>
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-white/5 text-xs text-textSecondary flex items-center justify-between">
+            <div className="p-3 border-t border-terminal-border text-xs text-terminal-dim flex items-center justify-between font-mono">
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-surface rounded">ESC</kbd>
+                <kbd className="px-2 py-1 bg-terminal-bg rounded">ESC</kbd>
                 <span>to close</span>
               </div>
               <span>Press ↵ to select</span>

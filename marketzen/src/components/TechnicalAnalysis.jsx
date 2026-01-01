@@ -427,15 +427,15 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   }
   
   const getSignalColor = (type) => {
-    if (type?.includes('BUY')) return 'text-positive'
-    if (type?.includes('SELL')) return 'text-negative'
-    return 'text-textSecondary'
+    if (type?.includes('BUY')) return 'text-terminal-green'
+    if (type?.includes('SELL')) return 'text-terminal-red'
+    return 'text-terminal-dim'
   }
   
   const getSignalBg = (type) => {
-    if (type?.includes('BUY')) return 'bg-positive/20 border-positive'
-    if (type?.includes('SELL')) return 'bg-negative/20 border-negative'
-    return 'bg-surfaceLight border-white/10'
+    if (type?.includes('BUY')) return 'bg-terminal-green/20 border-terminal-green'
+    if (type?.includes('SELL')) return 'bg-terminal-red/20 border-terminal-red'
+    return 'bg-terminal-bg-light border-terminal-border'
   }
   
   // Loading state
@@ -443,9 +443,9 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center h-96">
         <div className="text-center">
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-textSecondary">Loading technical analysis...</p>
-          {error && <p className="text-negative mt-2 text-sm">{error}</p>}
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-12 h-12 border-4 border-terminal-green border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-terminal-dim">Loading technical analysis...</p>
+          {error && <p className="text-terminal-red mt-2 text-sm">{error}</p>}
         </div>
       </motion.div>
     )
@@ -455,21 +455,21 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onBack} className="glass p-2.5 rounded-lg hover:bg-surfaceLight transition-colors">
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onBack} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border p-2.5 rounded-lg hover:bg-terminal-bg-light transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </motion.button>
         
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-2xl font-semibold">{stock?.name || 'Stock'}</h2>
-            <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary">{stock?.symbol || ''}</span>
+            <span className="px-2 py-0.5 rounded-full text-xs bg-terminal-bg-light text-terminal-dim">{stock?.symbol || ''}</span>
           </div>
-          <p className="text-textSecondary text-sm">Technical Analysis</p>
+          <p className="text-terminal-dim text-sm">Technical Analysis</p>
         </div>
         
         {onOpenConfig && (
-          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onOpenConfig} className="glass px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-surfaceLight transition-colors">
-            <Sliders className="w-4 h-4 text-primary" />
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onOpenConfig} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-terminal-bg-light transition-colors">
+            <Sliders className="w-4 h-4 text-terminal-green" />
             <span className="text-sm">Configure</span>
           </motion.button>
         )}
@@ -479,36 +479,36 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       
       {/* Signal Banner */}
       {signal && (
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`glass rounded-2xl p-6 mb-6 border-2 ${getSignalBg(signal.type)}`}>
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6 border-2 ${getSignalBg(signal.type)}`}>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                signal.type.includes('BUY') ? 'bg-positive/20' : signal.type.includes('SELL') ? 'bg-negative/20' : 'bg-surfaceLight'
+                signal.type.includes('BUY') ? 'bg-terminal-green/20' : signal.type.includes('SELL') ? 'bg-terminal-red/20' : 'bg-terminal-bg-light'
               }`}>
                 {signal.type.includes('BUY') ? (
-                  <TrendingUp className="w-8 h-8 text-positive" />
+                  <TrendingUp className="w-8 h-8 text-terminal-green" />
                 ) : signal.type.includes('SELL') ? (
-                  <TrendingDown className="w-8 h-8 text-negative" />
+                  <TrendingDown className="w-8 h-8 text-terminal-red" />
                 ) : (
-                  <Target className="w-8 h-8 text-textSecondary" />
+                  <Target className="w-8 h-8 text-terminal-dim" />
                 )}
               </div>
               <div>
-                <p className="text-sm text-textSecondary mb-1">Overall Signal</p>
+                <p className="text-sm text-terminal-dim mb-1">Overall Signal</p>
                 <p className={`text-3xl font-bold ${getSignalColor(signal.type)}`}>{signal.type}</p>
-                <p className="text-sm text-textSecondary mt-1">{signal.strength}</p>
+                <p className="text-sm text-terminal-dim mt-1">{signal.strength}</p>
               </div>
             </div>
             <div className="flex items-center gap-8">
               <div className="text-center">
-                <p className="text-sm text-textSecondary">Buy Signals</p>
-                <p className="text-2xl font-bold text-positive">{signal.buyCount}</p>
+                <p className="text-sm text-terminal-dim">Buy Signals</p>
+                <p className="text-2xl font-bold text-terminal-green">{signal.buyCount}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-textSecondary">Sell Signals</p>
-                <p className="text-2xl font-bold text-negative">{signal.sellCount}</p>
+                <p className="text-sm text-terminal-dim">Sell Signals</p>
+                <p className="text-2xl font-bold text-terminal-red">{signal.sellCount}</p>
               </div>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={performAnalysis} className="glass px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-surfaceLight">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={performAnalysis} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-terminal-bg-light">
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </motion.button>
@@ -535,8 +535,8 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             onClick={() => toggleIndicator(indicator.id)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors border ${
               indicators[indicator.id] 
-                ? 'bg-primary/20 border-primary/50 text-white' 
-                : 'glass hover:bg-surfaceLight border-transparent'
+                ? 'bg-terminal-green/20 border-terminal-green/50 text-terminal-bg' 
+                : 'bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border hover:bg-terminal-bg-light'
             }`}
           >
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: indicator.color }} />
@@ -559,7 +559,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             whileTap={{ scale: 0.98 }}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-              activeTab === tab.id ? 'bg-primary text-white' : 'glass hover:bg-surfaceLight'
+              activeTab === tab.id ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border hover:bg-terminal-bg-light'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -574,9 +574,9 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {activeTab === 'summary' && analysisData && (
           <motion.div key="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 glass rounded-2xl p-6">
+              <div className="lg:col-span-2 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-primary" />
+                  <Activity className="w-5 h-5 text-terminal-green" />
                   Price Chart
                 </h3>
                 <div className="h-80">
@@ -607,29 +607,29 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="glass rounded-2xl p-6">
+              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-primary" />
+                  <Target className="w-5 h-5 text-terminal-green" />
                   Trading Signals
                 </h3>
                 <div className="space-y-3 max-h-80 overflow-y-auto">
                   {analysisData.signals.map((sig, i) => (
                     <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className={`p-3 rounded-xl border ${
-                      sig.color === 'positive' ? 'bg-positive/10 border-positive/30' :
-                      sig.color === 'negative' ? 'bg-negative/10 border-negative/30' :
-                      'bg-surfaceLight border-white/10'
+                      sig.color === 'positive' ? 'bg-terminal-green/10 border-terminal-green/30' :
+                      sig.color === 'negative' ? 'bg-terminal-red/10 border-terminal-red/30' :
+                      'bg-terminal-bg-light border-terminal-border'
                     }`}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-sm">{sig.indicator}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          sig.signal === 'BUY' ? 'bg-positive/20 text-positive' :
-                          sig.signal === 'SELL' ? 'bg-negative/20 text-negative' :
-                          'bg-surface text-textSecondary'
+                          sig.signal === 'BUY' ? 'bg-terminal-green/20 text-terminal-green' :
+                          sig.signal === 'SELL' ? 'bg-terminal-red/20 text-terminal-red' :
+                          'bg-terminal-bg-light text-terminal-dim'
                         }`}>
                           {sig.signal}
                         </span>
                       </div>
-                      <p className="text-xs text-textSecondary">{sig.description}</p>
+                      <p className="text-xs text-terminal-dim">{sig.description}</p>
                     </motion.div>
                   ))}
                 </div>
@@ -642,7 +642,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {activeTab === 'indicators' && analysisData && (
           <motion.div key="indicators" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass rounded-2xl p-6">
+              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4">RSI ({params.rsi.period})</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -659,7 +659,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="glass rounded-2xl p-6">
+              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4">MACD</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -701,19 +701,19 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                       { name: 'MACD', value: (currentMACD - currentSignal)?.toFixed(2), status: currentMACD > currentSignal ? 'Bullish' : 'Bearish', color: currentMACD > currentSignal ? 'positive' : 'negative' },
                       { name: 'ATR (14)', value: `₹${currentATR?.toFixed(2)}`, status: 'Volatility', color: 'neutral' }
                     ].map((osc, i) => (
-                      <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="p-4 bg-surfaceLight rounded-xl">
-                        <p className="text-sm text-textSecondary mb-1">{osc.name}</p>
+                      <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="p-4 bg-terminal-bg-light rounded-xl">
+                        <p className="text-sm text-terminal-dim mb-1">{osc.name}</p>
                         <p className={`text-2xl font-bold ${
-                          osc.color === 'positive' ? 'text-positive' : 
-                          osc.color === 'negative' ? 'text-negative' : 
-                          'text-text'
+                          osc.color === 'positive' ? 'text-terminal-green' : 
+                          osc.color === 'negative' ? 'text-terminal-red' : 
+                          'text-terminal-text'
                         }`}>
                           {osc.value}
                         </p>
                         <p className={`text-xs mt-1 ${
-                          osc.color === 'positive' ? 'text-positive' : 
-                          osc.color === 'negative' ? 'text-negative' : 
-                          'text-textSecondary'
+                          osc.color === 'positive' ? 'text-terminal-green' : 
+                          osc.color === 'negative' ? 'text-terminal-red' : 
+                          'text-terminal-dim'
                         }`}>
                           {osc.status}
                         </p>
@@ -725,7 +725,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass rounded-2xl p-6">
+              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4">RSI Momentum</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -742,7 +742,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="glass rounded-2xl p-6">
+              <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4">Stochastic</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -767,33 +767,33 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           <motion.div key="patterns" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <div className="glass rounded-2xl p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Grid3X3 className="w-5 h-5 text-primary" />
+                <Grid3X3 className="w-5 h-5 text-terminal-green" />
                 Technical Patterns
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {analysisData.signals.filter(s => s.strength === 'STRONG' || s.strength === 'MODERATE').map((sig, i) => (
                   <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }} className={`p-4 rounded-xl border ${
-                    sig.color === 'positive' ? 'bg-positive/10 border-positive/30' :
-                    sig.color === 'negative' ? 'bg-negative/10 border-negative/30' :
-                    'bg-surfaceLight border-white/10'
+                    sig.color === 'positive' ? 'bg-terminal-green/10 border-terminal-green/30' :
+                    sig.color === 'negative' ? 'bg-terminal-red/10 border-terminal-red/30' :
+                    'bg-terminal-bg-light border-terminal-border'
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold">{sig.indicator}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        sig.signal === 'BUY' ? 'bg-positive/20 text-positive' :
-                        sig.signal === 'SELL' ? 'bg-negative/20 text-negative' :
-                        'bg-surface text-textSecondary'
+                        sig.signal === 'BUY' ? 'bg-terminal-green/20 text-terminal-green' :
+                        sig.signal === 'SELL' ? 'bg-terminal-red/20 text-terminal-red' :
+                        'bg-terminal-bg-light text-terminal-dim'
                       }`}>
                         {sig.signal}
                       </span>
                     </div>
-                    <p className="text-sm text-textSecondary">{sig.description}</p>
-                    <p className="text-xs text-textSecondary mt-1">{sig.strength} signal</p>
+                    <p className="text-sm text-terminal-dim">{sig.description}</p>
+                    <p className="text-xs text-terminal-dim mt-1">{sig.strength} signal</p>
                   </motion.div>
                 ))}
               </div>
               {analysisData.signals.filter(s => s.strength === 'STRONG' || s.strength === 'MODERATE').length === 0 && (
-                <p className="text-textSecondary text-center py-8">No strong patterns detected</p>
+                <p className="text-terminal-dim text-center py-8">No strong patterns detected</p>
               )}
             </div>
           </motion.div>
@@ -801,11 +801,11 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       </AnimatePresence>
       
       {/* Disclaimer */}
-      <div className="mt-6 p-4 glass rounded-xl">
+      <div className="mt-6 p-4 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-textSecondary flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-textSecondary">
-            <strong className="text-text">Disclaimer:</strong> Technical analysis is generated automatically. 
+          <AlertTriangle className="w-5 h-5 text-terminal-dim flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-terminal-dim">
+            <strong className="text-terminal-text">Disclaimer:</strong> Technical analysis is generated automatically. 
             This should not be considered financial advice. Always conduct your own research.
           </p>
         </div>

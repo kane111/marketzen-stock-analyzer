@@ -130,18 +130,18 @@ function IndicatorConfig({ params, onChange, onClose }) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-3xl max-h-[90vh] glass rounded-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-3xl max-h-[90vh] bg-terminal-panel border border-terminal-border rounded-xl overflow-hidden flex flex-col"
       >
         {/* Header */}
-        <div className="p-6 border-b border-white/5">
+        <div className="p-6 border-b border-terminal-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Sliders className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-terminal-green/20 flex items-center justify-center">
+                <Sliders className="w-5 h-5 text-terminal-green" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold">Indicator Parameters</h2>
-                <p className="text-sm text-textSecondary">Customize technical indicator settings</p>
+                <h2 className="text-xl font-semibold text-terminal-text">Indicator Parameters</h2>
+                <p className="text-sm text-terminal-dim font-mono">Customize technical indicator settings</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -149,35 +149,35 @@ function IndicatorConfig({ params, onChange, onClose }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleReset}
-                className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+                className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors"
                 title="Reset to defaults"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 text-terminal-dim" />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onClose}
-                className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+                className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 text-terminal-dim" />
               </motion.button>
             </div>
           </div>
 
           {/* Preset Quick Select */}
           <div className="flex items-center gap-2 mt-4">
-            <span className="text-sm text-textSecondary">Quick Presets:</span>
+            <span className="text-sm text-terminal-dim font-mono">Quick Presets:</span>
             {Object.entries(PRESETS).map(([key, preset]) => (
               <motion.button
                 key={key}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handlePresetApply(key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-mono ${
                   JSON.stringify(localParams) === JSON.stringify(preset.params)
-                    ? 'bg-primary text-white'
-                    : 'bg-surfaceLight text-textSecondary hover:bg-surface'
+                    ? 'bg-terminal-green text-terminal-bg'
+                    : 'bg-terminal-bg border border-terminal-border text-terminal-dim hover:border-terminal-dim'
                 }`}
               >
                 {preset.name}
@@ -190,17 +190,17 @@ function IndicatorConfig({ params, onChange, onClose }) {
         <div className="flex-1 overflow-y-auto">
           <div className="flex">
             {/* Category Sidebar */}
-            <div className="w-48 border-r border-white/5 p-4">
+            <div className="w-48 border-r border-terminal-border p-4">
               <div className="space-y-1">
                 {categories.map((cat) => (
                   <motion.button
                     key={cat.id}
                     whileHover={{ x: 4 }}
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors font-mono ${
                       activeCategory === cat.id
-                        ? 'bg-primary/20 text-primary'
-                        : 'text-textSecondary hover:bg-surfaceLight'
+                        ? 'bg-terminal-green/20 text-terminal-green'
+                        : 'text-terminal-dim hover:bg-terminal-bg'
                     }`}
                   >
                     <span>{cat.icon}</span>
@@ -223,64 +223,34 @@ function IndicatorConfig({ params, onChange, onClose }) {
                     className="space-y-6"
                   >
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Relative Strength Index</h3>
-                      <p className="text-sm text-textSecondary mb-4">
+                      <h3 className="text-lg font-medium text-terminal-text">Relative Strength Index</h3>
+                      <p className="text-sm text-terminal-dim font-mono mb-4">
                         RSI measures the speed and change of price movements. Values above 70 typically indicate overbought conditions, while below 30 indicate oversold.
                       </p>
                     </div>
-
+                    
                     <div className="grid gap-4">
-                      <ParameterSlider
-                        label="Period"
-                        value={localParams.rsi.period}
-                        min={2}
-                        max={50}
-                        step={1}
-                        onChange={(v) => handleParamChange('rsi', 'period', v)}
-                      />
-                      <ParameterSlider
-                        label="Overbought Threshold"
-                        value={localParams.rsi.overbought}
-                        min={50}
-                        max={95}
-                        step={1}
-                        onChange={(v) => handleParamChange('rsi', 'overbought', v)}
-                      />
-                      <ParameterSlider
-                        label="Oversold Threshold"
-                        value={localParams.rsi.oversold}
-                        min={5}
-                        max={50}
-                        step={1}
-                        onChange={(v) => handleParamChange('rsi', 'oversold', v)}
-                      />
-                    </div>
-
-                    {/* Visual Preview */}
-                    <div className="mt-6 p-4 bg-surfaceLight rounded-xl">
-                      <h4 className="text-sm font-medium mb-3">Preview</h4>
-                      <div className="h-24 flex items-end gap-1">
-                        {Array.from({ length: 50 }).map((_, i) => {
-                          const progress = i / 50
-                          const value = 50 + Math.sin(i * 0.3) * 30
-                          const isOverbought = value > localParams.rsi.overbought
-                          const isOversold = value < localParams.rsi.oversold
-                          return (
-                            <div
-                              key={i}
-                              className={`flex-1 rounded-t ${
-                                isOverbought ? 'bg-negative' : isOversold ? 'bg-positive' : 'bg-surface'
-                              }`}
-                              style={{ height: `${Math.abs(value - 50) * 1.5}%` }}
-                            />
-                          )
-                        })}
-                      </div>
-                      <div className="flex justify-between mt-2 text-xs text-textSecondary">
-                        <span>Oversold ({localParams.rsi.oversold})</span>
-                        <span>50</span>
-                        <span>Overbought ({localParams.rsi.overbought})</span>
-                      </div>
+                      {[
+                        { key: 'period', label: 'Period', min: 2, max: 50, step: 1 },
+                        { key: 'overbought', label: 'Overbought Level', min: 50, max: 95, step: 1 },
+                        { key: 'oversold', label: 'Oversold Level', min: 5, max: 50, step: 1 }
+                      ].map((param) => (
+                        <div key={param.key} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-terminal-dim font-mono">{param.label}</label>
+                            <span className="text-sm text-terminal-green font-mono">{localParams.rsi[param.key]}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={param.min}
+                            max={param.max}
+                            step={param.step}
+                            value={localParams.rsi[param.key]}
+                            onChange={(e) => handleParamChange('rsi', param.key, e.target.value)}
+                            className="w-full h-2 bg-terminal-bg rounded-lg appearance-none cursor-pointer accent-terminal-green"
+                          />
+                        </div>
+                      ))}
                     </div>
                   </motion.div>
                 )}
@@ -295,37 +265,34 @@ function IndicatorConfig({ params, onChange, onClose }) {
                     className="space-y-6"
                   >
                     <div>
-                      <h3 className="text-lg font-medium mb-2">MACD</h3>
-                      <p className="text-sm text-textSecondary mb-4">
-                        Moving Average Convergence Divergence shows the relationship between two moving averages of a security's price.
+                      <h3 className="text-lg font-medium text-terminal-text">Moving Average Convergence Divergence</h3>
+                      <p className="text-sm text-terminal-dim font-mono mb-4">
+                        MACD is a trend-following momentum indicator showing the relationship between two moving averages of a security's price.
                       </p>
                     </div>
-
+                    
                     <div className="grid gap-4">
-                      <ParameterSlider
-                        label="Fast EMA Period"
-                        value={localParams.macd.fastPeriod}
-                        min={4}
-                        max={30}
-                        step={1}
-                        onChange={(v) => handleParamChange('macd', 'fastPeriod', v)}
-                      />
-                      <ParameterSlider
-                        label="Slow EMA Period"
-                        value={localParams.macd.slowPeriod}
-                        min={10}
-                        max={50}
-                        step={1}
-                        onChange={(v) => handleParamChange('macd', 'slowPeriod', v)}
-                      />
-                      <ParameterSlider
-                        label="Signal Line Period"
-                        value={localParams.macd.signalPeriod}
-                        min={3}
-                        max={20}
-                        step={1}
-                        onChange={(v) => handleParamChange('macd', 'signalPeriod', v)}
-                      />
+                      {[
+                        { key: 'fastPeriod', label: 'Fast Period', min: 2, max: 50, step: 1 },
+                        { key: 'slowPeriod', label: 'Slow Period', min: 10, max: 100, step: 1 },
+                        { key: 'signalPeriod', label: 'Signal Period', min: 2, max: 50, step: 1 }
+                      ].map((param) => (
+                        <div key={param.key} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-terminal-dim font-mono">{param.label}</label>
+                            <span className="text-sm text-terminal-green font-mono">{localParams.macd[param.key]}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={param.min}
+                            max={param.max}
+                            step={param.step}
+                            value={localParams.macd[param.key]}
+                            onChange={(e) => handleParamChange('macd', param.key, e.target.value)}
+                            className="w-full h-2 bg-terminal-bg rounded-lg appearance-none cursor-pointer accent-terminal-green"
+                          />
+                        </div>
+                      ))}
                     </div>
                   </motion.div>
                 )}
@@ -340,53 +307,59 @@ function IndicatorConfig({ params, onChange, onClose }) {
                     className="space-y-6"
                   >
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Simple Moving Averages</h3>
-                      <p className="text-sm text-textSecondary mb-4">
-                        SMA calculates the average of a selected range of prices, equally weighted.
+                      <h3 className="text-lg font-medium text-terminal-text">Moving Averages</h3>
+                      <p className="text-sm text-terminal-dim font-mono mb-4">
+                        Simple (SMA) and Exponential (EMA) moving averages help identify trend direction and support/resistance levels.
                       </p>
                     </div>
-
-                    <div className="grid gap-4">
-                      <ParameterSlider
-                        label="Short Period"
-                        value={localParams.sma.shortPeriod}
-                        min={5}
-                        max={100}
-                        step={1}
-                        onChange={(v) => handleParamChange('sma', 'shortPeriod', v)}
-                      />
-                      <ParameterSlider
-                        label="Long Period"
-                        value={localParams.sma.longPeriod}
-                        min={20}
-                        max={200}
-                        step={1}
-                        onChange={(v) => handleParamChange('sma', 'longPeriod', v)}
-                      />
-                    </div>
-
-                    <div className="border-t border-white/5 pt-4 mt-4">
-                      <h4 className="text-md font-medium mb-2">Exponential Moving Average</h4>
-                      <p className="text-sm text-textSecondary mb-4">
-                        EMA gives more weight to recent prices, making it more responsive to new information.
-                      </p>
-                      <div className="grid gap-4">
-                        <ParameterSlider
-                          label="Short Period"
-                          value={localParams.ema.shortPeriod}
-                          min={5}
-                          max={50}
-                          step={1}
-                          onChange={(v) => handleParamChange('ema', 'shortPeriod', v)}
-                        />
-                        <ParameterSlider
-                          label="Long Period"
-                          value={localParams.ema.longPeriod}
-                          min={10}
-                          max={100}
-                          step={1}
-                          onChange={(v) => handleParamChange('ema', 'longPeriod', v)}
-                        />
+                    
+                    <div className="space-y-6">
+                      <h4 className="text-sm font-medium text-terminal-green font-mono">Simple Moving Average (SMA)</h4>
+                      <div className="grid gap-4 pl-4 border-l border-terminal-border">
+                        {[
+                          { key: 'shortPeriod', label: 'Short Period', min: 5, max: 200, step: 1 },
+                          { key: 'longPeriod', label: 'Long Period', min: 20, max: 500, step: 1 }
+                        ].map((param) => (
+                          <div key={param.key} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm text-terminal-dim font-mono">{param.label}</label>
+                              <span className="text-sm text-terminal-green font-mono">{localParams.sma[param.key]}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={param.min}
+                              max={param.max}
+                              step={param.step}
+                              value={localParams.sma[param.key]}
+                              onChange={(e) => handleParamChange('sma', param.key, e.target.value)}
+                              className="w-full h-2 bg-terminal-bg rounded-lg appearance-none cursor-pointer accent-terminal-green"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <h4 className="text-sm font-medium text-terminal-green font-mono">Exponential Moving Average (EMA)</h4>
+                      <div className="grid gap-4 pl-4 border-l border-terminal-border">
+                        {[
+                          { key: 'shortPeriod', label: 'Short Period', min: 5, max: 200, step: 1 },
+                          { key: 'longPeriod', label: 'Long Period', min: 20, max: 500, step: 1 }
+                        ].map((param) => (
+                          <div key={param.key} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm text-terminal-dim font-mono">{param.label}</label>
+                              <span className="text-sm text-terminal-green font-mono">{localParams.ema[param.key]}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={param.min}
+                              max={param.max}
+                              step={param.step}
+                              value={localParams.ema[param.key]}
+                              onChange={(e) => handleParamChange('ema', param.key, e.target.value)}
+                              className="w-full h-2 bg-terminal-bg rounded-lg appearance-none cursor-pointer accent-terminal-green"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </motion.div>
@@ -402,29 +375,33 @@ function IndicatorConfig({ params, onChange, onClose }) {
                     className="space-y-6"
                   >
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Bollinger Bands</h3>
-                      <p className="text-sm text-textSecondary mb-4">
-                        Bollinger Bands consist of a middle band (SMA) with two outer bands at standard deviations away.
+                      <h3 className="text-lg font-medium text-terminal-text">Bollinger Bands</h3>
+                      <p className="text-sm text-terminal-dim font-mono mb-4">
+                        Bollinger Bands consist of a middle band (SMA) and two outer bands that represent standard deviations from the middle band.
                       </p>
                     </div>
-
+                    
                     <div className="grid gap-4">
-                      <ParameterSlider
-                        label="Period (SMA Length)"
-                        value={localParams.bollinger.period}
-                        min={5}
-                        max={50}
-                        step={1}
-                        onChange={(v) => handleParamChange('bollinger', 'period', v)}
-                      />
-                      <ParameterSlider
-                        label="Standard Deviation"
-                        value={localParams.bollinger.stdDev}
-                        min={1}
-                        max={4}
-                        step={0.1}
-                        onChange={(v) => handleParamChange('bollinger', 'stdDev', v)}
-                      />
+                      {[
+                        { key: 'period', label: 'Period', min: 5, max: 100, step: 1 },
+                        { key: 'stdDev', label: 'Standard Deviations', min: 1, max: 5, step: 0.1 }
+                      ].map((param) => (
+                        <div key={param.key} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-terminal-dim font-mono">{param.label}</label>
+                            <span className="text-sm text-terminal-green font-mono">{localParams.bollinger[param.key]}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={param.min}
+                            max={param.max}
+                            step={param.step}
+                            value={localParams.bollinger[param.key]}
+                            onChange={(e) => handleParamChange('bollinger', param.key, e.target.value)}
+                            className="w-full h-2 bg-terminal-bg rounded-lg appearance-none cursor-pointer accent-terminal-green"
+                          />
+                        </div>
+                      ))}
                     </div>
                   </motion.div>
                 )}
@@ -439,21 +416,32 @@ function IndicatorConfig({ params, onChange, onClose }) {
                     className="space-y-6"
                   >
                     <div>
-                      <h3 className="text-lg font-medium mb-2">Volume Moving Average</h3>
-                      <p className="text-sm text-textSecondary mb-4">
-                        The volume MA helps identify unusual trading activity by comparing current volume to the average.
+                      <h3 className="text-lg font-medium text-terminal-text">Volume</h3>
+                      <p className="text-sm text-terminal-dim font-mono mb-4">
+                        Volume-based indicators help confirm price trends and identify potential reversals through trading volume analysis.
                       </p>
                     </div>
-
+                    
                     <div className="grid gap-4">
-                      <ParameterSlider
-                        label="Period"
-                        value={localParams.volume.maPeriod}
-                        min={5}
-                        max={50}
-                        step={1}
-                        onChange={(v) => handleParamChange('volume', 'maPeriod', v)}
-                      />
+                      {[
+                        { key: 'maPeriod', label: 'Moving Average Period', min: 5, max: 100, step: 1 }
+                      ].map((param) => (
+                        <div key={param.key} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-terminal-dim font-mono">{param.label}</label>
+                            <span className="text-sm text-terminal-green font-mono">{localParams.volume[param.key]}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={param.min}
+                            max={param.max}
+                            step={param.step}
+                            value={localParams.volume[param.key]}
+                            onChange={(e) => handleParamChange('volume', param.key, e.target.value)}
+                            className="w-full h-2 bg-terminal-bg rounded-lg appearance-none cursor-pointer accent-terminal-green"
+                          />
+                        </div>
+                      ))}
                     </div>
                   </motion.div>
                 )}
@@ -463,16 +451,16 @@ function IndicatorConfig({ params, onChange, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/5 flex items-center justify-between">
-          <div className="text-sm text-textSecondary">
-            {isDirty ? '• Unsaved changes' : '✓ All changes applied'}
+        <div className="p-4 border-t border-terminal-border flex items-center justify-between bg-terminal-header">
+          <div className="text-xs text-terminal-dim font-mono">
+            {isDirty ? '● Unsaved changes' : '✓ All changes saved'}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleReset}
-              className="px-4 py-2 rounded-lg bg-surfaceLight text-textSecondary hover:bg-surface transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg transition-colors font-mono"
             >
               Reset
             </motion.button>
@@ -480,14 +468,8 @@ function IndicatorConfig({ params, onChange, onClose }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleApply}
-              disabled={!isDirty}
-              className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-                isDirty
-                  ? 'bg-primary text-white'
-                  : 'bg-surfaceLight text-textSecondary cursor-not-allowed'
-              }`}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-terminal-green text-terminal-bg hover:bg-terminal-green/90 transition-colors font-mono"
             >
-              <Check className="w-4 h-4" />
               Apply Changes
             </motion.button>
           </div>
@@ -497,36 +479,4 @@ function IndicatorConfig({ params, onChange, onClose }) {
   )
 }
 
-// Helper function for formatting values
-const formatValue = (key, value) => {
-  if (['overbought', 'oversold'].includes(key)) return `${value}`
-  return value.toString()
-}
-
-// Parameter Slider Component
-function ParameterSlider({ label, value, min, max, step, onChange }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">{label}</label>
-        <span className="text-sm font-mono text-primary">{formatValue(label, value)}</span>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-textSecondary w-8">{min}</span>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 h-2 bg-surfaceLight rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
-        />
-        <span className="text-xs text-textSecondary w-8 text-right">{max}</span>
-      </div>
-    </div>
-  )
-}
-
-export { IndicatorConfig, DEFAULT_PARAMS, PRESETS }
-export default IndicatorConfig
+export { IndicatorConfig, DEFAULT_PARAMS }

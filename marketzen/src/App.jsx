@@ -749,9 +749,9 @@ function AppContent() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -20, scale: 0.95 }}
                     className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg font-mono text-sm ${
-                      notification.type === 'success' ? 'bg-positive/20 text-positive border border-positive/30' :
+                      notification.type === 'success' ? 'bg-terminal-green/20 text-terminal-green border border-terminal-green/30' :
                       notification.type === 'warning' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
-                      notification.type === 'info' ? 'bg-primary/20 text-primary border border-primary/30' :
+                      notification.type === 'info' ? 'bg-terminal-green/20 text-terminal-green border border-terminal-green/30' :
                       'bg-negative/20 text-negative border border-negative/30'
                     }`}
                   >

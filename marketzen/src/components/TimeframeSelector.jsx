@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 
 function TimeframeSelector({ timeframes, selected, onSelect }) {
   return (
-    <div className="flex items-center gap-1 p-1 glass rounded-lg">
+    <div className="flex items-center gap-1 p-1 bg-terminal-bg-secondary rounded-lg border border-terminal-border">
       {timeframes.map((tf) => (
         <motion.button
           key={tf.label}
@@ -11,8 +11,8 @@ function TimeframeSelector({ timeframes, selected, onSelect }) {
           whileTap={{ scale: 0.95 }}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
             selected.label === tf.label
-              ? 'bg-primary text-white shadow-lg'
-              : 'text-textSecondary hover:text-text hover:bg-surface'
+              ? 'bg-terminal-green text-terminal-bg shadow-lg'
+              : 'text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg-light'
           }`}
         >
           {tf.label}
