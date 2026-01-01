@@ -270,7 +270,14 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   
   const toggleIndicator = useCallback((indicator) => {
     setIndicators(prev => ({ ...prev, [indicator]: !prev[indicator] }))
-  }, [])
+    
+    // Trigger analysis after state update
+    setTimeout(() => {
+      if (stockData?.ohlc && stockData.ohlc.length > 0) {
+        performAnalysis()
+      }
+    }, 0)
+  }, [stockData, performAnalysis])
   
   const performAnalysis = useCallback(() => {
     if (!stockData?.ohlc || stockData.ohlc.length === 0) {
@@ -405,13 +412,6 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       setLocalLoading(false)
     }
   }, [stockData, params])
-  
-  // Trigger analysis when indicators are toggled
-  useEffect(() => {
-    if (stockData?.ohlc && stockData.ohlc.length > 0) {
-      performAnalysis()
-    }
-  }, [indicators, stockData, performAnalysis])
   
   // Initial data load
   useEffect(() => {
