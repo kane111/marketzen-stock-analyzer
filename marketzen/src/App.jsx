@@ -151,6 +151,23 @@ function AppContent() {
     setTimeout(() => setNotification(null), 3000)
   }
 
+  // Handle Escape key for modals (Search Overlay and Keyboard Shortcuts)
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (showKeyboardShortcuts) {
+          setShowKeyboardShortcuts(false)
+        }
+        if (searchOpen) {
+          setSearchOpen(false)
+        }
+      }
+    }
+    
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [showKeyboardShortcuts, searchOpen])
+
   // Check mobile
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)

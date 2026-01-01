@@ -4,7 +4,7 @@ async function testCTAsAndToggles() {
   console.log('Starting CTA and Toggle Functionality Tests...\n')
 
   const browser = await chromium.launch({ headless: true })
-  const baseUrl = 'https://o328oq0w42tg.space.minimax.io'
+  const baseUrl = 'https://cx7iok4vmdps.space.minimax.io'
   
   let allTestsPassed = true
   const errors = []
