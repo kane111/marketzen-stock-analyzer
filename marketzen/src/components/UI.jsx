@@ -216,11 +216,10 @@ export function TerminalIndicatorToggle({
   className = ''
 }) {
   return (
-    <motion.button
+    <button
+      type="button"
       onClick={disabled ? undefined : onToggle}
       disabled={disabled}
-      whileHover={{ scale: disabled ? 1 : 1.02 }}
-      whileTap={{ scale: disabled ? 1 : 0.98 }}
       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all border ${
         isActive
           ? 'bg-terminal-green/20 border-terminal-green text-terminal-green shadow-lg shadow-terminal-green/10'
@@ -235,18 +234,16 @@ export function TerminalIndicatorToggle({
       />
       <span className="text-sm font-mono">{label}</span>
       {isActive && (
-        <motion.div
+        <motion.span
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
-          className="ml-auto"
+          className="ml-auto w-5 h-5 rounded-full bg-terminal-green text-terminal-bg flex items-center justify-center text-xs font-bold"
         >
-          <span className="w-5 h-5 rounded-full bg-terminal-green text-terminal-bg flex items-center justify-center text-xs font-bold">
-            ✓
-          </span>
-        </motion.div>
+          ✓
+        </motion.span>
       )}
-    </motion.button>
+    </button>
   )
 }
 
