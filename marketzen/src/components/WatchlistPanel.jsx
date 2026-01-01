@@ -285,18 +285,15 @@ function WatchlistPanel({ onStockSelect }) {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-center justify-between p-4 hover:bg-surfaceLight/50 transition-colors group"
+                className="flex items-center justify-between p-4 hover:bg-surfaceLight/50 transition-colors group cursor-pointer"
+                onClick={() => handleSelectStock(stock)}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center cursor-pointer"
-                       onClick={() => handleSelectStock(stock)}>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
                   </div>
                   <div>
-                    <h4 className="font-medium cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => handleSelectStock(stock)}>
-                      {stock.symbol}
-                    </h4>
+                    <h4 className="font-medium">{stock.symbol}</h4>
                     <p className="text-sm text-textSecondary">{stock.name}</p>
                   </div>
                 </div>
@@ -325,7 +322,10 @@ function WatchlistPanel({ onStockSelect }) {
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => handleRemoveStock(stock.symbol)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveStock(stock.symbol)
+                      }}
                       className="p-2 rounded-lg bg-negative/10 text-negative hover:bg-negative/20"
                       title="Remove"
                     >
