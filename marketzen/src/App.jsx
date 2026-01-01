@@ -112,19 +112,16 @@ function App() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Load first stock
+  // Load first stock and fetch data
   useEffect(() => {
     if (watchlist.length > 0 && !selectedStock && view === 'dashboard') {
-      setSelectedStock(watchlist[0])
+      const firstStock = watchlist[0]
+      setSelectedStock(firstStock)
+      // Fetch data for the first stock
+      fetchStockData(firstStock, TIMEFRAMES[1])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchlist, selectedStock, view])
-
-  // Fetch stock data when selectedStock changes
-  useEffect(() => {
-    if (selectedStock) {
-      fetchStockData(selectedStock, selectedTimeframe)
-    }
-  }, [selectedStock, fetchStockData, selectedTimeframe])
 
   // Save watchlist
   useEffect(() => {
@@ -177,14 +174,17 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  const fetchStockData = useCallback(async (stock, timeframe = selectedTimeframe, taMode = false, isMultiChart = false, multiTimeframe = null) => {
+  const fetchStockData = useCallback(async (stock, timeframe, taMode = false, isMultiChart = false, multiTimeframe = null) => {
     if (!stock) return
+    
+    // Use selectedTimeframe as default when not provided
+    const effectiveTimeframe = timeframe || selectedTimeframe
     
     setError(null)
     setLoading(true)
     
     try {
-      const tf = taMode ? timeframe : (multiTimeframe || timeframe)
+      const tf = taMode ? timeframe : (multiTimeframe || effectiveTimeframe)
       const url = `${YAHOO_BASE}/${stock.id}?range=${tf.range}&interval=${tf.interval}`
       const response = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`)
       
