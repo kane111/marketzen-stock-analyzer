@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Filter, ArrowUpDown, ChevronDown, X, Star, Plus, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react'
 import { useWatchlist } from '../context/WatchlistContext'
+import { TerminalCheckbox } from './UI'
 
 // Mock stock data for screening
 const STOCK_DATABASE = [
@@ -301,24 +302,16 @@ function StockScreener({ onStockSelect }) {
                 />
               </div>
               <div className="flex items-center gap-4 pt-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.showGainersOnly}
-                    onChange={(e) => setFilters(prev => ({ ...prev, showGainersOnly: e.target.checked, showLosersOnly: false }))}
-                    className="w-4 h-4 rounded border-white/20 bg-surfaceLight text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm">Gainers Only</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.showLosersOnly}
-                    onChange={(e) => setFilters(prev => ({ ...prev, showLosersOnly: e.target.checked, showGainersOnly: false }))}
-                    className="w-4 h-4 rounded border-white/20 bg-surfaceLight text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm">Losers Only</span>
-                </label>
+                <TerminalCheckbox
+                  label="Gainers Only"
+                  checked={filters.showGainersOnly}
+                  onChange={(e) => setFilters(prev => ({ ...prev, showGainersOnly: e.target.checked, showLosersOnly: false }))}
+                />
+                <TerminalCheckbox
+                  label="Losers Only"
+                  checked={filters.showLosersOnly}
+                  onChange={(e) => setFilters(prev => ({ ...prev, showLosersOnly: e.target.checked, showGainersOnly: false }))}
+                />
               </div>
             </div>
           </motion.div>

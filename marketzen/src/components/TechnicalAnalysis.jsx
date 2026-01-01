@@ -11,6 +11,7 @@ import {
   Bar, Cell 
 } from 'recharts'
 import TimeframeSelector from './TimeframeSelector'
+import { TerminalTab, TerminalIndicatorToggle } from './UI'
 
 // ============================================================================
 // TECHNICAL INDICATOR CALCULATION FUNCTIONS
@@ -528,45 +529,28 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           { id: 'stoch', label: 'Stochastic', color: '#f97316' },
           { id: 'atr', label: 'ATR', color: '#84cc16' }
         ].map(indicator => (
-          <motion.button
+          <TerminalIndicatorToggle
             key={indicator.id}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => toggleIndicator(indicator.id)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors border ${
-              indicators[indicator.id] 
-                ? 'bg-terminal-green/20 border-terminal-green/50 text-terminal-bg' 
-                : 'bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border hover:bg-terminal-bg-light'
-            }`}
-          >
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: indicator.color }} />
-            <span className="text-sm">{indicator.label}</span>
-          </motion.button>
+            label={indicator.label}
+            color={indicator.color}
+            isActive={indicators[indicator.id]}
+            onToggle={() => toggleIndicator(indicator.id)}
+          />
         ))}
       </div>
       
       {/* Tab Navigation */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {[
+      <TerminalTab
+        tabs={[
           { id: 'summary', label: 'Summary', icon: Target },
           { id: 'indicators', label: 'Indicators', icon: Activity },
           { id: 'oscillators', label: 'Oscillators', icon: Zap },
           { id: 'patterns', label: 'Patterns', icon: Grid3X3 }
-        ].map((tab) => (
-          <motion.button
-            key={tab.id}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-              activeTab === tab.id ? 'bg-terminal-green text-terminal-bg' : 'bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border hover:bg-terminal-bg-light'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </motion.button>
-        ))}
-      </div>
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        className="mb-6"
+      />
       
       {/* Content */}
       <AnimatePresence mode="wait">

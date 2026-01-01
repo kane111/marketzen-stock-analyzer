@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, TrendingUp, TrendingDown, PieChart, BarChart3, RefreshCw, Download, ExternalLink, Info } from 'lucide-react'
+import { TerminalTab } from './UI'
 
 // Yahoo Finance quote summary endpoint
 const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
@@ -307,24 +308,12 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
-        {tabs.map((tab) => (
-          <motion.button
-            key={tab.id}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors text-sm ${
-              activeTab === tab.id
-                ? 'bg-terminal-green text-terminal-bg'
-                : 'bg-terminal-bg-secondary border border-terminal-border hover:bg-terminal-bg-light'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </motion.button>
-        ))}
-      </div>
+      <TerminalTab
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        className="mb-3"
+      />
 
       {/* Main Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
