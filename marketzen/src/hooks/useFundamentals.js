@@ -76,15 +76,14 @@ export function useFundamentals(symbol, options = {}) {
         setLastUpdated(new Date())
         setDataSource('Yahoo Finance')
       } else {
-        // Use mock data if API returns no results
-        setData(getMockFundamentals(symbol))
-        setDataSource('Demo Data')
+        // No data available from API
+        setData(null)
+        setError('No fundamental data available for this symbol')
       }
     } catch (err) {
       console.error('Error fetching fundamentals:', err)
-      setData(getMockFundamentals(symbol))
-      setDataSource('Demo Data (API unavailable)')
-      setError(err.message)
+      setData(null)
+      setError(`Failed to fetch fundamentals: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -156,51 +155,3 @@ export function getMetric(data, path) {
   return value?.raw !== undefined ? value.raw : value
 }
 
-// ============================================================================
-// MOCK DATA FOR FALLBACK
-// ============================================================================
-
-function getMockFundamentals(symbol) {
-  const mockData = {
-    'RELIANCE.NS': {
-      summaryDetail: {
-        marketCap: { raw: 16000000000000 },
-        fiftyTwoWeekHighRaw: { raw: 3200 },
-        fiftyTwoWeekLowRaw: { raw: 2400 },
-        dividendYieldRaw: { raw: 0.0035 },
-        averageVolume: { raw: 5000000 },
-        volume: { raw: 6000000 },
-        sharesOutstanding: { raw: 6800000000 },
-        twoHundredDayAverage: { raw: 2800 },
-        fiftyDayAverage: { raw: 2950 }
-      },
-      defaultKeyStatistics: {
-        trailingPE: { raw: 28.5 },
-        forwardPE: { raw: 22.3 },
-        priceToBookRaw: { raw: 3.2 },
-        priceToSalesTrailing12Months: { raw: 2.1 },
-        trailingEps: { raw: 98.5 },
-        beta: { raw: 0.85 },
-        fiftyTwoWeekChange: { raw: 0.15 },
-        floatShares: { raw: 5000000000 },
-        insiderHoldings: { raw: 0.45 }
-      },
-      financialData: {
-        totalRevenue: { raw: 800000000000 },
-        netIncomeToCommon: { raw: 95000000000 },
-        grossMargins: { raw: 0.52 },
-        operatingMargins: { raw: 0.18 },
-        profitMargins: { raw: 0.12 },
-        returnOnEquity: { raw: 0.13 },
-        returnOnAssets: { raw: 0.08 },
-        debtToEquity: { raw: 0.4 },
-        currentRatio: { raw: 1.2 },
-        currentPrice: { raw: 2850 }
-      }
-    }
-  }
-  
-  return mockData[symbol] || mockData['RELIANCE.NS']
-}
-
-export default useFundamentals
