@@ -212,7 +212,7 @@ export function ErrorPage({
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   )
 }
 

@@ -13,6 +13,7 @@ import {
 import TimeframeSelector from './charts/TimeframeSelector'
 import { TerminalTab, TerminalIndicatorToggle } from './UI'
 import { Spinner } from './common/LoadingSkeleton'
+import { InlineError } from './common/ErrorDisplay'
 import { 
   useIndicators, 
   useIndicatorParams,
@@ -279,7 +280,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-96">
         <Spinner size="3rem" />
         <p className="text-terminal-dim mt-4 font-mono">Loading technical analysis...</p>
-        {error && <p className="text-terminal-red mt-2 text-sm">{error}</p>}
+        {error && <div className="mt-4"><InlineError message={error} severity="error" /></div>}
       </motion.div>
     )
   }

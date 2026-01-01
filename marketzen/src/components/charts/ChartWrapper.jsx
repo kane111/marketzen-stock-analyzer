@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion } from 'framer-motion'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
 import { Spinner } from '../common/LoadingSkeleton'
+import { ErrorWithRetry } from '../common/ErrorDisplay'
 
 // Timeframe constants - matches Yahoo Finance API
 export const TIMEFRAMES = [
@@ -252,17 +253,11 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
       {/* Error Message */}
       {error && (
         <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
-          <div className="text-center">
-            <p className="text-negative mb-2 font-mono text-sm">{error}</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => fetchChartData(stock?.id, selectedTimeframe)}
-              className="px-3 py-1 rounded border border-terminal-border text-terminal-dim hover:text-terminal-text text-sm"
-            >
-              Retry
-            </motion.button>
-          </div>
+          <ErrorWithRetry 
+            message={error} 
+            onRetry={() => fetchChartData(stock?.id, selectedTimeframe)} 
+            severity="error"
+          />
         </div>
       )}
 

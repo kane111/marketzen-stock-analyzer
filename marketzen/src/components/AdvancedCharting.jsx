@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Settings, ZoomIn, ZoomOut, MoveHorizontal, Ca
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, BarChart, Bar } from 'recharts'
 import { useTheme } from '../context/ThemeContext'
 import { Spinner } from './common/LoadingSkeleton'
+import { ErrorBanner } from './common/ErrorDisplay'
 
 // Yahoo Finance API endpoints
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -365,9 +366,7 @@ function AdvancedCharting({ onStockSelect }) {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-negative/10 border border-negative/30 rounded-lg p-3 mb-4 text-sm text-negative">
-          {error}
-        </div>
+        <ErrorBanner message={error} severity="warning" onDismiss={() => setError(null)} />
       )}
 
       {/* Main Chart */}
