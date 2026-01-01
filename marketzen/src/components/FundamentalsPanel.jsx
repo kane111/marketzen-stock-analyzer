@@ -233,7 +233,7 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="absolute inset-0 bg-terminal-bg flex flex-col"
+      className="h-full flex flex-col"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
