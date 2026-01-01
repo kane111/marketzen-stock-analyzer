@@ -137,6 +137,10 @@ function AppContent() {
     setShowFundamentalsPanel(false)
   }, [])
   
+  // Fundamentals cache for background fetching
+  const [fundamentalsCache, setFundamentalsCache] = useState({})
+  const [fundamentalsLoading, setFundamentalsLoading] = useState(false)
+  
   // Panel sizing
   const [leftPanelWidth, setLeftPanelWidth] = useState(200)
   const [rightPanelWidth, setRightPanelWidth] = useState(250)
@@ -420,6 +424,79 @@ function AppContent() {
       })
     }
   }
+
+  // Background fundamentals fetching - fetch when stock changes even if panel is closed
+  useEffect(() => {
+    if (!selectedStock?.id) return
+    
+    // Check if we already have cached data that's not too old (5 minutes)
+    const cached = fundamentalsCache[selectedStock.id]
+    const cacheAge = cached?.timestamp ? Date.now() - cached.timestamp : Infinity
+    const CACHE_MAX_AGE = 5 * 60 * 1000 // 5 minutes
+    
+    if (cached && cacheAge < CACHE_MAX_AGE) {
+      // Use cached data, no need to fetch
+      return
+    }
+    
+    // Fetch fundamentals in background
+    setFundamentalsLoading(true)
+    const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
+    const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
+    const url = `${YAHOO_QUOTE_SUMMARY}/${selectedStock.id}?modules=${FUNDAMENTAL_MODULES}`
+    
+    const CORS_PROXIES = [
+      'https://corsproxy.io/?',
+      'https://justfetch.itsvg.in/?url=',
+      'https://api.allorigins.win/raw?url=',
+      'https://corsproxy.pages.dev/?',
+      'https://proxy.cors.sh/'
+    ]
+    
+    const tryFetchWithProxy = async (proxyIndex = 0, attempts = 0) => {
+      if (proxyIndex >= CORS_PROXIES.length) {
+        throw new Error('All proxies failed')
+      }
+      
+      const proxy = CORS_PROXIES[proxyIndex]
+      
+      try {
+        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+          }
+        })
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return await response.json()
+      } catch (err) {
+        if (attempts < 3) {
+          return tryFetchWithProxy(proxyIndex, attempts + 1)
+        }
+        return tryFetchWithProxy(proxyIndex + 1, 0)
+      }
+    }
+    
+    tryFetchWithProxy()
+      .then(result => {
+        if (result.quoteSummary?.result?.[0]) {
+          setFundamentalsCache(prev => ({
+            ...prev,
+            [selectedStock.id]: {
+              data: result.quoteSummary.result[0],
+              timestamp: Date.now()
+            }
+          }))
+        }
+      })
+      .catch(err => {
+        console.error('Background fundamentals fetch error:', err)
+      })
+      .finally(() => {
+        setFundamentalsLoading(false)
+      })
+  }, [selectedStock?.id, fundamentalsCache])
 
   const handleAnalyzeClick = (stock, e) => {
     e.stopPropagation()
@@ -1486,6 +1563,8 @@ function AppContent() {
                                 stock={selectedStock}
                                 stockData={stockData}
                                 onClose={handleCloseFundamentals}
+                                cachedFundamentals={fundamentalsCache[selectedStock?.id]}
+                                loading={fundamentalsLoading}
                               />
                             </motion.div>
                           )}

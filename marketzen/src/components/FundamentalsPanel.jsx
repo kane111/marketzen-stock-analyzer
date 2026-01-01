@@ -1,7 +1,7 @@
-import { useState, memo } from 'react'
+import { useState, memo, useEffect } from 'react'
 import { X, TrendingUp, PieChart, BarChart3 } from 'lucide-react'
 import { TerminalTab } from './UI'
-import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
+import { getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
 import { MetricCard } from './common/MetricCard'
 
 /**
@@ -13,14 +13,14 @@ import { MetricCard } from './common/MetricCard'
  * - Better card padding in grids
  * - Clearer visual hierarchy
  * - Smooth transitions between tabs
+ * - Uses cached data when available
  */
-function FundamentalsPanel({ stock, onClose }) {
+function FundamentalsPanel({ stock, stockData, onClose, cachedFundamentals = null, loading: externalLoading = false }) {
   const [activeTab, setActiveTab] = useState('valuation')
-
-  const {
-    data: fundamentals,
-    loading
-  } = useFundamentals(stock?.id)
+  
+  // Use cached data if available, otherwise show loading
+  const fundamentals = cachedFundamentals?.data
+  const isLoading = externalLoading || !fundamentals
 
   const tabs = [
     { id: 'valuation', label: 'Valuation', icon: PieChart },
@@ -29,7 +29,7 @@ function FundamentalsPanel({ stock, onClose }) {
   ]
 
   // Loading state with better visual feedback
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="h-full flex flex-col p-3">
         {/* Header */}
