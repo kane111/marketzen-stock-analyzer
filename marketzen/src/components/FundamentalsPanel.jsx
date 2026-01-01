@@ -194,8 +194,9 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
   if (loading) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="max-w-4xl mx-auto"
       >
         <div className="flex items-center justify-between mb-6">
@@ -227,9 +228,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       className="max-w-4xl mx-auto"
     >
       {/* Header */}
