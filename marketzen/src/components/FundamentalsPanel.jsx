@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, TrendingDown, PieChart, BarChart3, RefreshCw, Info } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, PieChart, BarChart3, RefreshCw } from 'lucide-react'
 import { TerminalTab } from './UI'
 import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
 import { MetricCard } from './common/MetricCard'
@@ -383,16 +383,6 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* Disclaimer */}
-      <div className="mt-3 p-3 bg-terminal-bg-secondary border border-terminal-border rounded-lg flex items-start gap-2">
-        <Info className="w-4 h-4 text-terminal-dim flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-terminal-dim">
-          <strong className="text-terminal-text">Disclaimer:</strong> Fundamental data is provided for informational purposes only and should not be considered as financial advice. 
-          Always conduct your own research and consider consulting a financial advisor before making investment decisions.
-          {dataSource.includes('Demo') && ' Some data shown is demo data as the live API is currently unavailable.'}
-        </p>
       </div>
     </motion.div>
   )
