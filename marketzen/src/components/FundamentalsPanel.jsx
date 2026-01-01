@@ -137,14 +137,8 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
             <X className="w-5 h-5" />
           </motion.button>
           <div>
-            <h2 className="text-xl font-semibold">{stock?.name}</h2>
-            <div className="flex items-center gap-2 text-xs text-terminal-dim">
-              <span>{stock?.symbol}</span>
-              <span>•</span>
-              <span className="px-2 py-0.5 bg-terminal-bg-light rounded-full">{getSector()}</span>
-              <span>•</span>
-              <span>NSE</span>
-            </div>
+            <h2 className="text-lg font-semibold">{stock?.name}</h2>
+            <p className="text-xs text-terminal-dim">{stock?.symbol} • NSE</p>
           </div>
         </div>
 
@@ -172,36 +166,12 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
         </div>
       </div>
 
-      {/* Data Source & Last Updated */}
-      <div className="flex items-center justify-between text-xs text-terminal-dim mb-3">
-        <span>Data Source: {dataSource}</span>
-        {lastUpdated && <span>Last Updated: {lastUpdated.toLocaleTimeString()}</span>}
-      </div>
-
-      {/* Current Price Card */}
-      {stockData && (
-        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3 mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-terminal-dim">Current Price</p>
-            <p className="text-xl font-bold">{formatCurrency(stockData.current_price)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-terminal-dim">Day Change</p>
-            <p className={`text-lg font-semibold ${
-              (stockData.current_price - stockData.previous_close) >= 0 ? 'text-terminal-green' : 'text-terminal-red'
-            }`}>
-              {((stockData.current_price - stockData.previous_close) / stockData.previous_close * 100).toFixed(2)}%
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Tabs */}
       <TerminalTab
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        className="mb-3"
+        className="mb-2"
       />
 
       {/* Main Scrollable Content */}
@@ -214,10 +184,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3"
             >
-              <h3 className="text-base font-semibold mb-3">Valuation Metrics</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <h3 className="text-sm font-semibold mb-2">Valuation Metrics</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <MetricCard
                   label="P/E Ratio"
                   value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.trailingPE'))}
@@ -274,10 +244,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3"
             >
-              <h3 className="text-base font-semibold mb-3">Financial Performance</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <h3 className="text-sm font-semibold mb-2">Financial Performance</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <MetricCard
                   label="Revenue (TTM)"
                   value={formatNumber(getMetric(fundamentals, 'financialData.totalRevenue'))}
@@ -333,10 +303,10 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4"
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3"
             >
-              <h3 className="text-base font-semibold mb-3">Price Performance</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <h3 className="text-sm font-semibold mb-2">Price Performance</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <MetricCard
                   label="52 Week High"
                   value={formatCurrency(getMetric(fundamentals, 'summaryDetail.fiftyTwoWeekHighRaw'))}
