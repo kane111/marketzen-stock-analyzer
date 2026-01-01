@@ -46,7 +46,7 @@ function LoadingSkeleton() {
               key={i}
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
-              className="glass p-4 rounded-xl"
+              className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border p-4 rounded-xl"
             >
               <div className="w-20 h-3 rounded bg-surface mb-2" />
               <div className="w-28 h-6 rounded bg-surface" />
@@ -55,7 +55,7 @@ function LoadingSkeleton() {
         </div>
 
         {/* Chart Skeleton */}
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <div className="flex items-center justify-between mb-6">
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}

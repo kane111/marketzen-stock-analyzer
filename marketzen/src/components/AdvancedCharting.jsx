@@ -206,7 +206,7 @@ function AdvancedCharting({ onStockSelect }) {
       if (!data) return null
 
       return (
-        <div className="glass rounded-lg p-3 border border-white/10">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-lg p-3 border border-white/10">
           <p className="text-sm text-textSecondary mb-2">{formatDate(data.date)}</p>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between gap-4">
@@ -318,7 +318,7 @@ function AdvancedCharting({ onStockSelect }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="glass rounded-2xl p-4 mb-6 overflow-hidden"
+            className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-4 mb-6 overflow-hidden"
           >
             <div className="flex items-center gap-6 flex-wrap">
               {[
@@ -346,7 +346,7 @@ function AdvancedCharting({ onStockSelect }) {
       </AnimatePresence>
 
       {/* Main Chart */}
-      <div className="glass rounded-2xl p-6">
+      <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
         {/* Chart Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
@@ -501,7 +501,7 @@ function AdvancedCharting({ onStockSelect }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 glass rounded-2xl p-6"
+          className="mt-6 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6"
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Selected: {formatDate(selectedCandle.date)}</h3>
@@ -532,7 +532,7 @@ function AdvancedCharting({ onStockSelect }) {
 
       {/* Chart Legend */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass rounded-xl p-4">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4">
           <h4 className="text-sm font-medium mb-2">Chart Patterns</h4>
           <div className="space-y-2 text-sm text-textSecondary">
             <p>• Doji: Open ≈ Close</p>
@@ -540,7 +540,7 @@ function AdvancedCharting({ onStockSelect }) {
             <p>• Engulfing: Large body engulfs previous</p>
           </div>
         </div>
-        <div className="glass rounded-xl p-4">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4">
           <h4 className="text-sm font-medium mb-2">Technical Indicators</h4>
           <div className="space-y-2 text-sm text-textSecondary">
             <p className="text-amber-500">• SMA(20): 20-day average</p>
@@ -548,7 +548,7 @@ function AdvancedCharting({ onStockSelect }) {
             <p className="text-cyan-500">• RSI: Momentum oscillator</p>
           </div>
         </div>
-        <div className="glass rounded-xl p-4">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4">
           <h4 className="text-sm font-medium mb-2">Quick Tips</h4>
           <div className="space-y-2 text-sm text-textSecondary">
             <p>• Green = Bullish (close {'>'} open)</p>

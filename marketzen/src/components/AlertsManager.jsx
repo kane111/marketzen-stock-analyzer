@@ -171,7 +171,7 @@ function AlertsManager({ stock, currentStockData, onClose }) {
 
       {/* Quick Stats from Fundamentals */}
       {stock && fundamentals && (
-        <div className="glass rounded-xl p-4 mb-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4 mb-6">
           <h3 className="text-sm font-medium text-textSecondary mb-3">Quick Reference</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
@@ -214,7 +214,7 @@ function AlertsManager({ stock, currentStockData, onClose }) {
                 key={alert.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="glass rounded-lg p-3 flex items-center justify-between border border-positive/30"
+                className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-lg p-3 flex items-center justify-between border border-positive/30"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-positive/20 flex items-center justify-center">
@@ -240,7 +240,7 @@ function AlertsManager({ stock, currentStockData, onClose }) {
       )}
 
       {/* Active Alerts List */}
-      <div className="glass rounded-2xl overflow-hidden">
+      <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-white/5">
           <h3 className="text-sm font-medium text-textSecondary uppercase tracking-wider">
             {stock ? `Alerts for ${stock.symbol}` : 'All Alerts'} ({stockAlerts.length})
@@ -419,7 +419,7 @@ function CreateAlertModal({ stock, currentPrice, onClose, onSubmit }) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass rounded-2xl p-6 w-full max-w-md"
+        className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 w-full max-w-md"
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold">Create Alert for {stock?.symbol}</h3>
@@ -548,7 +548,7 @@ function EditAlertModal({ alert, onClose, onSubmit }) {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass rounded-2xl p-6 w-full max-w-md"
+        className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 w-full max-w-md"
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold">Edit Alert</h3>
@@ -558,7 +558,7 @@ function EditAlertModal({ alert, onClose, onSubmit }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="glass rounded-lg p-4">
+          <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-lg p-4">
             <p className="text-sm text-textSecondary">Alert Type</p>
             <p className="font-medium">{alert.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
           </div>

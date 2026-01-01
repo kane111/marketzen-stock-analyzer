@@ -92,7 +92,7 @@ function PerformanceChart({ onStockSelect }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="glass rounded-lg p-3 border border-white/10">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-lg p-3 border border-white/10">
           <p className="text-sm text-textSecondary mb-2">{formatDate(label)}</p>
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
@@ -112,7 +112,7 @@ function PerformanceChart({ onStockSelect }) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="glass rounded-2xl p-8"
+        className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-8"
       >
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="w-8 h-8 text-primary animate-spin" />
@@ -159,7 +159,7 @@ function PerformanceChart({ onStockSelect }) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-xl p-4"
+            className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
           >
             <p className="text-sm text-textSecondary mb-1">Current Value</p>
             <p className="text-2xl font-bold">{formatCurrency(metrics.currentValue)}</p>
@@ -169,7 +169,7 @@ function PerformanceChart({ onStockSelect }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="glass rounded-xl p-4"
+            className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
           >
             <p className="text-sm text-textSecondary mb-1">Total Return</p>
             <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ function PerformanceChart({ onStockSelect }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="glass rounded-xl p-4"
+            className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
           >
             <p className="text-sm text-textSecondary mb-1">vs Benchmark</p>
             <div className="flex items-center gap-2">
@@ -203,7 +203,7 @@ function PerformanceChart({ onStockSelect }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="glass rounded-xl p-4"
+            className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
           >
             <p className="text-sm text-textSecondary mb-1">Holdings</p>
             <p className="text-2xl font-bold">{holdings.length}</p>
@@ -245,7 +245,7 @@ function PerformanceChart({ onStockSelect }) {
       </div>
 
       {/* Chart */}
-      <div className="glass rounded-2xl p-6">
+      <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             {chartType === 'area' ? (
@@ -343,7 +343,7 @@ function PerformanceChart({ onStockSelect }) {
 
       {/* Performance Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <h3 className="text-lg font-medium mb-4">Best Performers</h3>
           <div className="space-y-3">
             {holdings.slice(0, 5).map((holding) => (
@@ -372,7 +372,7 @@ function PerformanceChart({ onStockSelect }) {
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <h3 className="text-lg font-medium mb-4">Recent Activity</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 bg-surfaceLight rounded-lg">

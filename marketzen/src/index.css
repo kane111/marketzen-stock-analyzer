@@ -39,13 +39,6 @@ body {
   background: #4a5568;
 }
 
-/* Glass effect */
-.glass {
-  background: rgba(21, 26, 33, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
 /* Glow effects */
 .glow-positive {
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);

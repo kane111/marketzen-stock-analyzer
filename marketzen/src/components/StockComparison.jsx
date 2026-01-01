@@ -287,7 +287,7 @@ function StockComparison({ onClose, watchlist = [] }) {
       </div>
 
       {/* Stock Selection */}
-      <div className="glass rounded-2xl p-4 mb-6">
+      <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-textSecondary uppercase tracking-wider">
             Stocks to Compare ({comparisonStocks.length}/4)
@@ -330,7 +330,7 @@ function StockComparison({ onClose, watchlist = [] }) {
                   key={stock.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="glass rounded-xl p-4 relative"
+                  className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4 relative"
                   style={{ borderLeft: `3px solid ${COLORS[index % COLORS.length]}` }}
                 >
                   <button
@@ -374,7 +374,7 @@ function StockComparison({ onClose, watchlist = [] }) {
 
       {/* Comparison Chart */}
       {comparisonStocks.length > 0 && (
-        <div className="glass rounded-2xl p-6 mb-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
           <h3 className="text-lg font-medium mb-4">Performance Comparison (%)</h3>
           {loading ? (
             <div className="h-80 flex items-center justify-center">
@@ -445,7 +445,7 @@ function StockComparison({ onClose, watchlist = [] }) {
 
       {/* Metrics Comparison Table */}
       {comparisonStocks.length > 1 && (
-        <div className="glass rounded-2xl overflow-hidden">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-white/5">
             <h3 className="text-sm font-medium text-textSecondary uppercase tracking-wider">Metrics Comparison</h3>
           </div>
@@ -521,7 +521,7 @@ function StockComparison({ onClose, watchlist = [] }) {
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass rounded-2xl p-6 w-full max-w-md"
+              className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 w-full max-w-md"
             >
               <h3 className="text-lg font-semibold mb-4">Save Comparison</h3>
               <input
@@ -584,7 +584,7 @@ function StockSearchButton({ onSelect, existingStocks, watchlist }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute right-0 top-full mt-2 w-72 glass rounded-xl overflow-hidden z-50"
+              className="absolute right-0 top-full mt-2 w-72 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl overflow-hidden z-50"
             >
               <div className="p-3 border-b border-white/5">
                 <input

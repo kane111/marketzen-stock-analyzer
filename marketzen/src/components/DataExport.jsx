@@ -302,7 +302,7 @@ function DataExport() {
       {/* Export Options */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Format Selection */}
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <h3 className="text-lg font-medium mb-4">Export Format</h3>
           <div className="space-y-3">
             <motion.button
@@ -344,7 +344,7 @@ function DataExport() {
         </div>
 
         {/* Quick Export All */}
-        <div className="glass rounded-2xl p-6 lg:col-span-2">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 lg:col-span-2">
           <h3 className="text-lg font-medium mb-4">Quick Export</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.button
@@ -378,7 +378,7 @@ function DataExport() {
       {/* Export Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Portfolio Export */}
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-positive/20 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-positive" />
@@ -413,7 +413,7 @@ function DataExport() {
         </div>
 
         {/* Watchlist Export */}
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
               <Clock className="w-5 h-5 text-amber-500" />
@@ -462,7 +462,7 @@ function DataExport() {
         </div>
 
         {/* Alerts Export */}
-        <div className="glass rounded-2xl p-6">
+        <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-lg bg-negative/20 flex items-center justify-center">
               <TrendingDown className="w-5 h-5 text-negative" />
@@ -498,7 +498,7 @@ function DataExport() {
       </div>
 
       {/* Export History Info */}
-      <div className="mt-6 glass rounded-2xl p-6">
+      <div className="mt-6 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
         <h3 className="text-lg font-medium mb-4">Export Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-surfaceLight rounded-xl">

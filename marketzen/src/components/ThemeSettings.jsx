@@ -98,7 +98,7 @@ function ThemeSettings() {
 
         {/* Content Area */}
         <div className="lg:col-span-2">
-          <div className="glass rounded-2xl p-6">
+          <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
             {/* Color Presets Section */}
             {activeSection === 'presets' && (
               <motion.div

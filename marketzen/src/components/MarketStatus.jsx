@@ -122,7 +122,7 @@ function MarketStatus({ marketStatus, lastUpdated, onRefresh }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="absolute right-0 top-full mt-2 w-72 glass rounded-xl overflow-hidden shadow-xl z-50"
+              className="absolute right-0 top-full mt-2 w-72 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl overflow-hidden shadow-xl z-50"
             >
               {/* Header */}
               <div className="p-4 border-b border-white/5">

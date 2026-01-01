@@ -126,7 +126,7 @@ function SectorDashboard({ onSectorSelect }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-xl p-4"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
         >
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-positive" />
@@ -140,7 +140,7 @@ function SectorDashboard({ onSectorSelect }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass rounded-xl p-4"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
         >
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-negative" />
@@ -154,7 +154,7 @@ function SectorDashboard({ onSectorSelect }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass rounded-xl p-4"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
         >
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-primary" />
@@ -170,7 +170,7 @@ function SectorDashboard({ onSectorSelect }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass rounded-xl p-4"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4"
         >
           <div className="flex items-center gap-2 mb-2">
             {bestSector.change >= 0 ? (
@@ -210,7 +210,7 @@ function SectorDashboard({ onSectorSelect }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="glass rounded-2xl p-6"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6"
         >
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {sortedSectors.map((sector, index) => (
@@ -279,7 +279,7 @@ function SectorDashboard({ onSectorSelect }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="glass rounded-2xl overflow-hidden"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl overflow-hidden"
         >
           <div className="grid grid-cols-4 gap-4 p-4 bg-surfaceLight text-sm text-textSecondary font-medium">
             <div>Sector</div>
@@ -327,7 +327,7 @@ function SectorDashboard({ onSectorSelect }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="glass rounded-2xl p-6"
+          className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6"
         >
           <h3 className="text-lg font-medium mb-4">Sector Comparison</h3>
           <div className="h-96">
