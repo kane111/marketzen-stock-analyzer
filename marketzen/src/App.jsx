@@ -134,6 +134,9 @@ function AppContent() {
   
   // Fundamentals panel state
   const [showFundamentalsPanel, setShowFundamentalsPanel] = useState(false)
+  const handleCloseFundamentals = useCallback(() => {
+    setShowFundamentalsPanel(false)
+  }, [])
   
   // Panel sizing
   const [leftPanelWidth, setLeftPanelWidth] = useState(200)
@@ -1542,7 +1545,7 @@ function AppContent() {
                               <FundamentalsPanel
                                 stock={selectedStock}
                                 stockData={stockData}
-                                onClose={() => setShowFundamentalsPanel(false)}
+                                onClose={handleCloseFundamentals}
                               />
                             </motion.div>
                           )}
