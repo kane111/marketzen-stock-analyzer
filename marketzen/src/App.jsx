@@ -133,8 +133,8 @@ function AppContent() {
   const [rightPanelTab, setRightPanelTab] = useState('depth')
   
   // Panel sizing
-  const [leftPanelWidth, setLeftPanelWidth] = useState(280)
-  const [rightPanelWidth, setRightPanelWidth] = useState(320)
+  const [leftPanelWidth, setLeftPanelWidth] = useState(200)
+  const [rightPanelWidth, setRightPanelWidth] = useState(250)
   const [isResizingLeft, setIsResizingLeft] = useState(false)
   const [isResizingRight, setIsResizingRight] = useState(false)
   
