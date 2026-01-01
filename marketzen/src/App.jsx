@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu, Terminal, Command, ChevronRight, ChevronDown, Copy, Check, RotateCcw, Play, Pause, Maximize2, Minimize2, GripVertical } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -47,7 +47,7 @@ const DEFAULT_STOCKS = [
   { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India' }
 ]
 
-// Map timeframe labels to Yahoo Finance ranges and intervals
+// Map timeframe labels to Yahoo Finance ranges and interval
 const TIMEFRAMES = [
   { label: '1D', range: '1d', interval: '5m' },
   { label: '1W', range: '5d', interval: '15m' },
@@ -120,6 +120,29 @@ function AppContent() {
     const saved = localStorage.getItem('marketzen_indicator_params')
     return saved ? JSON.parse(saved) : DEFAULT_PARAMS
   })
+  
+  // Terminal Workspace specific state
+  const [commandMode, setCommandMode] = useState(false)
+  const [commandInput, setCommandInput] = useState('')
+  const [commandHistory, setCommandHistory] = useState([])
+  const [commandHistoryIndex, setCommandHistoryIndex] = useState(-1)
+  const [copiedData, setCopiedData] = useState(false)
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [cursorBlink, setCursorBlink] = useState(true)
+  
+  // Panel sizing
+  const [leftPanelWidth, setLeftPanelWidth] = useState(280)
+  const [rightPanelWidth, setRightPanelWidth] = useState(320)
+  const [isResizingLeft, setIsResizingLeft] = useState(false)
+  const [isResizingRight, setIsResizingRight] = useState(false)
+  
+  // Command palette suggestions
+  const [commandSuggestions, setCommandSuggestions] = useState([])
+  const [selectedSuggestion, setSelectedSuggestion] = useState(0)
+  
+  const commandInputRef = useRef(null)
+  const resizeTimeoutRef = useRef(null)
 
   // Show notification helper
   const showNotification = (message, type = 'success') => {
@@ -162,6 +185,14 @@ function AppContent() {
       }
     }
   }, [refreshInterval])
+
+  // Cursor blink effect
+  useEffect(() => {
+    const blinkInterval = setInterval(() => {
+      setCursorBlink(prev => !prev)
+    }, 530)
+    return () => clearInterval(blinkInterval)
+  }, [])
 
   // Market status detection
   useEffect(() => {
@@ -335,7 +366,7 @@ function AppContent() {
 
   // Auto-refresh during market hours
   useEffect(() => {
-    if (marketStatus === 'live' && selectedStock && (view === 'dashboard' || view === 'analysis')) {
+    if (autoRefresh && marketStatus === 'live' && selectedStock && (view === 'dashboard' || view === 'analysis')) {
       const interval = setInterval(() => {
         const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
         fetchStockData(selectedStock, tf, view === 'analysis')
@@ -344,7 +375,7 @@ function AppContent() {
       setRefreshInterval(interval)
       return () => clearInterval(interval)
     }
-  }, [marketStatus, selectedStock, selectedTimeframe, fetchStockData, view])
+  }, [marketStatus, selectedStock, selectedTimeframe, fetchStockData, view, autoRefresh])
 
   const handleStockSelect = (stock) => {
     setSelectedStock(stock)
@@ -472,17 +503,233 @@ function AppContent() {
     setShowIndicatorConfig(false)
   }
 
-  // Keyboard shortcut for search
+  // Command palette commands
+  const COMMANDS = [
+    { id: 'search', label: 'search <symbol>', description: 'Search for a stock', action: () => setSearchOpen(true) },
+    { id: 'refresh', label: 'refresh', description: 'Refresh current data', action: () => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis') },
+    { id: 'toggle-refresh', label: 'auto-refresh', description: 'Toggle auto-refresh', action: () => setAutoRefresh(!autoRefresh) },
+    { id: 'portfolio', label: 'portfolio', description: 'View portfolio', action: () => setView('portfolio') },
+    { id: 'watchlist', label: 'watchlist', description: 'View watchlist', action: () => setView('watchlist') },
+    { id: 'analysis', label: 'analysis', description: 'Technical analysis', action: () => setView('analysis') },
+    { id: 'screener', label: 'screener', description: 'Stock screener', action: () => setView('screener') },
+    { id: 'sectors', label: 'sectors', description: 'Sector overview', action: () => setView('sectors') },
+    { id: 'news', label: 'news', description: 'Market news', action: () => setView('news') },
+    { id: 'alerts', label: 'alerts', description: 'Price alerts', action: () => setView('alerts') },
+    { id: 'export', label: 'export', description: 'Export data', action: () => setView('export') },
+    { id: 'clear', label: 'clear', description: 'Clear terminal', action: () => {} },
+    { id: 'help', label: 'help', description: 'Show help', action: () => setShowKeyboardShortcuts(true) }
+  ]
+
+  // Handle command input
+  const handleCommandInput = (e) => {
+    const value = e.target.value
+    setCommandInput(value)
+    setCommandHistoryIndex(-1)
+    
+    if (value.startsWith('/')) {
+      const query = value.substring(1).toLowerCase()
+      const filtered = COMMANDS.filter(cmd => 
+        cmd.label.toLowerCase().includes(query) || 
+        cmd.description.toLowerCase().includes(query)
+      )
+      setCommandSuggestions(filtered.slice(0, 5))
+      setSelectedSuggestion(0)
+    } else {
+      setCommandSuggestions([])
+    }
+  }
+
+  const executeCommand = () => {
+    const cmd = commandInput.trim()
+    
+    if (cmd) {
+      setCommandHistory(prev => [...prev, cmd].slice(-20))
+      
+      if (cmd.startsWith('/')) {
+        const query = cmd.substring(1).toLowerCase()
+        const matchedCommand = COMMANDS.find(c => c.label.toLowerCase() === query)
+        
+        if (matchedCommand) {
+          matchedCommand.action()
+        } else if (query === 'clear') {
+          // Clear command output
+        }
+      } else if (cmd === '?') {
+        setShowKeyboardShortcuts(true)
+      }
+      
+      setCommandInput('')
+      setCommandSuggestions([])
+    }
+    
+    setCommandMode(false)
+    setCommandHistoryIndex(-1)
+  }
+
+  const navigateCommandHistory = (direction) => {
+    if (commandHistory.length === 0) return
+    
+    if (direction === 'up') {
+      if (commandHistoryIndex < commandHistory.length - 1) {
+        const newIndex = commandHistoryIndex + 1
+        setCommandHistoryIndex(newIndex)
+        setCommandInput(commandHistory[commandHistory.length - 1 - newIndex])
+      }
+    } else if (direction === 'down') {
+      if (commandHistoryIndex > 0) {
+        const newIndex = commandHistoryIndex - 1
+        setCommandHistoryIndex(newIndex)
+        setCommandInput(commandHistory[commandHistory.length - 1 - newIndex])
+      } else if (commandHistoryIndex === 0) {
+        setCommandHistoryIndex(-1)
+        setCommandInput('')
+      }
+    }
+  }
+
+  // Copy data to clipboard
+  const copyToClipboard = (data) => {
+    const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+    navigator.clipboard.writeText(text)
+    setCopiedData(true)
+    setTimeout(() => setCopiedData(false), 2000)
+  }
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Command mode (/)
+      if (e.key === '/' && !commandMode && !searchOpen && document.activeElement !== commandInputRef.current) {
+        e.preventDefault()
+        setCommandMode(true)
+        setTimeout(() => commandInputRef.current?.focus(), 50)
+        return
+      }
+      
+      // Escape to exit command mode
+      if (e.key === 'Escape' && commandMode) {
+        e.preventDefault()
+        setCommandMode(false)
+        setCommandInput('')
+        setCommandSuggestions([])
+        return
+      }
+      
+      // Command mode navigation
+      if (commandMode && commandSuggestions.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setSelectedSuggestion(prev => (prev + 1) % commandSuggestions.length)
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          setSelectedSuggestion(prev => (prev - 1 + commandSuggestions.length) % commandSuggestions.length)
+          return
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          if (commandSuggestions[selectedSuggestion]) {
+            const cmd = commandSuggestions[selectedSuggestion]
+            setCommandInput(cmd.label)
+            executeCommand()
+          }
+          return
+        }
+      }
+      
+      // Command mode history navigation
+      if (commandMode && e.key === 'ArrowUp') {
+        e.preventDefault()
+        navigateCommandHistory('up')
+        return
+      }
+      if (commandMode && e.key === 'ArrowDown') {
+        e.preventDefault()
+        navigateCommandHistory('down')
+        return
+      }
+      
+      // Enter to execute command
+      if (commandMode && e.key === 'Enter') {
+        e.preventDefault()
+        executeCommand()
+        return
+      }
+      
+      // Ctrl/Cmd + K for search
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setSearchOpen(true)
+        return
+      }
+      
+      // Ctrl/Cmd + / for shortcuts help
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault()
+        setShowKeyboardShortcuts(true)
+        return
+      }
+      
+      // R for quick refresh
+      if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !commandMode && document.activeElement !== commandInputRef.current) {
+        if (selectedStock) {
+          fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')
+        }
+        return
+      }
+      
+      // A for analysis
+      if (e.key === 'a' && !e.metaKey && !e.ctrlKey && !e.altKey && !commandMode && document.activeElement !== commandInputRef.current) {
+        if (selectedStock) {
+          setView('analysis')
+        }
+        return
       }
     }
+    
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [commandMode, commandInput, commandSuggestions, commandHistory, commandHistoryIndex, selectedSuggestion, selectedStock, selectedTimeframe, view, fetchStockData])
+
+  // Panel resizing handlers
+  const handleMouseDownLeft = (e) => {
+    e.preventDefault()
+    setIsResizingLeft(true)
+  }
+  
+  const handleMouseDownRight = (e) => {
+    e.preventDefault()
+    setIsResizingRight(true)
+  }
+  
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isResizingLeft) {
+        const newWidth = Math.min(Math.max(200, e.clientX), 450)
+        setLeftPanelWidth(newWidth)
+      }
+      if (isResizingRight) {
+        const newWidth = Math.min(Math.max(250, window.innerWidth - e.clientX - 80), 500)
+        setRightPanelWidth(newWidth)
+      }
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizingLeft(false)
+      setIsResizingRight(false)
+    }
+    
+    if (isResizingLeft || isResizingRight) {
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    }
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizingLeft, isResizingRight])
 
   // View navigation helper
   const isViewActive = (targetView) => view === targetView
@@ -492,863 +739,1051 @@ function AppContent() {
       <WatchlistProvider>
         <PortfolioProvider watchlist={watchlist}>
           <AlertsProvider stockData={stockData} marketStatus={marketStatus}>
-            <div className="min-h-screen bg-background text-text overflow-hidden">
-          {/* Notification Toast */}
-          <AnimatePresence>
-            {notification && (
-              <motion.div
-                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
-                  notification.type === 'success' ? 'bg-positive/20 text-positive border border-positive/30' :
-                  notification.type === 'warning' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
-                  notification.type === 'info' ? 'bg-primary/20 text-primary border border-primary/30' :
-                  'bg-negative/20 text-negative border border-negative/30'
-                }`}
-              >
-                <p className="text-sm font-medium">{notification.message}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Header */}
-          <motion.header 
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="fixed top-0 left-0 right-0 z-50 glass px-4 lg:px-6 py-4 lg:py-5 flex items-center justify-between bg-background/80 backdrop-blur-xl border-b border-white/5"
-          >
-            <div className="flex items-center gap-4 lg:gap-6">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setView('dashboard')}
-                className="flex items-center gap-3"
-              >
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-                  <TrendingUp className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
-                </div>
-                <div className="hidden md:block">
-                  <h1 className="text-lg lg:text-xl font-bold tracking-tight">MarketZen</h1>
-                  <p className="text-xs text-textSecondary">Indian Stock Tracker</p>
-                </div>
-              </motion.button>
-
-              {/* Desktop Navigation Links */}
-              <nav className="hidden lg:flex items-center gap-1 ml-4">
-                {[
-                  { id: 'dashboard', label: 'Dashboard', icon: null },
-                  { id: 'sectors', label: 'Sectors', icon: BarChart3 },
-                  { id: 'news', label: 'News', icon: Newspaper },
-                  { id: 'watchlist', label: 'Watchlist', icon: Eye },
-                ].map((item) => (
-                  <motion.button
-                    key={item.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setView(isViewActive(item.id) ? 'dashboard' : item.id)}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                      isViewActive(item.id) 
-                        ? 'bg-primary/10 text-primary shadow-sm' 
-                        : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
+            <div className="min-h-screen bg-terminal-bg text-terminal-text font-mono overflow-hidden">
+              {/* Notification Toast */}
+              <AnimatePresence>
+                {notification && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg font-mono text-sm ${
+                      notification.type === 'success' ? 'bg-positive/20 text-positive border border-positive/30' :
+                      notification.type === 'warning' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                      notification.type === 'info' ? 'bg-primary/20 text-primary border border-primary/30' :
+                      'bg-negative/20 text-negative border border-negative/30'
                     }`}
                   >
-                    {item.icon && <item.icon className="w-4 h-4" />}
-                    {item.label}
-                  </motion.button>
-                ))}
-              </nav>
-            </div>
+                    <p className="font-medium">{notification.message}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            {/* Market Status Indicator */}
-            <MarketStatus 
-              marketStatus={marketStatus} 
-              lastUpdated={lastUpdated} 
-              onRefresh={() => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')}
-            />
-
-            {/* Desktop Action Buttons */}
-            <div className="hidden lg:flex items-center gap-3">
-              {/* Primary Actions Group */}
-              <div className="flex items-center gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setSearchOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-surfaceLight/50 text-textSecondary hover:text-text hover:bg-surfaceLight transition-all duration-200 flex items-center gap-3 text-sm"
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Search stocks...</span>
-                  <kbd className="px-2 py-0.5 text-xs bg-surface rounded text-textSecondary/70">⌘K</kbd>
-                </motion.button>
-              </div>
-              
-              <div className="w-px h-8 bg-white/10 mx-2" />
-              
-              {/* Secondary Actions Group */}
-              <div className="flex items-center gap-2">
-                {[
-                  { id: 'alerts', icon: Bell, label: 'Alerts' },
-                  { id: 'portfolio', icon: Wallet, label: 'Portfolio' },
-                  { id: 'comparison', icon: BarChart2, label: 'Compare' },
-                  { id: 'analysis', icon: Activity, label: 'Analysis' },
-                  { id: 'screener', icon: Filter, label: 'Screener' },
-                ].map((item) => (
-                  <motion.button
-                    key={item.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setView(isViewActive(item.id) ? 'dashboard' : item.id)}
-                    className={`p-2.5 rounded-xl transition-all duration-200 ${
-                      isViewActive(item.id) 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
-                    }`}
-                    title={item.label}
-                  >
-                    <item.icon className="w-5 h-5" />
-                  </motion.button>
-                ))}
-              </div>
-              
-              <div className="w-px h-8 bg-white/10 mx-2" />
-              
-              {/* Tertiary Actions Group */}
-              <div className="flex items-center gap-2">
-                {[
-                  { id: 'theme', icon: Palette, label: 'Theme' },
-                  { id: 'advancedChart', icon: CandlestickChart, label: 'Charts' },
-                  { id: 'export', icon: Download, label: 'Export' },
-                  { id: 'performance', icon: ChartIcon, label: 'Performance' },
-                ].map((item) => (
-                  <motion.button
-                    key={item.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setView(isViewActive(item.id) ? 'dashboard' : item.id)}
-                    className={`p-2.5 rounded-xl transition-all duration-200 ${
-                      isViewActive(item.id) 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
-                    }`}
-                    title={item.label}
-                  >
-                    <item.icon className="w-5 h-5" />
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* Mobile/Tablet Actions */}
-            <div className="flex lg:hidden items-center gap-2">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSearchOpen(true)}
-                className="p-3 rounded-xl bg-surfaceLight/50 text-textSecondary"
-              >
-                <Search className="w-5 h-5" />
-              </motion.button>
-              
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className={`p-3 rounded-xl transition-all ${
-                  showMobileMenu ? 'bg-primary text-white' : 'bg-surfaceLight/50 text-textSecondary'
-                }`}
-              >
-                {showMobileMenu ? <X className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
-              </motion.button>
-            </div>
-          </motion.header>
-
-          {/* Mobile Menu Overlay */}
-          <AnimatePresence>
-            {showMobileMenu && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setShowMobileMenu(false)}
-                  className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                />
-                <motion.div
-                  initial={{ x: '100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '100%' }}
-                  transition={{ type: 'spring', damping: 25 }}
-                  className="fixed right-0 top-0 bottom-0 w-80 glass z-50 lg:hidden overflow-y-auto"
-                >
-                  <div className="p-6 pt-24">
-                    <h2 className="text-sm font-semibold text-textSecondary uppercase tracking-wider mb-4">Navigation</h2>
-                    <div className="space-y-2">
-                      {[
-                        { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
-                        { id: 'sectors', label: 'Sectors', icon: BarChart3 },
-                        { id: 'news', label: 'News', icon: Newspaper },
-                        { id: 'watchlist', label: 'Watchlist', icon: Eye },
-                        { id: 'portfolio', label: 'Portfolio', icon: Wallet },
-                        { id: 'alerts', label: 'Alerts', icon: Bell },
-                        { id: 'comparison', label: 'Compare', icon: BarChart2 },
-                        { id: 'analysis', label: 'Analysis', icon: Activity },
-                        { id: 'screener', label: 'Screener', icon: Filter },
-                        { id: 'theme', label: 'Theme', icon: Palette },
-                        { id: 'advancedChart', label: 'Charts', icon: CandlestickChart },
-                        { id: 'export', label: 'Export', icon: Download },
-                        { id: 'performance', label: 'Performance', icon: ChartIcon },
-                      ].map((item) => (
-                        <motion.button
-                          key={item.id}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            setView(isViewActive(item.id) ? 'dashboard' : item.id)
-                            setShowMobileMenu(false)
-                          }}
-                          className={`w-full px-4 py-4 rounded-xl text-left flex items-center gap-4 transition-all ${
-                            isViewActive(item.id) 
-                              ? 'bg-primary/10 text-primary' 
-                              : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
-                          }`}
-                        >
-                          <item.icon className="w-5 h-5" />
-                          <span className="font-medium">{item.label}</span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
-          {/* Bottom Navigation for Mobile */}
-          {isMobile && (
-            <motion.nav
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/5 px-2 py-2 pb-safe flex items-center justify-around bg-background/95 backdrop-blur-xl"
-            >
-              {[
-                { id: 'dashboard', icon: TrendingUp, label: 'Market' },
-                { id: 'sectors', icon: BarChart3, label: 'Sectors' },
-                { id: 'news', icon: Newspaper, label: 'News' },
-                { id: 'watchlist', icon: Eye, label: 'Watchlist' },
-                { id: 'portfolio', icon: Wallet, label: 'Portfolio' },
-              ].map((item) => (
-                <motion.button
-                  key={item.id}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setView(item.id)}
-                  className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[64px] ${
-                    view === item.id 
-                      ? 'text-primary' 
-                      : 'text-textSecondary hover:text-text'
-                  }`}
-                >
-                  <item.icon className="w-6 h-6" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
-                  {view === item.id && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-primary/10 rounded-xl"
-                      transition={{ type: 'spring', damping: 25 }}
-                    />
-                  )}
-                </motion.button>
-              ))}
-            </motion.nav>
-          )}
-
-          <div className={`pt-20 lg:pt-24 h-screen flex ${isMobile ? 'pb-24' : ''}`}>
-            <AnimatePresence>
-              {!isMobile && view === 'dashboard' && (
-                <motion.aside
-                  initial={{ x: -300, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -300, opacity: 0 }}
-                  className="hidden lg:flex md:relative left-0 top-20 bottom-0 w-72 flex-col glass border-r border-white/5 z-30 h-[calc(100vh-5rem)]"
-                >
-                  <div className="p-4 flex-1 flex flex-col min-h-0">
-                    <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                      <h2 className="text-sm font-medium text-textSecondary uppercase tracking-wider">Watchlist</h2>
-                      <span className="text-xs text-textSecondary bg-surfaceLight px-2 py-1 rounded-full">{watchlist.length}</span>
-                    </div>
-                    
-                    <div className="space-y-2 flex-1 overflow-y-auto min-h-0 pr-2 -mr-2 scrollbar-thin">
-                      <AnimatePresence>
-                        {watchlist.map((stock, index) => (
-                          <motion.div
-                            key={stock.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            transition={{ delay: index * 0.05 }}
-                            onClick={() => handleStockSelect(stock)}
-                            className={`p-4 rounded-xl cursor-pointer transition-all duration-200 group flex-shrink-0 ${
-                              selectedStock?.id === stock.id 
-                                ? 'bg-surfaceLight border border-primary/30' 
-                                : 'hover:bg-surfaceLight border border-transparent'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                                  selectedStock?.id === stock.id 
-                                    ? 'bg-primary/20 text-primary' 
-                                    : 'bg-surface text-textSecondary'
-                                }`}>
-                                  {stock.symbol.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <p className="font-medium">{stock.symbol}</p>
-                                  <p className="text-xs text-textSecondary truncate max-w-[120px]">{stock.name}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={(e) => handleAnalyzeClick(stock, e)}
-                                  className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                                  title="Technical Analysis"
-                                >
-                                  <Activity className="w-4 h-4" />
-                                </motion.button>
-                                <button
-                                  onClick={(e) => removeFromWatchlist(e, stock.id)}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface rounded-lg transition-all"
-                                >
-                                  <X className="w-4 h-4 text-textSecondary hover:text-negative" />
-                                </button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </motion.aside>
-              )}
-            </AnimatePresence>
-
-            {/* Mobile Watchlist Drawer */}
-            <AnimatePresence>
-              {isMobile && showMobileWatchlist && (view === 'dashboard' || view === 'analysis') && (
-                <>
+              {/* Keyboard Shortcuts Modal */}
+              <AnimatePresence>
+                {showKeyboardShortcuts && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    onClick={() => setShowMobileWatchlist(false)}
-                    className="fixed inset-0 bg-black/50 z-40"
-                  />
-                  <motion.div
-                    initial={{ x: '-100%' }}
-                    animate={{ x: 0 }}
-                    exit={{ x: '-100%' }}
-                    transition={{ type: 'spring', damping: 25 }}
-                    className="fixed left-0 top-0 bottom-0 w-80 glass z-50 overflow-y-auto"
+                    className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+                    onClick={() => setShowKeyboardShortcuts(false)}
                   >
-                    <div className="p-4 pt-20">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-sm font-medium text-textSecondary uppercase tracking-wider">Watchlist</h2>
-                        <button onClick={() => setShowMobileWatchlist(false)}>
-                          <X className="w-5 h-5 text-textSecondary" />
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      className="bg-terminal-panel border border-terminal-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-terminal-green flex items-center gap-2">
+                          <Terminal className="w-5 h-5" />
+                          Keyboard Shortcuts
+                        </h3>
+                        <button
+                          onClick={() => setShowKeyboardShortcuts(false)}
+                          className="text-terminal-dim hover:text-terminal-text transition-colors"
+                        >
+                          <X className="w-5 h-5" />
                         </button>
                       </div>
-                      <div className="space-y-2">
-                        {watchlist.map((stock) => (
-                          <motion.div
-                            key={stock.id}
-                            onClick={() => handleStockSelect(stock)}
-                            className={`p-4 rounded-xl cursor-pointer transition-all ${
-                              selectedStock?.id === stock.id 
-                                ? 'bg-surfaceLight border border-primary/30' 
-                                : 'hover:bg-surfaceLight'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                                  selectedStock?.id === stock.id 
-                                    ? 'bg-primary/20 text-primary' 
-                                    : 'bg-surface text-textSecondary'
-                                }`}>
-                                  {stock.symbol.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <p className="font-medium">{stock.symbol}</p>
-                                  <p className="text-xs text-textSecondary">{stock.name}</p>
-                                </div>
-                              </div>
-                              <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                onClick={(e) => handleAnalyzeClick(stock, e)}
-                                className="p-2 rounded-lg bg-primary/10 text-primary"
-                              >
-                                <Activity className="w-4 h-4" />
-                              </motion.button>
-                            </div>
-                          </motion.div>
+                      <div className="space-y-3 text-sm">
+                        {[
+                          { keys: '/', desc: 'Open command mode' },
+                          { keys: 'Ctrl/Cmd + K', desc: 'Search stocks' },
+                          { keys: 'Ctrl/Cmd + /', desc: 'Show shortcuts' },
+                          { keys: 'Esc', desc: 'Close command mode' },
+                          { keys: '↑/↓', desc: 'Navigate command history' },
+                          { keys: 'R', desc: 'Quick refresh data' },
+                          { keys: 'A', desc: 'Go to analysis' },
+                        ].map((shortcut) => (
+                          <div key={shortcut.keys} className="flex items-center justify-between py-2 border-b border-terminal-border/50 last:border-0">
+                            <kbd className="px-3 py-1 bg-terminal-bg rounded text-terminal-green font-mono text-xs">
+                              {shortcut.keys}
+                            </kbd>
+                            <span className="text-terminal-dim">{shortcut.desc}</span>
+                          </div>
                         ))}
                       </div>
-                    </div>
+                      <div className="mt-6 pt-4 border-t border-terminal-border">
+                        <p className="text-xs text-terminal-dim text-center">
+                          Press <kbd className="px-2 py-0.5 bg-terminal-bg rounded text-terminal-green mx-1">?</kbd> anywhere to show this help
+                        </p>
+                      </div>
+                    </motion.div>
                   </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-
-            {/* Main Content */}
-            <main className="flex-1 ml-0 lg:ml-72 p-4 lg:p-6 overflow-y-auto h-[calc(100vh-5rem)]">
-              <AnimatePresence mode="wait">
-                {/* Alerts View */}
-                {view === 'alerts' && (
-                  <AlertsManager
-                    key="alerts"
-                    stock={selectedStock}
-                    currentStockData={stockData}
-                    onClose={() => setView('dashboard')}
-                  />
                 )}
+              </AnimatePresence>
 
-                {/* Fundamentals View */}
-                {view === 'fundamentals' && (
-                  <FundamentalsPanel
-                    key="fundamentals"
-                    stock={selectedStock}
-                    stockData={stockData}
-                    onClose={() => setView('dashboard')}
-                  />
-                )}
+              {/* Terminal Header */}
+              <motion.header 
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="fixed top-0 left-0 right-0 z-50 bg-terminal-header border-b border-terminal-border px-4 py-2"
+              >
+                <div className="flex items-center justify-between">
+                  {/* Logo & Status */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded bg-terminal-green/20 flex items-center justify-center">
+                        <Terminal className="w-4 h-4 text-terminal-green" />
+                      </div>
+                      <span className="font-bold text-terminal-text">MarketZen_Terminal</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-terminal-bg text-terminal-dim">v2.0</span>
+                    </div>
+                    
+                    {/* Status Indicators */}
+                    <div className="hidden md:flex items-center gap-4 ml-6">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${marketStatus === 'live' ? 'bg-terminal-green animate-pulse' : marketStatus === 'pre-market' ? 'bg-amber-500' : marketStatus === 'post-market' ? 'bg-blue-500' : 'bg-terminal-dim'}`}></span>
+                        <span className="text-xs text-terminal-dim">
+                          {marketStatus === 'live' ? 'MARKET OPEN' : marketStatus === 'pre-market' ? 'PRE-MARKET' : marketStatus === 'post-market' ? 'POST-MARKET' : 'MARKET CLOSED'}
+                        </span>
+                      </div>
+                      
+                      {autoRefresh && (
+                        <div className="flex items-center gap-1 text-xs text-terminal-green">
+                          <RefreshCw className="w-3 h-3 animate-spin" style={{ animationDuration: '3s' }} />
+                          <span>AUTO</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-1 text-xs text-terminal-dim">
+                        <Clock className="w-3 h-3" />
+                        <span>{lastUpdated ? lastUpdated.toLocaleTimeString('en-IN', { hour12: false }) : '--:--:--'}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Watchlist View */}
-                {view === 'watchlist' && (
-                  <WatchlistPanel
-                    key="watchlist"
-                    onStockSelect={handleStockSelect}
-                  />
-                )}
+                  {/* Command Bar */}
+                  <div className="flex-1 max-w-xl mx-6">
+                    <div className={`flex items-center bg-terminal-bg rounded-lg border transition-all duration-200 ${
+                      commandMode ? 'border-terminal-green shadow-lg shadow-terminal-green/20' : 'border-terminal-border focus-within:border-terminal-dim'
+                    }`}>
+                      pl-3 text<span className="-terminal-dim">
+                        <Command className="w-4 h-4" />
+                      </span>
+                      <input
+                        ref={commandInputRef}
+                        type="text"
+                        value={commandInput}
+                        onChange={handleCommandInput}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') executeCommand()
+                        }}
+                        placeholder={commandMode ? "Type command or / for help..." : "Press / to enter command mode..."}
+                        className="flex-1 bg-transparent px-3 py-2 text-sm text-terminal-text placeholder-terminal-dim focus:outline-none font-mono"
+                        readOnly={!commandMode}
+                      />
+                      {commandInput && (
+                        <button
+                          onClick={() => executeCommand()}
+                          className="pr-3 text-terminal-green hover:text-terminal-bright"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Command Suggestions */}
+                    <AnimatePresence>
+                      {commandMode && commandSuggestions.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-full max-w-xl bg-terminal-panel border border-terminal-border rounded-lg shadow-xl overflow-hidden"
+                        >
+                          {commandSuggestions.map((cmd, index) => (
+                            <button
+                              key={cmd.id}
+                              onClick={() => {
+                                setCommandInput(cmd.label)
+                                executeCommand()
+                              }}
+                              className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between hover:bg-terminal-bg transition-colors ${
+                                index === selectedSuggestion ? 'bg-terminal-bg' : ''
+                              }`}
+                            >
+                              <span>
+                                <span className="text-terminal-green font-mono">{cmd.label}</span>
+                                <span className="text-terminal-dim ml-2">{cmd.description}</span>
+                              </span>
+                              {index === selectedSuggestion && (
+                                <ChevronRight className="w-4 h-4 text-terminal-dim" />
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
-                {/* Performance View */}
-                {view === 'performance' && (
-                  <PerformanceChart
-                    key="performance"
-                    onStockSelect={handleStockSelect}
-                  />
-                )}
-
-                {/* Stock Screener View */}
-                {view === 'screener' && (
-                  <StockScreener
-                    key="screener"
-                    onStockSelect={handleStockSelect}
-                  />
-                )}
-
-                {/* Theme Settings View */}
-                {view === 'theme' && (
-                  <ThemeSettings
-                    key="theme"
-                  />
-                )}
-
-                {/* Advanced Charting View */}
-                {view === 'advancedChart' && (
-                  <AdvancedCharting
-                    key="advancedChart"
-                    onStockSelect={handleStockSelect}
-                  />
-                )}
-
-                {/* Data Export View */}
-                {view === 'export' && (
-                  <DataExport
-                    key="export"
-                  />
-                )}
-
-                {/* Comparison View */}
-                {view === 'comparison' && (
-                  <StockComparison
-                    key="comparison"
-                    onClose={() => setView('dashboard')}
-                    watchlist={watchlist}
-                  />
-                )}
-
-                {/* Portfolio View */}
-                {view === 'portfolio' ? (
-                  <Portfolio 
-                    key="portfolio"
-                    onStockSelect={handlePortfolioStockSelect}
-                  />
-                ) : view === 'sectors' ? (
-                  <SectorDashboard 
-                    key="sectors"
-                    onSectorSelect={handleSectorSelect}
-                  />
-                ) : view === 'news' ? (
-                  <NewsFeed 
-                    key="news"
-                    stockId={selectedStock?.id || null}
-                    onBack={() => setView('dashboard')}
-                  />
-                ) : view === 'analysis' ? (
-                  <TechnicalAnalysis 
-                    key="analysis"
-                    stock={selectedStock}
-                    stockData={stockData}
-                    onBack={handleBackToDashboard}
-                    taTimeframes={TA_TIMEFRAMES}
-                    fetchStockData={fetchStockData}
-                    loading={loading}
-                    indicatorParams={indicatorParams}
-                    onOpenConfig={() => setShowIndicatorConfig(true)}
-                  />
-                ) : loading ? (
-                  <LoadingSkeleton key="loading" />
-                ) : error ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col items-center justify-center h-64"
-                  >
-                    <div className="text-negative mb-4">{error}</div>
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => fetchStockData(selectedStock)}
-                      className="glass px-4 py-2 rounded-lg flex items-center gap-2"
+                      onClick={() => setSearchOpen(true)}
+                      className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors"
+                      title="Search (Ctrl+K)"
+                    >
+                      <Search className="w-4 h-4 text-terminal-dim" />
+                    </motion.button>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowKeyboardShortcuts(true)}
+                      className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors"
+                      title="Shortcuts (Ctrl+/)"
+                    >
+                      <Command className="w-4 h-4 text-terminal-dim" />
+                    </motion.button>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setAutoRefresh(!autoRefresh)}
+                      className={`p-2 rounded-lg border transition-colors ${
+                        autoRefresh ? 'bg-terminal-green/20 border-terminal-green text-terminal-green' : 'bg-terminal-bg border-terminal-border text-terminal-dim'
+                      }`}
+                      title="Toggle Auto-Refresh"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </motion.button>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')}
+                      className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-green hover:text-terminal-green transition-colors"
+                      title="Manual Refresh (R)"
                     >
                       <RefreshCw className="w-4 h-4" />
-                      Retry
                     </motion.button>
-                  </motion.div>
-                ) : stockData ? (
-                  <motion.div
-                    key={stockData.symbol}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="h-full flex flex-col"
-                  >
-                    {/* Stock Header */}
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
-                          <span className="text-2xl font-bold text-primary">{stockData.symbol.substring(0, 2)}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-2xl font-semibold truncate">{stockData.name}</h2>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-lg text-textSecondary">{stockData.symbol}</span>
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-surfaceLight text-textSecondary flex-shrink-0">
-                              NSE
-                            </span>
-                            
-                            {/* Fundamentals Button */}
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setView('fundamentals')}
-                              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors ml-auto flex-shrink-0"
-                            >
-                              <PieChart className="w-4 h-4" />
-                              Fundamentals
-                            </motion.button>
+                  </div>
+                </div>
+              </motion.header>
 
-                            {/* Multi-chart mode toggle */}
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                setMultiChartMode(!multiChartMode)
-                                if (!multiChartMode) {
-                                  setMultiChartData({})
-                                  const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
-                                    selectedMultiTimeframes.includes(tf.label)
-                                  )
-                                  timeframesToFetch.forEach(tf => {
-                                    fetchStockData(selectedStock, null, false, true, tf)
-                                  })
-                                }
-                              }}
-                              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
-                                multiChartMode 
-                                  ? 'bg-primary text-white' 
-                                  : 'bg-surfaceLight text-textSecondary hover:bg-surface'
-                              }`}
-                            >
-                              <BarChart2 className="w-4 h-4" />
-                              Multi-Timeframe
-                            </motion.button>
-                            
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setView('analysis')}
-                              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2 hover:bg-primary/20 transition-colors"
-                            >
-                              <Activity className="w-4 h-4" />
-                              Technical Analysis
-                            </motion.button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Price Display */}
-                      <div className="flex items-baseline gap-4 flex-wrap">
-                        <PriceCounter 
-                          value={stockData.current_price} 
-                          isPositive={isPositive}
-                          prefix="₹"
-                        />
-                        <motion.div 
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-                            isPositive ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'
+              {/* Terminal Workspace - Three Panel Layout */}
+              <div className="pt-14 h-screen flex overflow-hidden">
+                
+                {/* Left Panel - Watchlist */}
+                <motion.aside
+                  initial={{ x: -300, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  className="hidden lg:flex flex-col bg-terminal-panel border-r border-terminal-border relative"
+                  style={{ width: leftPanelWidth }}
+                >
+                  {/* Resize Handle */}
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-terminal-green transition-colors z-10"
+                    onMouseDown={handleMouseDownLeft}
+                  />
+                  
+                  {/* Panel Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-terminal-border bg-terminal-header">
+                    <div className="flex items-center gap-2">
+                      <span className="text-terminal-green font-bold text-sm">WATCHLIST</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bg text-terminal-dim">
+                        {watchlist.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSearchOpen(true)}
+                        className="p-1 rounded hover:bg-terminal-bg transition-colors"
+                        title="Add Stock"
+                      >
+                        <span className="text-terminal-dim text-xs">+</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Stock List */}
+                  <div className="flex-1 overflow-y-auto">
+                    <AnimatePresence>
+                      {watchlist.map((stock, index) => (
+                        <motion.div
+                          key={stock.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{ delay: index * 0.03 }}
+                          onClick={() => handleStockSelect(stock)}
+                          className={`px-4 py-3 border-b border-terminal-border/50 cursor-pointer transition-all hover:bg-terminal-bg group ${
+                            selectedStock?.id === stock.id ? 'bg-terminal-bg border-l-2 border-l-terminal-green' : ''
                           }`}
                         >
-                          {isPositive ? (
-                            <TrendingUp className="w-4 h-4" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4" />
-                          )}
-                          <span className="font-mono font-medium">
-                            {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
-                          </span>
-                          <span className="text-xs opacity-70">{selectedTimeframe.label}</span>
-                        </motion.div>
-                      </div>
-
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 flex-shrink-0">
-                        {[
-                          { label: 'Open', value: formatCurrency(stockData.open) },
-                          { label: 'Day High', value: formatCurrency(stockData.day_high) },
-                          { label: 'Day Low', value: formatCurrency(stockData.day_low) },
-                          { label: 'Volume', value: formatNumber(stockData.volume) }
-                        ].map((stat, i) => (
-                          <motion.div
-                            key={stat.label}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className="glass p-4 rounded-xl"
-                          >
-                            <p className="text-xs text-textSecondary mb-1">{stat.label}</p>
-                            <p className="font-mono font-medium">{stat.value}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Chart Section */}
-                    <div className="glass rounded-2xl p-6 flex-1 flex flex-col min-h-0">
-                      <div className="flex items-center justify-between mb-6 flex-wrap gap-4 flex-shrink-0">
-                        <h3 className="text-lg font-medium">
-                          {multiChartMode ? 'Multi-Timeframe Analysis' : 'Price Chart'}
-                        </h3>
-                        
-                        {!multiChartMode ? (
-                          <TimeframeSelector 
-                            timeframes={TIMEFRAMES}
-                            selected={selectedTimeframe}
-                            onSelect={setSelectedTimeframe}
-                          />
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-textSecondary mr-2">Compare:</span>
-                            {MULTI_CHART_TIMEFRAMES.map((tf) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold font-mono ${
+                                selectedStock?.id === stock.id 
+                                  ? 'bg-terminal-green/20 text-terminal-green' 
+                                  : 'bg-terminal-bg text-terminal-dim'
+                              }`}>
+                                {stock.symbol.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm">{stock.symbol}</p>
+                                <p className="text-xs text-terminal-dim truncate max-w-[120px]">{stock.name}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
                               <motion.button
-                                key={tf.label}
-                                onClick={() => toggleMultiTimeframe(tf.label)}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                  selectedMultiTimeframes.includes(tf.label)
-                                    ? 'bg-primary text-white'
-                                    : 'bg-surfaceLight text-textSecondary hover:bg-surface'
-                                }`}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={(e) => handleAnalyzeClick(stock, e)}
+                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded bg-terminal-green/20 text-terminal-green hover:bg-terminal-green/30 transition-all"
+                                title="Analysis (A)"
                               >
-                                {tf.label}
+                                <Activity className="w-3 h-3" />
                               </motion.button>
+                              <button
+                                onClick={(e) => removeFromWatchlist(e, stock.id)}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-negative/20 rounded transition-all"
+                              >
+                                <X className="w-3 h-3 text-terminal-dim hover:text-negative" />
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                  
+                  {/* Panel Footer */}
+                  <div className="px-4 py-2 border-t border-terminal-border bg-terminal-header">
+                    <p className="text-xs text-terminal-dim font-mono">
+                      <span className="text-terminal-green">$</span> workspace:watchlist
+                    </p>
+                  </div>
+                </motion.aside>
+
+                {/* Main Content - Chart & Analysis */}
+                <main className="flex-1 flex flex-col overflow-hidden bg-terminal-bg min-w-0">
+                  <AnimatePresence mode="wait">
+                    {/* Alerts View */}
+                    {view === 'alerts' && (
+                      <AlertsManager
+                        key="alerts"
+                        stock={selectedStock}
+                        currentStockData={stockData}
+                        onClose={() => setView('dashboard')}
+                      />
+                    )}
+
+                    {/* Fundamentals View */}
+                    {view === 'fundamentals' && (
+                      <FundamentalsPanel
+                        key="fundamentals"
+                        stock={selectedStock}
+                        stockData={stockData}
+                        onClose={() => setView('dashboard')}
+                      />
+                    )}
+
+                    {/* Watchlist View */}
+                    {view === 'watchlist' && (
+                      <WatchlistPanel
+                        key="watchlist"
+                        onStockSelect={handleStockSelect}
+                      />
+                    )}
+
+                    {/* Performance View */}
+                    {view === 'performance' && (
+                      <PerformanceChart
+                        key="performance"
+                        onStockSelect={handleStockSelect}
+                      />
+                    )}
+
+                    {/* Stock Screener View */}
+                    {view === 'screener' && (
+                      <StockScreener
+                        key="screener"
+                        onStockSelect={handleStockSelect}
+                      />
+                    )}
+
+                    {/* Theme Settings View */}
+                    {view === 'theme' && (
+                      <ThemeSettings
+                        key="theme"
+                      />
+                    )}
+
+                    {/* Advanced Charting View */}
+                    {view === 'advancedChart' && (
+                      <AdvancedCharting
+                        key="advancedChart"
+                        onStockSelect={handleStockSelect}
+                      />
+                    )}
+
+                    {/* Data Export View */}
+                    {view === 'export' && (
+                      <DataExport
+                        key="export"
+                      />
+                    )}
+
+                    {/* Comparison View */}
+                    {view === 'comparison' && (
+                      <StockComparison
+                        key="comparison"
+                        onClose={() => setView('dashboard')}
+                        watchlist={watchlist}
+                      />
+                    )}
+
+                    {/* Portfolio View */}
+                    {view === 'portfolio' ? (
+                      <Portfolio 
+                        key="portfolio"
+                        onStockSelect={handlePortfolioStockSelect}
+                      />
+                    ) : view === 'sectors' ? (
+                      <SectorDashboard 
+                        key="sectors"
+                        onSectorSelect={handleSectorSelect}
+                      />
+                    ) : view === 'news' ? (
+                      <NewsFeed 
+                        key="news"
+                        stockId={selectedStock?.id || null}
+                        onBack={() => setView('dashboard')}
+                      />
+                    ) : view === 'analysis' ? (
+                      <TechnicalAnalysis 
+                        key="analysis"
+                        stock={selectedStock}
+                        stockData={stockData}
+                        onBack={handleBackToDashboard}
+                        taTimeframes={TA_TIMEFRAMES}
+                        fetchStockData={fetchStockData}
+                        loading={loading}
+                        indicatorParams={indicatorParams}
+                        onOpenConfig={() => setShowIndicatorConfig(true)}
+                      />
+                    ) : loading ? (
+                      <LoadingSkeleton key="loading" />
+                    ) : error ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center justify-center h-full"
+                      >
+                        <div className="text-negative mb-4 font-mono">{error}</div>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => fetchStockData(selectedStock)}
+                          className="px-4 py-2 rounded border border-terminal-border flex items-center gap-2 hover:bg-terminal-panel transition-colors font-mono text-sm"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Retry
+                        </motion.button>
+                      </motion.div>
+                    ) : stockData ? (
+                      <motion.div
+                        key={stockData.symbol}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="h-full flex flex-col"
+                      >
+                        {/* Stock Header */}
+                        <div className="flex-shrink-0 px-6 py-4 border-b border-terminal-border bg-terminal-panel">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded bg-terminal-green/20 flex items-center justify-center flex-shrink-0">
+                              <span className="text-lg font-bold font-mono text-terminal-green">{stockData.symbol.substring(0, 2)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h2 className="text-lg font-semibold truncate">{stockData.name}</h2>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-sm text-terminal-dim font-mono">{stockData.symbol}</span>
+                                <span className="px-2 py-0.5 rounded text-xs bg-terminal-bg text-terminal-dim border border-terminal-border">
+                                  NSE
+                                </span>
+                                
+                                {/* Quick Actions */}
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setView('fundamentals')}
+                                  className="px-3 py-1 rounded text-xs bg-terminal-bg border border-terminal-border flex items-center gap-2 hover:border-terminal-dim transition-colors ml-auto"
+                                >
+                                  <PieChart className="w-3 h-3" />
+                                  Fundamentals
+                                </motion.button>
+
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => {
+                                    setMultiChartMode(!multiChartMode)
+                                    if (!multiChartMode) {
+                                      setMultiChartData({})
+                                      const timeframesToFetch = MULTI_CHART_TIMEFRAMES.filter(tf => 
+                                        selectedMultiTimeframes.includes(tf.label)
+                                      )
+                                      timeframesToFetch.forEach(tf => {
+                                        fetchStockData(selectedStock, null, false, true, tf)
+                                      })
+                                    }
+                                  }}
+                                  className={`px-3 py-1 rounded text-xs flex items-center gap-2 transition-colors ${
+                                    multiChartMode 
+                                      ? 'bg-terminal-green text-terminal-bg border border-terminal-green' 
+                                      : 'bg-terminal-bg border border-terminal-border hover:border-terminal-dim'
+                                  }`}
+                                >
+                                  <BarChart2 className="w-3 h-3" />
+                                  Multi
+                                </motion.button>
+                                
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setView('analysis')}
+                                  className="px-3 py-1 rounded text-xs bg-terminal-green/20 text-terminal-green border border-terminal-green/50 flex items-center gap-2 hover:bg-terminal-green/30 transition-colors"
+                                >
+                                  <Activity className="w-3 h-3" />
+                                  Analysis
+                                </motion.button>
+                                
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => copyToClipboard(stockData)}
+                                  className="p-1.5 rounded bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors"
+                                  title="Copy Data"
+                                >
+                                  {copiedData ? <Check className="w-3 h-3 text-terminal-green" /> : <Copy className="w-3 h-3" />}
+                                </motion.button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Price Display */}
+                          <div className="flex items-baseline gap-4 mt-4">
+                            <PriceCounter 
+                              value={stockData.current_price} 
+                              isPositive={isPositive}
+                              prefix="₹"
+                            />
+                            <motion.div 
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className={`flex items-center gap-2 px-3 py-1 rounded font-mono text-sm ${
+                                isPositive ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'
+                              }`}
+                            >
+                              {isPositive ? (
+                                <TrendingUp className="w-4 h-4" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4" />
+                              )}
+                              <span className="font-bold">
+                                {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
+                              </span>
+                              <span className="text-xs opacity-70">{selectedTimeframe.label}</span>
+                            </motion.div>
+                          </div>
+
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-4 gap-4 mt-4">
+                            {[
+                              { label: 'OPEN', value: formatCurrency(stockData.open) },
+                              { label: 'HIGH', value: formatCurrency(stockData.day_high) },
+                              { label: 'LOW', value: formatCurrency(stockData.day_low) },
+                              { label: 'VOL', value: formatNumber(stockData.volume) }
+                            ].map((stat, i) => (
+                              <motion.div
+                                key={stat.label}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="bg-terminal-bg border border-terminal-border rounded p-3"
+                              >
+                                <p className="text-xs text-terminal-dim mb-1">{stat.label}</p>
+                                <p className="font-mono font-medium">{stat.value}</p>
+                              </motion.div>
                             ))}
                           </div>
-                        )}
-                      </div>
-                      
-                      {/* Single Chart View */}
-                      {!multiChartMode ? (
-                        <div className="flex-1 min-h-0">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData}>
-                              <defs>
-                                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.3}/>
-                                  <stop offset="95%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0}/>
-                                </linearGradient>
-                              </defs>
-                              <XAxis 
-                                dataKey="time" 
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                                interval="preserveStartEnd"
-                                minTickGap={30}
-                              />
-                              <YAxis 
-                                domain={['auto', 'auto']}
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                                tickFormatter={(value) => `₹${value.toLocaleString()}`}
-                                width={70}
-                              />
-                              <Tooltip
-                                contentStyle={{
-                                  background: 'rgba(21, 26, 33, 0.95)',
-                                  border: '1px solid rgba(255,255,255,0.1)',
-                                  borderRadius: '8px',
-                                  backdropFilter: 'blur(12px)'
-                                }}
-                                labelStyle={{ color: '#9ca3af' }}
-                                formatter={(value) => [formatCurrency(value), 'Price']}
-                              />
-                              <Area
-                                type="monotone"
-                                dataKey="price"
-                                stroke={isPositive ? '#10b981' : '#ef4444'}
-                                strokeWidth={2}
-                                fill="url(#colorPrice)"
-                                animationDuration={1000}
-                              />
-                            </AreaChart>
-                          </ResponsiveContainer>
                         </div>
-                      ) : (
-                        /* Multi-Chart Grid View */
-                        <div className={`grid gap-4 ${
-                          selectedMultiTimeframes.length <= 2 ? 'grid-cols-2' : 
-                          selectedMultiTimeframes.length <= 3 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'
-                        }`}>
-                          {selectedMultiTimeframes.map((tfLabel) => {
-                            const chartInfo = multiChartData[tfLabel]
-                            const timeframe = MULTI_CHART_TIMEFRAMES.find(t => t.label === tfLabel)
-                            const chartDataTf = chartInfo?.data || []
-                            const stockDataTf = chartInfo?.stockData
-                            const isPositiveTf = stockDataTf ? 
-                              (stockDataTf.current_price >= stockDataTf.previous_close) : true
+
+                        {/* Chart Section */}
+                        <div className="flex-1 flex flex-col min-h-0 p-4">
+                          <div className="flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-terminal-green font-bold text-sm">CHART</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bg text-terminal-dim border border-terminal-border">
+                                {multiChartMode ? 'MULTI-TF' : selectedTimeframe.label}
+                              </span>
+                            </div>
                             
-                            return (
-                              <motion.div
-                                key={tfLabel}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="glass rounded-xl p-4"
-                              >
-                                <div className="flex items-center justify-between mb-3">
-                                  <span className="text-sm font-medium text-textSecondary">{tfLabel}</span>
-                                  {stockDataTf && (
-                                    <span className={`text-sm font-mono ${
-                                      isPositiveTf ? 'text-positive' : 'text-negative'
-                                    }`}>
-                                      {formatCurrency(stockDataTf.current_price)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="h-40">
-                                  {chartDataTf.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                      <AreaChart data={chartDataTf}>
-                                        <defs>
-                                          <linearGradient id={`colorPrice${tfLabel}`} x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={isPositiveTf ? '#10b981' : '#ef4444'} stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor={isPositiveTf ? '#10b981' : '#ef4444'} stopOpacity={0}/>
-                                          </linearGradient>
-                                        </defs>
-                                        <XAxis dataKey="time" hide />
-                                        <YAxis 
-                                          domain={['auto', 'auto']}
-                                          tick={{ fill: '#6b7280', fontSize: 10 }}
-                                          tickFormatter={(value) => `₹${value}`}
-                                          width={50}
-                                        />
-                                        <Tooltip
-                                          contentStyle={{
-                                            background: 'rgba(21, 26, 33, 0.95)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: '4px',
-                                            fontSize: '11px'
-                                          }}
-                                          formatter={(value) => [formatCurrency(value), 'Price']}
-                                        />
-                                        <Area
-                                          type="monotone"
-                                          dataKey="price"
-                                          stroke={isPositiveTf ? '#10b981' : '#ef4444'}
-                                          strokeWidth={1.5}
-                                          fill={`url(#colorPrice${tfLabel})`}
-                                        />
-                                      </AreaChart>
-                                    </ResponsiveContainer>
-                                  ) : (
-                                    <div className="h-full flex items-center justify-center">
-                                      <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                        className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
-                                      />
+                            {!multiChartMode ? (
+                              <TimeframeSelector 
+                                timeframes={TIMEFRAMES}
+                                selected={selectedTimeframe}
+                                onSelect={setSelectedTimeframe}
+                              />
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                {MULTI_CHART_TIMEFRAMES.map((tf) => (
+                                  <motion.button
+                                    key={tf.label}
+                                    onClick={() => toggleMultiTimeframe(tf.label)}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className={`px-3 py-1 rounded text-xs font-mono transition-all ${
+                                      selectedMultiTimeframes.includes(tf.label)
+                                        ? 'bg-terminal-green text-terminal-bg'
+                                        : 'bg-terminal-bg border border-terminal-border hover:border-terminal-dim'
+                                    }`}
+                                  >
+                                    {tf.label}
+                                  </motion.button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Chart Container */}
+                          {!multiChartMode ? (
+                            <div className="flex-1 min-h-0 border border-terminal-border rounded-lg bg-terminal-panel p-4">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                  <defs>
+                                    <linearGradient id="colorPriceTerminal" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0.2}/>
+                                      <stop offset="95%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0}/>
+                                    </linearGradient>
+                                  </defs>
+                                  <XAxis 
+                                    dataKey="time" 
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'monospace' }}
+                                    interval="preserveStartEnd"
+                                    minTickGap={30}
+                                  />
+                                  <YAxis 
+                                    domain={['auto', 'auto']}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'monospace' }}
+                                    tickFormatter={(value) => `₹${value.toLocaleString()}`}
+                                    width={70}
+                                  />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: 'rgba(3, 7, 18, 0.95)',
+                                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                                      borderRadius: '4px',
+                                      backdropFilter: 'blur(12px)',
+                                      fontFamily: 'monospace'
+                                    }}
+                                    labelStyle={{ color: '#6b7280', fontFamily: 'monospace' }}
+                                    formatter={(value) => [formatCurrency(value), 'PRICE']}
+                                  />
+                                  <Area
+                                    type="monotone"
+                                    dataKey="price"
+                                    stroke={isPositive ? '#22c55e' : '#ef4444'}
+                                    strokeWidth={2}
+                                    fill="url(#colorPriceTerminal)"
+                                    animationDuration={800}
+                                  />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            </div>
+                          ) : (
+                            /* Multi-Chart Grid View */
+                            <div className={`flex-1 min-h-0 grid gap-3 ${
+                              selectedMultiTimeframes.length <= 2 ? 'grid-cols-2' : 
+                              selectedMultiTimeframes.length <= 3 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'
+                            }`}>
+                              {selectedMultiTimeframes.map((tfLabel) => {
+                                const chartInfo = multiChartData[tfLabel]
+                                const timeframe = MULTI_CHART_TIMEFRAMES.find(t => t.label === tfLabel)
+                                const chartDataTf = chartInfo?.data || []
+                                const stockDataTf = chartInfo?.stockData
+                                const isPositiveTf = stockDataTf ? 
+                                  (stockDataTf.current_price >= stockDataTf.previous_close) : true
+                                
+                                return (
+                                  <motion.div
+                                    key={tfLabel}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="border border-terminal-border rounded-lg bg-terminal-panel p-3 overflow-hidden flex flex-col"
+                                  >
+                                    <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                                      <span className="text-xs font-bold text-terminal-dim font-mono">{tfLabel}</span>
+                                      {stockDataTf && (
+                                        <span className={`text-xs font-mono font-bold ${
+                                          isPositiveTf ? 'text-terminal-green' : 'text-negative'
+                                        }`}>
+                                          {formatCurrency(stockDataTf.current_price)}
+                                        </span>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                                {stockDataTf && (
-                                  <div className="mt-2 flex items-center justify-between text-xs text-textSecondary">
-                                    <span>Vol: {formatNumber(stockDataTf.volume)}</span>
-                                    <span className={isPositiveTf ? 'text-positive' : 'text-negative'}>
-                                      {isPositiveTf ? '+' : ''}
-                                      {((stockDataTf.current_price - stockDataTf.previous_close) / stockDataTf.previous_close * 100).toFixed(2)}%
-                                    </span>
-                                  </div>
-                                )}
-                              </motion.div>
-                            )
-                          })}
+                                    <div className="flex-1 min-h-0">
+                                      {chartDataTf.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                          <AreaChart data={chartDataTf}>
+                                            <defs>
+                                              <linearGradient id={`colorPriceTerminal${tfLabel}`} x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={isPositiveTf ? '#22c55e' : '#ef4444'} stopOpacity={0.2}/>
+                                                <stop offset="95%" stopColor={isPositiveTf ? '#22c55e' : '#ef4444'} stopOpacity={0}/>
+                                              </linearGradient>
+                                            </defs>
+                                            <XAxis dataKey="time" hide />
+                                            <YAxis 
+                                              domain={['auto', 'auto']}
+                                              tick={{ fill: '#4b5563', fontSize: 9, fontFamily: 'monospace' }}
+                                              tickFormatter={(value) => `₹${value}`}
+                                              width={45}
+                                            />
+                                            <Tooltip
+                                              contentStyle={{
+                                                background: 'rgba(3, 7, 18, 0.95)',
+                                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                                                borderRadius: '4px',
+                                                fontSize: '10px'
+                                              }}
+                                              formatter={(value) => [formatCurrency(value), 'PRICE']}
+                                            />
+                                            <Area
+                                              type="monotone"
+                                              dataKey="price"
+                                              stroke={isPositiveTf ? '#22c55e' : '#ef4444'}
+                                              strokeWidth={1.5}
+                                              fill={`url(#colorPriceTerminal${tfLabel})`}
+                                            />
+                                          </AreaChart>
+                                        </ResponsiveContainer>
+                                      ) : (
+                                        <div className="h-full flex items-center justify-center">
+                                          <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                            className="w-5 h-5 border-2 border-terminal-green border-t-transparent rounded-full"
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                    {stockDataTf && (
+                                      <div className="mt-2 flex items-center justify-between text-xs text-terminal-dim flex-shrink-0">
+                                        <span>VOL: {formatNumber(stockDataTf.volume)}</span>
+                                        <span className={isPositiveTf ? 'text-terminal-green' : 'text-negative'}>
+                                          {isPositiveTf ? '+' : ''}
+                                          {((stockDataTf.current_price - stockDataTf.previous_close) / stockDataTf.previous_close * 100).toFixed(2)}%
+                                        </span>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ) : (
-                  <div className="flex items-center justify-center h-64">
-                    <p className="text-textSecondary">Select a stock to view details</p>
+                      </motion.div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <p className="text-terminal-dim mb-2 font-mono text-sm">No stock selected</p>
+                          <p className="text-xs text-terminal-dim/50 font-mono">Press / or Ctrl+K to search</p>
+                        </div>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </main>
+
+                {/* Right Panel - Market Depth & Stats */}
+                <motion.aside
+                  initial={{ x: 300, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  className="hidden lg:flex flex-col bg-terminal-panel border-l border-terminal-border relative"
+                  style={{ width: rightPanelWidth }}
+                >
+                  {/* Resize Handle */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-terminal-green transition-colors z-10"
+                    onMouseDown={handleMouseDownRight}
+                  />
+                  
+                  {/* Panel Tabs */}
+                  <div className="flex border-b border-terminal-border bg-terminal-header">
+                    <button className="flex-1 px-4 py-3 text-xs font-bold text-terminal-green border-b-2 border-terminal-green bg-terminal-bg">
+                      MARKET DEPTH
+                    </button>
+                    <button className="flex-1 px-4 py-3 text-xs font-bold text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg transition-colors">
+                      STATS
+                    </button>
+                    <button className="flex-1 px-4 py-3 text-xs font-bold text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg transition-colors">
+                      ORDERS
+                    </button>
                   </div>
+                  
+                  {/* Market Depth Content */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs text-terminal-dim font-mono">BID / ASK</span>
+                      <span className="text-xs text-terminal-dim font-mono">QTY</span>
+                    </div>
+                    
+                    {/* Asks (Sell Orders) - Top */}
+                    <div className="space-y-1 mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={`ask-${i}`} className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-negative flex items-center gap-1">
+                            <span className="w-1 h-1 bg-negative rounded-full"></span>
+                            {stockData ? formatCurrency(stockData.day_high - (i * 0.5)) : '--'}
+                          </span>
+                          <span className="text-terminal-dim">{Math.floor(Math.random() * 5000 + 1000)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Current Price */}
+                    {stockData && (
+                      <div className="py-3 border-y border-terminal-border bg-terminal-bg my-4">
+                        <p className="text-center font-mono text-lg font-bold text-terminal-text">
+                          {formatCurrency(stockData.current_price)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Bids (Buy Orders) - Bottom */}
+                    <div className="space-y-1">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={`bid-${i}`} className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-terminal-green flex items-center gap-1">
+                            <span className="w-1 h-1 bg-terminal-green rounded-full"></span>
+                            {stockData ? formatCurrency(stockData.day_low + (i * 0.5)) : '--'}
+                          </span>
+                          <span className="text-terminal-dim">{Math.floor(Math.random() * 5000 + 1000)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* OHLC Bar */}
+                    {stockData && (
+                      <div className="mt-6">
+                        <p className="text-xs text-terminal-dim font-mono mb-2">OHLC</p>
+                        <div className="space-y-2 text-xs font-mono">
+                          <div className="flex justify-between">
+                            <span className="text-terminal-dim">Open:</span>
+                            <span>{formatCurrency(stockData.open)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-terminal-dim">High:</span>
+                            <span className="text-terminal-green">{formatCurrency(stockData.day_high)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-terminal-dim">Low:</span>
+                            <span className="text-negative">{formatCurrency(stockData.day_low)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-terminal-dim">Close:</span>
+                            <span>{formatCurrency(stockData.current_price)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-terminal-dim">Volume:</span>
+                            <span>{formatNumber(stockData.volume)}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Price Change Bar */}
+                        <div className="mt-4">
+                          <p className="text-xs text-terminal-dim font-mono mb-1">CHANGE</p>
+                          <div className="h-2 bg-terminal-bg rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(Math.abs(priceChange) * 5, 100)}%` }}
+                              className={`h-full ${isPositive ? 'bg-terminal-green' : 'bg-negative'}`}
+                            />
+                          </div>
+                          <p className={`text-xs font-mono mt-1 ${isPositive ? 'text-terminal-green' : 'text-negative'}`}>
+                            {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Quick Stats */}
+                    <div className="mt-6 pt-4 border-t border-terminal-border">
+                      <p className="text-xs text-terminal-dim font-mono mb-3">QUICK STATS</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-terminal-bg rounded p-2">
+                          <p className="text-terminal-dim mb-1">52W High</p>
+                          <p className="font-mono text-terminal-green">{stockData ? formatCurrency(stockData.day_high * 1.3) : '--'}</p>
+                        </div>
+                        <div className="bg-terminal-bg rounded p-2">
+                          <p className="text-terminal-dim mb-1">52W Low</p>
+                          <p className="font-mono text-negative">{stockData ? formatCurrency(stockData.day_low * 0.7) : '--'}</p>
+                        </div>
+                        <div className="bg-terminal-bg rounded p-2">
+                          <p className="text-terminal-dim mb-1">Mkt Cap</p>
+                          <p className="font-mono">--</p>
+                        </div>
+                        <div className="bg-terminal-bg rounded p-2">
+                          <p className="text-terminal-dim mb-1">P/E</p>
+                          <p className="font-mono">--</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Panel Footer */}
+                  <div className="px-4 py-2 border-t border-terminal-border bg-terminal-header">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-terminal-dim font-mono">
+                        <span className="text-terminal-green">$</span> workspace:depth
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${cursorBlink ? 'bg-terminal-green' : 'bg-terminal-green/30'}`}></span>
+                        <span className="text-xs text-terminal-dim font-mono">online</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.aside>
+              </div>
+
+              {/* Mobile Watchlist Drawer */}
+              <AnimatePresence>
+                {isMobile && showMobileWatchlist && (view === 'dashboard' || view === 'analysis') && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setShowMobileWatchlist(false)}
+                      className="fixed inset-0 bg-black/50 z-40"
+                    />
+                    <motion.div
+                      initial={{ x: '-100%' }}
+                      animate={{ x: 0 }}
+                      exit={{ x: '-100%' }}
+                      transition={{ type: 'spring', damping: 25 }}
+                      className="fixed left-0 top-0 bottom-0 w-80 bg-terminal-panel z-50 overflow-y-auto"
+                    >
+                      <div className="p-4 pt-14">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-sm font-medium text-terminal-dim uppercase tracking-wider">Watchlist</h2>
+                          <button onClick={() => setShowMobileWatchlist(false)}>
+                            <X className="w-5 h-5 text-terminal-dim" />
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {watchlist.map((stock) => (
+                            <motion.div
+                              key={stock.id}
+                              onClick={() => handleStockSelect(stock)}
+                              className={`p-4 rounded-xl cursor-pointer transition-all ${
+                                selectedStock?.id === stock.id 
+                                  ? 'bg-terminal-bg border border-terminal-green/50' 
+                                  : 'hover:bg-terminal-bg border border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-10 h-10 rounded flex items-center justify-center text-sm font-semibold font-mono ${
+                                    selectedStock?.id === stock.id 
+                                      ? 'bg-terminal-green/20 text-terminal-green' 
+                                      : 'bg-terminal-bg text-terminal-dim'
+                                  }`}>
+                                    {stock.symbol.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">{stock.symbol}</p>
+                                    <p className="text-xs text-terminal-dim">{stock.name}</p>
+                                  </div>
+                                </div>
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={(e) => handleAnalyzeClick(stock, e)}
+                                  className="p-2 rounded-lg bg-terminal-green/20 text-terminal-green"
+                                >
+                                  <Activity className="w-4 h-4" />
+                                </motion.button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  </>
                 )}
               </AnimatePresence>
-            </main>
-          </div>
 
-          {/* Search Overlay */}
-          <SearchOverlay 
-            isOpen={searchOpen}
-            onClose={() => setSearchOpen(false)}
-            onAdd={addToWatchlist}
-          />
+              {/* Bottom Navigation for Mobile */}
+              {isMobile && (
+                <motion.nav
+                  initial={{ y: 50, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="fixed bottom-0 left-0 right-0 z-40 px-2 py-2 pb-safe flex items-center justify-around bg-terminal-panel border-t border-terminal-border"
+                >
+                  {[
+                    { id: 'dashboard', icon: TrendingUp, label: 'Market' },
+                    { id: 'sectors', icon: BarChart3, label: 'Sectors' },
+                    { id: 'news', icon: Newspaper, label: 'News' },
+                    { id: 'watchlist', icon: Eye, label: 'Watchlist' },
+                    { id: 'portfolio', icon: Wallet, label: 'Portfolio' },
+                  ].map((item) => (
+                    <motion.button
+                      key={item.id}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setView(item.id)}
+                      className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[64px] ${
+                        view === item.id 
+                          ? 'text-terminal-green' 
+                          : 'text-terminal-dim hover:text-terminal-text'
+                      }`}
+                    >
+                      <item.icon className="w-6 h-6" />
+                      <span className="text-[10px] font-medium font-mono">{item.label}</span>
+                      {view === item.id && (
+                        <motion.div
+                          layoutId="activeTabTerminal"
+                          className="absolute inset-0 bg-terminal-green/10 rounded-xl"
+                          transition={{ type: 'spring', damping: 25 }}
+                        />
+                      )}
+                    </motion.button>
+                  ))}
+                </motion.nav>
+              )}
 
-          {/* Indicator Configuration Modal */}
-          <AnimatePresence>
-            {showIndicatorConfig && (
-              <IndicatorConfig
-                params={indicatorParams}
-                onChange={handleIndicatorParamsChange}
-                onClose={() => setShowIndicatorConfig(false)}
+              {/* Search Overlay */}
+              <SearchOverlay 
+                isOpen={searchOpen}
+                onClose={() => setSearchOpen(false)}
+                onAdd={addToWatchlist}
               />
-            )}
-          </AnimatePresence>
-        </div>
-      </AlertsProvider>
-    </PortfolioProvider>
-    </WatchlistProvider>
+
+              {/* Indicator Configuration Modal */}
+              <AnimatePresence>
+                {showIndicatorConfig && (
+                  <IndicatorConfig
+                    params={indicatorParams}
+                    onChange={handleIndicatorParamsChange}
+                    onClose={() => setShowIndicatorConfig(false)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+          </AlertsProvider>
+        </PortfolioProvider>
+      </WatchlistProvider>
     </ThemeProvider>
   )
 }
