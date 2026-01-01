@@ -1350,11 +1350,7 @@ function AppContent() {
                             </div>
 
                             {!multiChartMode ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bg text-terminal-dim border border-terminal-border">
-                                  Managed by ChartWrapper
-                                </span>
-                              </div>
+                              <div />
                             ) : (
                               <div className="flex items-center gap-2">
                                 {MULTI_CHART_TIMEFRAMES.map((tf) => (

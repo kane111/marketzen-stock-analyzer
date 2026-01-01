@@ -11,7 +11,7 @@ export const TIMEFRAMES = [
   { label: '6M', value: '6M', days: 180 },
   { label: '1Y', value: '1Y', days: 365 },
   { label: '5Y', value: '5Y', days: 1825 },
-  { label: 'ALL', value: 'ALL', days: null }
+  { label: 'ALL', value: 'ALL', days: 3650 }
 ]
 
 const TIMEFRAME_PRESETS = {
@@ -43,6 +43,13 @@ function formatDateLabel(date, includeYear = false) {
   return `${day} ${month}`
 }
 
+// Format month-year for longer timeframes
+function formatMonthYearLabel(date) {
+  const month = MONTH_ABBREVIATIONS[date.toLocaleString('en-US', { month: 'long' })]
+  const year = date.getFullYear().toString().slice(-2)
+  return `${month} '${year}`
+}
+
 // Format currency for display
 function formatCurrency(value) {
   if (!value && value !== 0) return 'N/A'
@@ -53,52 +60,84 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-// Generate mock chart data
+// Generate mock chart data with proper historical dates
 function generateChartData(stock, timeframe) {
   if (!stock || !stock.current_price) return []
 
   const days = timeframe.days || 365
-  const data = []
   const preset = TIMEFRAME_PRESETS[timeframe.value] || 'day'
-
-  let currentPrice = stock.current_price
+  
+  const data = []
+  const today = new Date()
+  
+  let currentPrice = stock.current_price * 0.7 // Start 30% lower for upward trend
   const volatility = 0.02
-  const trend = 0.0005
+  const trend = 0.0003 // Slight upward trend
 
-  // Generate enough data points based on timeframe
-  // Using trading days approximation (~252 trading days per year)
-  const pointsNeeded = days <= 1 ? 78 
-    : days <= 7 ? 28 
-    : days <= 30 ? 30 
-    : days <= 90 ? 65 
-    : days <= 180 ? 126 
-    : days <= 365 ? 252 
-    : days <= 730 ? 504 
-    : days <= 1095 ? 756 
-    : days <= 1825 ? 1260 
-    : 2000
+  // Calculate number of data points based on timeframe
+  let pointsNeeded
+  if (days <= 1) {
+    pointsNeeded = 78 // 15-min intervals for intraday
+  } else if (days <= 7) {
+    pointsNeeded = days === 1 ? 78 : days * 4 // 4 data points per day
+  } else if (days <= 30) {
+    pointsNeeded = days // 1 data point per day
+  } else if (days <= 90) {
+    pointsNeeded = Math.ceil(days / 3) // 1 data point per 3 days (weekly)
+  } else if (days <= 365) {
+    pointsNeeded = Math.ceil(days / 7) // 1 data point per week
+  } else if (days <= 1825) {
+    pointsNeeded = Math.ceil(days / 30) // 1 data point per month
+  } else {
+    pointsNeeded = 120 // For ALL timeframe
+  }
 
-  for (let i = pointsNeeded; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
+  // Ensure minimum data points for visualization
+  pointsNeeded = Math.max(pointsNeeded, 30)
+
+  for (let i = pointsNeeded - 1; i >= 0; i--) {
+    const date = new Date(today)
+    
+    // Calculate date going backwards
+    if (days <= 1) {
+      // Intraday - go back by hours
+      date.setHours(date.getHours() - (i * 0.5))
+    } else if (days <= 30) {
+      // Daily - go back by days
+      date.setDate(date.getDate() - i)
+    } else if (days <= 90) {
+      // Weekly - go back by weeks
+      date.setDate(date.getDate() - (i * 7))
+    } else {
+      // Monthly - go back by months
+      date.setMonth(date.getMonth() - i)
+    }
 
     // Add some randomness for price movement
     const randomChange = (Math.random() - 0.5) * 2 * volatility
     const trendChange = trend * i
-    currentPrice = currentPrice * (1 - trendChange) * (1 + randomChange)
+    currentPrice = currentPrice * (1 + trendChange) * (1 + randomChange)
 
+    // Generate time label based on preset
     let timeLabel
-    if (preset === 'day') {
+    if (preset === 'day' && days <= 7) {
+      // For short timeframes, show day and month
       timeLabel = formatDateLabel(date, false)
+    } else if (preset === 'day' && days <= 30) {
+      // For 1M, show full date
+      timeLabel = formatDateLabel(date, true)
     } else if (preset === 'week') {
+      // For weekly, show date and month
       timeLabel = formatDateLabel(date, false)
     } else {
-      timeLabel = formatDateLabel(date, true)
+      // For monthly (1Y, 5Y, ALL), show month and year only
+      timeLabel = formatMonthYearLabel(date)
     }
 
     data.push({
       time: timeLabel,
-      price: Math.round(currentPrice * 100) / 100
+      price: Math.round(currentPrice * 100) / 100,
+      date: date // Keep original date for debugging if needed
     })
   }
 
