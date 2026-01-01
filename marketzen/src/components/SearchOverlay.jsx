@@ -16,14 +16,28 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
   })
   const inputRef = useRef(null)
 
+  // Robust focus handling - try multiple approaches
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100)
+    if (isOpen && inputRef.current) {
+      // Immediate focus attempt
+      inputRef.current.focus()
+      
+      // Backup focus attempts with increasing delays
+      const timeouts = [
+        setTimeout(() => inputRef.current?.focus(), 50),
+        setTimeout(() => inputRef.current?.focus(), 150),
+        setTimeout(() => inputRef.current?.focus(), 300),
+      ]
+      
       const handleKeyDown = (e) => {
         if (e.key === 'Escape') onClose()
       }
       window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
+      
+      return () => {
+        timeouts.forEach(clearTimeout)
+        window.removeEventListener('keydown', handleKeyDown)
+      }
     }
   }, [isOpen, onClose])
 
@@ -153,6 +167,7 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search NSE/BSE stocks..."
+                autoFocus
                 className="flex-1 bg-transparent text-lg outline-none placeholder:text-terminal-dim font-mono"
               />
               <button
