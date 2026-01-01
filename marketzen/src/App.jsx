@@ -1344,10 +1344,13 @@ function AppContent() {
                           </div>
                         </div>
 
-                        {/* Chart Section - Conditionally shown when fundamentals panel is closed */}
-                        {!showFundamentalsPanel && (
-                        <div className="flex-1 flex flex-col min-h-0 p-4">
-                          <div className="flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0">
+                        {/* Chart Section - Resizes when fundamentals panel is open */}
+                        <div className={`flex-1 flex flex-col min-h-0 p-4 transition-all duration-300 ${
+                          showFundamentalsPanel ? 'pb-1 pt-2' : ''
+                        }`}>
+                          <div className={`flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0 ${
+                            showFundamentalsPanel ? 'mb-2' : ''
+                          }`}>
                             <div className="flex items-center gap-2">
                               <span className="text-terminal-green font-bold text-sm">CHART</span>
                               <span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bg text-terminal-dim border border-terminal-border">
@@ -1384,7 +1387,9 @@ function AppContent() {
                           
                           {/* Chart Container */}
                           {!multiChartMode ? (
-                            <div className="flex-1 min-h-0 border border-terminal-border rounded-lg bg-terminal-panel p-4">
+                            <div className={`flex-1 min-h-0 border border-terminal-border rounded-lg bg-terminal-panel p-4 transition-all duration-300 ${
+                              showFundamentalsPanel ? 'p-2' : ''
+                            }`}>
                               <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={chartData}>
                                   <defs>
@@ -1433,7 +1438,7 @@ function AppContent() {
                             </div>
                           ) : (
                             /* Multi-Chart Grid View */
-                            <div className={`flex-1 min-h-0 grid gap-3 ${
+                            <div className={`flex-1 min-h-0 grid gap-3 transition-all duration-300 ${
                               selectedMultiTimeframes.length <= 2 ? 'grid-cols-2' : 
                               selectedMultiTimeframes.length <= 3 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'
                             }`}>
@@ -1522,19 +1527,17 @@ function AppContent() {
                             </div>
                           )}
                         </div>
-                        )}
 
                         {/* Fundamentals Bottom Panel */}
                         <AnimatePresence>
                           {showFundamentalsPanel && stockData && (
                             <motion.div
                               key="fundamentals-panel"
-                              initial={{ y: '100%' }}
-                              animate={{ y: 0 }}
-                              exit={{ y: '100%' }}
+                              initial={{ height: 0 }}
+                              animate={{ height: '45%' }}
+                              exit={{ height: 0 }}
                               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                              className="absolute bottom-0 left-0 right-0 bg-terminal-panel border-t border-terminal-border shadow-2xl overflow-hidden"
-                              style={{ height: '50%' }}
+                              className="bg-terminal-panel border-t border-terminal-border overflow-hidden"
                             >
                               <FundamentalsPanel
                                 stock={selectedStock}
