@@ -132,6 +132,9 @@ function AppContent() {
   const [cursorBlink, setCursorBlink] = useState(true)
   const [rightPanelTab, setRightPanelTab] = useState('depth')
   
+  // Fundamentals panel state
+  const [showFundamentalsPanel, setShowFundamentalsPanel] = useState(false)
+  
   // Panel sizing
   const [leftPanelWidth, setLeftPanelWidth] = useState(200)
   const [rightPanelWidth, setRightPanelWidth] = useState(250)
@@ -1093,7 +1096,7 @@ function AppContent() {
                 </motion.aside>
 
                 {/* Main Content - Chart & Analysis */}
-                <main className="flex-1 flex flex-col overflow-hidden bg-terminal-bg min-w-0">
+                <main className="flex-1 flex flex-col overflow-hidden bg-terminal-bg min-w-0 relative">
                   <AnimatePresence mode="wait">
                     {/* Alerts View */}
                     {view === 'alerts' && (
@@ -1101,16 +1104,6 @@ function AppContent() {
                         key="alerts"
                         stock={selectedStock}
                         currentStockData={stockData}
-                        onClose={() => setView('dashboard')}
-                      />
-                    )}
-
-                    {/* Fundamentals View */}
-                    {view === 'fundamentals' && (
-                      <FundamentalsPanel
-                        key="fundamentals"
-                        stock={selectedStock}
-                        stockData={stockData}
                         onClose={() => setView('dashboard')}
                       />
                     )}
@@ -1244,8 +1237,12 @@ function AppContent() {
                                 <motion.button
                                   whileHover={{ scale: 1.05 }}
                                   whileTap={{ scale: 0.95 }}
-                                  onClick={() => setView('fundamentals')}
-                                  className="px-3 py-1 rounded text-xs bg-terminal-bg border border-terminal-border flex items-center gap-2 hover:border-terminal-dim transition-colors ml-auto"
+                                  onClick={() => setShowFundamentalsPanel(!showFundamentalsPanel)}
+                                  className={`px-3 py-1 rounded text-xs flex items-center gap-2 transition-colors ${
+                                    showFundamentalsPanel 
+                                      ? 'bg-terminal-green text-terminal-bg border border-terminal-green' 
+                                      : 'bg-terminal-bg border border-terminal-border hover:border-terminal-dim'
+                                  }`}
                                 >
                                   <PieChart className="w-3 h-3" />
                                   Fundamentals
@@ -1347,7 +1344,8 @@ function AppContent() {
                           </div>
                         </div>
 
-                        {/* Chart Section */}
+                        {/* Chart Section - Conditionally shown when fundamentals panel is closed */}
+                        {!showFundamentalsPanel && (
                         <div className="flex-1 flex flex-col min-h-0 p-4">
                           <div className="flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0">
                             <div className="flex items-center gap-2">
@@ -1524,6 +1522,28 @@ function AppContent() {
                             </div>
                           )}
                         </div>
+                        )}
+
+                        {/* Fundamentals Bottom Panel */}
+                        <AnimatePresence>
+                          {showFundamentalsPanel && stockData && (
+                            <motion.div
+                              key="fundamentals-panel"
+                              initial={{ y: '100%' }}
+                              animate={{ y: 0 }}
+                              exit={{ y: '100%' }}
+                              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                              className="absolute bottom-0 left-0 right-0 bg-terminal-panel border-t border-terminal-border shadow-2xl overflow-hidden"
+                              style={{ height: '50%' }}
+                            >
+                              <FundamentalsPanel
+                                stock={selectedStock}
+                                stockData={stockData}
+                                onClose={() => setShowFundamentalsPanel(false)}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
                     ) : (
                       <div className="flex items-center justify-center h-full">
