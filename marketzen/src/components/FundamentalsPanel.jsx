@@ -1,80 +1,19 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, TrendingDown, PieChart, BarChart3, RefreshCw } from 'lucide-react'
+import { X, TrendingUp, PieChart, BarChart3 } from 'lucide-react'
 import { TerminalTab } from './UI'
 import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
 import { MetricCard } from './common/MetricCard'
 
-// Sector mapping for Indian stocks
-const SECTOR_MAPPING = {
-  'RELIANCE.NS': 'Energy',
-  'TCS.NS': 'Technology',
-  'HDFCBANK.NS': 'Financials',
-  'ICICIBANK.NS': 'Financials',
-  'SBIN.NS': 'Financials',
-  'INFY.NS': 'Technology',
-  'HINDUNILVR.NS': 'Consumer Staples',
-  'ASIANPAINT.NS': 'Consumer Discretionary',
-  'NESTLEIND.NS': 'Consumer Staples',
-  'MARUTI.NS': 'Consumer Discretionary',
-  'TATAMOTORS.NS': 'Consumer Discretionary',
-  'SUNPHARMA.NS': 'Healthcare',
-  'AXISBANK.NS': 'Financials',
-  'KOTAKBANK.NS': 'Financials',
-  'WIPRO.NS': 'Technology',
-  'BHARTIARTL.NS': 'Communication',
-  'BAJFINANCE.NS': 'Financials',
-  'TATASTEEL.NS': 'Materials',
-  'JSWSTEEL.NS': 'Materials',
-  'MOTHERSUMI.NS': 'Consumer Discretionary',
-  'BAJAJ-AUTO.NS': 'Consumer Discretionary',
-  'EICHERMOT.NS': 'Consumer Discretionary',
-  'DABUR.NS': 'Consumer Staples',
-  'BRITANNIA.NS': 'Consumer Staples',
-  'COALINDIA.NS': 'Energy',
-  'VEDL.NS': 'Materials',
-  'ONGC.NS': 'Energy',
-  'IOC.NS': 'Energy',
-  'NTPC.NS': 'Utilities',
-  'POWERGRID.NS': 'Utilities',
-  'CIPLA.NS': 'Healthcare',
-  'DRREDDY.NS': 'Healthcare',
-  'ZYDUSLIFE.NS': 'Healthcare',
-  'DLF.NS': 'Real Estate',
-  'GODREJPROP.NS': 'Real Estate',
-  'SOBHA.NS': 'Real Estate',
-  'PRESTIGE.NS': 'Real Estate',
-  'LODHA.NS': 'Real Estate',
-  'APOLLOHOSP.NS': 'Healthcare',
-  'FORTIS.NS': 'Healthcare',
-  'MAXHEALTH.NS': 'Healthcare',
-  'METROPOLIS.NS': 'Healthcare',
-  'ZEE.NS': 'Communication',
-  'PVR.NS': 'Communication',
-  'INOXLEISUR.NS': 'Communication',
-  'DISHTV.NS': 'Communication',
-  'SUNTV.NS': 'Communication',
-  'ITC.NS': 'Consumer Staples',
-  'GODREJCP.NS': 'Consumer Staples',
-  'HCLTECH.NS': 'Technology',
-  'TECHM.NS': 'Technology'
-}
-
-function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
+function FundamentalsPanel({ stock, onClose }) {
   const [activeTab, setActiveTab] = useState('valuation')
   
   // Use the new fundamentals hook
   const { 
     data: fundamentals, 
     loading, 
-    dataSource, 
-    lastUpdated, 
     refresh: fetchFundamentals 
   } = useFundamentals(stock?.id)
-
-  const getSector = () => {
-    return SECTOR_MAPPING[stock?.id] || 'Other'
-  }
 
   const tabs = [
     { id: 'valuation', label: 'Valuation', icon: PieChart },
@@ -91,28 +30,19 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="h-full flex flex-col"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onClose}
-              className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </motion.button>
-            <div>
-              <h2 className="text-xl font-semibold">Fundamentals</h2>
-              <p className="text-terminal-dim text-sm">Loading...</p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </motion.button>
+          <h2 className="text-lg font-semibold">Fundamentals</h2>
         </div>
-        <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-4 flex-1">
-          <div className="animate-pulse space-y-3">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-10 bg-terminal-bg-light rounded" />
-            ))}
-          </div>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-terminal-dim text-sm">Loading...</p>
         </div>
       </motion.div>
     )
@@ -126,43 +56,17 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
       className="h-full flex flex-col"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onClose}
-            className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </motion.button>
-          <div>
-            <h2 className="text-lg font-semibold">{stock?.name}</h2>
-            <p className="text-xs text-terminal-dim">{stock?.symbol} • NSE</p>
-          </div>
-        </div>
-
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={fetchFundamentals}
-            className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
-            title="Refresh data"
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </motion.button>
-          {onAddToComparison && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onAddToComparison}
-              className="px-3 py-1.5 bg-terminal-green/10 text-terminal-green rounded-lg flex items-center gap-1.5 text-sm"
-            >
-              <PieChart className="w-4 h-4" />
-              Compare
-            </motion.button>
-          )}
+          <h2 className="text-lg font-semibold">{stock?.name}</h2>
         </div>
       </div>
 
@@ -184,10 +88,9 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3"
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2"
             >
-              <h3 className="text-sm font-semibold mb-2">Valuation Metrics</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1">
                 <MetricCard
                   label="P/E Ratio"
                   value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.trailingPE'))}
@@ -244,10 +147,9 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3"
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2"
             >
-              <h3 className="text-sm font-semibold mb-2">Financial Performance</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1">
                 <MetricCard
                   label="Revenue (TTM)"
                   value={formatNumber(getMetric(fundamentals, 'financialData.totalRevenue'))}
@@ -303,10 +205,9 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-3"
+              className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2"
             >
-              <h3 className="text-sm font-semibold mb-2">Price Performance</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1">
                 <MetricCard
                   label="52 Week High"
                   value={formatCurrency(getMetric(fundamentals, 'summaryDetail.fiftyTwoWeekHighRaw'))}
