@@ -250,7 +250,7 @@ function AppContent() {
   const fetchStockData = useCallback(async (stock, timeframe, taMode = false, isMultiChart = false, multiTimeframe = null) => {
     if (!stock) return
     
-    const effectiveTimeframe = timeframe || selectedTimeframe
+    const effectiveTimeframe = timeframe || TIMEFRAMES[1]
     
     setError(null)
     setLoading(true)
@@ -372,7 +372,7 @@ function AppContent() {
     } finally {
       setLoading(false)
     }
-  }, [selectedTimeframe])
+  }, [TIMEFRAMES[1]])
 
   // Fetch multi-chart data when mode is enabled
   useEffect(() => {
@@ -390,14 +390,14 @@ function AppContent() {
   useEffect(() => {
     if (autoRefresh && marketStatus === 'live' && selectedStock && (view === 'dashboard' || view === 'analysis')) {
       const interval = setInterval(() => {
-        const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
+        const tf = view === 'analysis' ? TA_TIMEFRAMES[1] : TIMEFRAMES[1]
         fetchStockData(selectedStock, tf, view === 'analysis')
       }, 60000)
       
       setRefreshInterval(interval)
       return () => clearInterval(interval)
     }
-  }, [marketStatus, selectedStock, selectedTimeframe, fetchStockData, view, autoRefresh])
+  }, [marketStatus, selectedStock, TIMEFRAMES[1], fetchStockData, view, autoRefresh])
 
   const handleStockSelect = (stock) => {
     setSelectedStock(stock)
@@ -405,7 +405,7 @@ function AppContent() {
     setView('dashboard')
     
     // Always fetch data for the selected stock
-    const timeframe = view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe
+    const timeframe = view === 'analysis' ? TA_TIMEFRAMES[1] : TIMEFRAMES[1]
     fetchStockData(stock, timeframe, view === 'analysis')
     
     if (multiChartMode) {
@@ -532,7 +532,7 @@ function AppContent() {
   // Command palette commands
   const COMMANDS = [
     { id: 'search', label: 'search <symbol>', description: 'Search for a stock', action: () => setSearchOpen(true) },
-    { id: 'refresh', label: 'refresh', description: 'Refresh current data', action: () => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis') },
+    { id: 'refresh', label: 'refresh', description: 'Refresh current data', action: () => selectedStock && fetchStockData(selectedStock, TIMEFRAMES[1], view === 'analysis') },
     { id: 'toggle-refresh', label: 'auto-refresh', description: 'Toggle auto-refresh', action: () => setAutoRefresh(!autoRefresh) },
     { id: 'portfolio', label: 'portfolio', description: 'View portfolio', action: () => setView('portfolio') },
     { id: 'watchlist', label: 'watchlist', description: 'View watchlist', action: () => setView('watchlist') },
@@ -700,7 +700,7 @@ function AppContent() {
       // R for quick refresh
       if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !commandMode && document.activeElement !== commandInputRef.current) {
         if (selectedStock) {
-          fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')
+          fetchStockData(selectedStock, TIMEFRAMES[1], view === 'analysis')
         }
         return
       }
@@ -716,7 +716,7 @@ function AppContent() {
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [commandMode, commandInput, commandSuggestions, commandHistory, commandHistoryIndex, selectedSuggestion, selectedStock, selectedTimeframe, view, fetchStockData])
+  }, [commandMode, commandInput, commandSuggestions, commandHistory, commandHistoryIndex, selectedSuggestion, selectedStock, TIMEFRAMES[1], view, fetchStockData])
 
   // Panel resizing handlers
   const handleMouseDownLeft = (e) => {
@@ -983,7 +983,7 @@ function AppContent() {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')}
+                      onClick={() => selectedStock && fetchStockData(selectedStock, TIMEFRAMES[1], view === 'analysis')}
                       className="p-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-green hover:text-terminal-green transition-colors"
                       title="Manual Refresh (R)"
                     >
@@ -1311,7 +1311,7 @@ function AppContent() {
                               <span className="font-bold">
                                 {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
                               </span>
-                              <span className="text-xs opacity-70">{selectedTimeframe.label}</span>
+                              <span className="text-xs opacity-70">{TIMEFRAMES[1].label}</span>
                             </motion.div>
                           </div>
 
