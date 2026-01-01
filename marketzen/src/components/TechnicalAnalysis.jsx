@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import TimeframeSelector from './charts/TimeframeSelector'
 import { TerminalTab, TerminalIndicatorToggle } from './UI'
+import { Spinner } from './common/LoadingSkeleton'
 import { 
   useIndicators, 
   useIndicatorParams,
@@ -275,12 +276,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   // Loading state
   if (localLoading) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-12 h-12 border-4 border-terminal-green border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-terminal-dim">Loading technical analysis...</p>
-          {error && <p className="text-terminal-red mt-2 text-sm">{error}</p>}
-        </div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-96">
+        <Spinner size="3rem" />
+        <p className="text-terminal-dim mt-4 font-mono">Loading technical analysis...</p>
+        {error && <p className="text-terminal-red mt-2 text-sm">{error}</p>}
       </motion.div>
     )
   }
