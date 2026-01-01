@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 
-// Re-export all components from new modular structure for backward compatibility
-// Components have been extracted to separate files in common/, charts/, and indicators/ directories
-
 // ==========================================
 // TERMINAL BUTTON - Primary CTA Component
+// UX Improvements:
+// - Better touch targets (min 44px height)
+// - Clearer active/hover states
+// - Consistent sizing across variants
 // ==========================================
 export function TerminalButton({
   children,
@@ -16,7 +17,7 @@ export function TerminalButton({
   className = '',
   isSelected = false
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 ease-out rounded-lg focus:outline-none focus:ring-2 focus:ring-terminal-green/50 disabled:opacity-50 disabled:cursor-not-allowed'
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 ease-out rounded-lg focus:outline-none focus:ring-2 focus:ring-terminal-green/50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
   
   const variants = {
     primary: isSelected
@@ -51,6 +52,10 @@ export function TerminalButton({
 
 // ==========================================
 // TERMINAL TOGGLE - Boolean Switch
+// UX Improvements:
+// - Better contrast for checked state
+// - Clearer visual feedback
+// - Improved accessibility
 // ==========================================
 export function TerminalToggle({
   label,
@@ -60,7 +65,7 @@ export function TerminalToggle({
   className = ''
 }) {
   return (
-    <label className={`inline-flex items-center gap-3 cursor-pointer group ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}>
+    <label className={`inline-flex items-center gap-3 cursor-pointer group ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`}>
       <span className={`text-sm font-mono transition-colors ${checked ? 'text-terminal-text' : 'text-terminal-dim group-hover:text-terminal-text'}`}>
         {label}
       </span>
@@ -71,20 +76,20 @@ export function TerminalToggle({
         onClick={disabled ? undefined : onChange}
         disabled={disabled}
         animate={{
-          backgroundColor: checked ? 'rgba(51, 255, 0, 0.2)' : 'rgba(31, 34, 35, 1)',
+          backgroundColor: checked ? 'rgba(51, 255, 0, 0.15)' : 'rgba(31, 34, 35, 1)',
           borderColor: checked ? '#33FF00' : '#3a3f42'
         }}
         whileHover={!disabled ? { scale: 1.05 } : {}}
         whileTap={!disabled ? { scale: 0.95 } : {}}
-        className={`relative w-11 h-6 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-terminal-green/50`}
+        className={`relative w-11 h-6 rounded-full border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-terminal-green/50 cursor-pointer`}
       >
         <motion.div
           animate={{
             x: checked ? 20 : 2,
-            backgroundColor: checked ? '#33FF00' : '#666'
+            backgroundColor: checked ? '#33FF00' : '#6b7280'
           }}
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-          className={`absolute top-1 left-1 w-4 h-4 rounded-full shadow-sm ${
+          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow-sm transition-colors ${
             checked ? 'shadow-terminal-green/30' : 'shadow-black/20'
           }`}
         />
@@ -95,6 +100,10 @@ export function TerminalToggle({
 
 // ==========================================
 // TERMINAL CHECKBOX - Custom Checkbox
+// UX Improvements:
+// - Larger hit area
+// - Better visual feedback
+// - Clear checked state
 // ==========================================
 export function TerminalCheckbox({
   label,
@@ -104,14 +113,14 @@ export function TerminalCheckbox({
   className = ''
 }) {
   return (
-    <label className={`inline-flex items-center gap-2.5 cursor-pointer group ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}>
+    <label className={`inline-flex items-center gap-3 cursor-pointer group ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`}>
       <motion.div
         animate={{
           backgroundColor: checked ? '#33FF00' : 'transparent',
           borderColor: checked ? '#33FF00' : '#3a3f42'
         }}
         whileHover={!disabled ? { borderColor: checked ? '#33FF00' : '#33FF00' } : {}}
-        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-terminal-green/50`}
+        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-terminal-green/50 cursor-pointer`}
       >
         {checked && (
           <motion.svg
@@ -144,6 +153,10 @@ export function TerminalCheckbox({
 
 // ==========================================
 // TERMINAL TAB - Tab Navigation
+// UX Improvements:
+// - Better spacing between tabs
+// - Clearer active state
+// - Improved hover feedback
 // ==========================================
 export function TerminalTab({
   tabs,
@@ -152,20 +165,20 @@ export function TerminalTab({
   className = ''
 }) {
   return (
-    <div className={`flex gap-1 overflow-x-auto ${className}`}>
+    <div className={`flex gap-1.5 overflow-x-auto ${className}`}>
       {tabs.map((tab) => (
         <motion.button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg whitespace-nowrap transition-all text-xs font-mono ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-xs font-mono ${
             activeTab === tab.id
               ? 'bg-terminal-green text-terminal-bg border border-terminal-green shadow-lg shadow-terminal-green/10'
               : 'bg-terminal-bg-secondary text-terminal-dim border border-terminal-border hover:bg-terminal-bg-light hover:text-terminal-text hover:border-terminal-border/80'
           }`}
         >
-          {tab.icon && <tab.icon className="w-3 h-3" />}
+          {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
           {tab.label}
         </motion.button>
       ))}
@@ -175,6 +188,10 @@ export function TerminalTab({
 
 // ==========================================
 // TERMINAL CHIP - Filter Chip / Tag
+// UX Improvements:
+// - Better sizing
+// - Clear selection state
+// - Improved hover effects
 // ==========================================
 export function TerminalChip({
   label,
@@ -190,7 +207,7 @@ export function TerminalChip({
       disabled={disabled}
       whileHover={{ scale: disabled ? 1 : 1.05 }}
       whileTap={{ scale: disabled ? 1 : 0.95 }}
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full whitespace-nowrap text-xs font-mono transition-all ${
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-mono transition-all ${
         isSelected
           ? color 
             ? `text-terminal-bg border-0` 
@@ -209,6 +226,10 @@ export function TerminalChip({
 
 // ==========================================
 // TERMINAL INDICATOR TOGGLE - For Chart Indicators
+// UX Improvements:
+// - Better spacing
+// - Clearer active state
+// - Improved color visibility
 // ==========================================
 export function TerminalIndicatorToggle({
   label,
@@ -230,8 +251,8 @@ export function TerminalIndicatorToggle({
       } ${className}`}
     >
       <span 
-        className={`w-3 h-3 rounded-full shadow-sm transition-colors ${
-          isActive ? 'ring-1 ring-terminal-green/50' : ''
+        className={`w-3 h-3 rounded-full shadow-sm transition-all ${
+          isActive ? 'ring-1.5 ring-terminal-green/50' : ''
         }`}
         style={{ backgroundColor: isActive ? color : '#4a4f52' }}
       />
@@ -252,6 +273,10 @@ export function TerminalIndicatorToggle({
 
 // ==========================================
 // TERMINAL RADIO GROUP - Mutually Exclusive Options
+// UX Improvements:
+// - Better gap between options
+// - Clearer active state
+// - Improved hover feedback
 // ==========================================
 export function TerminalRadioGroup({
   options,
@@ -282,6 +307,10 @@ export function TerminalRadioGroup({
 
 // ==========================================
 // TERMINAL ACTION BUTTON - Icon Button
+// UX Improvements:
+// - Better touch target
+// - Clearer active state
+// - Better hover feedback
 // ==========================================
 export function TerminalActionButton({
   icon: Icon,
@@ -311,13 +340,17 @@ export function TerminalActionButton({
 
 // ==========================================
 // TERMINAL TOOLBAR - Button Group Container
+// UX Improvements:
+// - Better internal padding
+// - Consistent gap
+// - Subtle border
 // ==========================================
 export function TerminalToolbar({
   children,
   className = ''
 }) {
   return (
-    <div className={`flex items-center gap-1 p-1 bg-terminal-bg-secondary rounded-lg border border-terminal-border ${className}`}>
+    <div className={`flex items-center gap-1 p-1.5 bg-terminal-bg-secondary rounded-lg border border-terminal-border ${className}`}>
       {children}
     </div>
   )
@@ -325,6 +358,9 @@ export function TerminalToolbar({
 
 // ==========================================
 // TERMINAL TOOLBAR BUTTON - For Toolbar Groups
+// UX Improvements:
+// - Better sizing
+// - Clear active state
 // ==========================================
 export function TerminalToolbarButton({
   icon: Icon,
@@ -347,5 +383,70 @@ export function TerminalToolbarButton({
     >
       <Icon className="w-4 h-4" />
     </motion.button>
+  )
+}
+
+// ==========================================
+// TERMINAL CARD - Generic Card Container
+// UX Improvements:
+// - Consistent padding
+// - Subtle hover state
+// - Clear borders
+// ==========================================
+export function TerminalCard({
+  children,
+  className = '',
+  hover = false,
+  onClick
+}) {
+  const Component = onClick ? motion.div : 'div'
+  const motionProps = onClick ? {
+    whileHover: { scale: 1.01 },
+    whileTap: { scale: 0.99 }
+  } : {}
+
+  return (
+    <Component
+      className={`
+        bg-terminal-bg-secondary 
+        border border-terminal-border 
+        rounded-xl 
+        p-4 
+        ${hover ? 'cursor-pointer hover:border-terminal-dim' : ''}
+        ${className}
+      `}
+      {...motionProps}
+    >
+      {children}
+    </Component>
+  )
+}
+
+// ==========================================
+// TERMINAL SECTION - Section Container
+// UX Improvements:
+// - Clear separation
+// - Consistent spacing
+// ==========================================
+export function TerminalSection({
+  title,
+  children,
+  className = '',
+  action
+}) {
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {(title || action) && (
+        <div className="flex items-center justify-between">
+          {title && (
+            <h3 className="text-sm font-semibold text-terminal-text uppercase tracking-wide">
+              {title}
+            </h3>
+          )}
+          {action && <div>{action}</div>}
+        </div>
+      )}
+      <div>{children}</div>
+    </div>
   )
 }

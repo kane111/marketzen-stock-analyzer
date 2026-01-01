@@ -1,9 +1,19 @@
-import { useState, useEffect, useCallback, useMemo, memo } from 'react'
+import { useState, memo } from 'react'
 import { X, TrendingUp, PieChart, BarChart3 } from 'lucide-react'
 import { TerminalTab } from './UI'
 import { useFundamentals, getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
 import { MetricCard } from './common/MetricCard'
 
+/**
+ * FundamentalsPanel - Displays fundamental data for a stock
+ * 
+ * UX Improvements:
+ * - Better header spacing and layout
+ * - Improved tab spacing
+ * - Better card padding in grids
+ * - Clearer visual hierarchy
+ * - Smooth transitions between tabs
+ */
 function FundamentalsPanel({ stock, onClose }) {
   const [activeTab, setActiveTab] = useState('valuation')
 
@@ -18,53 +28,64 @@ function FundamentalsPanel({ stock, onClose }) {
     { id: 'performance', label: 'Performance', icon: TrendingUp }
   ]
 
-  // Loading state
+  // Loading state with better visual feedback
   if (loading) {
     return (
-      <div className="h-full flex flex-col">
-        <div className="flex items-center gap-2">
+      <div className="h-full flex flex-col p-3">
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-3">
           <button
             onClick={onClose}
-            className="p-1 rounded bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
+            className="p-1.5 rounded bg-terminal-bg-light hover:bg-terminal-border transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
-          <h2 className="text-base font-semibold">Fundamentals</h2>
+          <h2 className="text-sm font-semibold">{stock?.name}</h2>
         </div>
+        
+        {/* Loading skeleton */}
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-terminal-dim text-sm">Loading...</p>
+          <div className="flex flex-col items-center gap-3">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-3 border-terminal-green border-t-transparent rounded-full"
+            />
+            <p className="text-xs text-terminal-dim">Loading fundamentals...</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2">
+    <div className="h-full flex flex-col p-3">
+      {/* Header with better spacing */}
+      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
         <button
           onClick={onClose}
-          className="p-1 rounded bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
+          className="p-1.5 rounded bg-terminal-bg-light hover:bg-terminal-border transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
-        <h2 className="text-base font-semibold">{stock?.name}</h2>
+        <h2 className="text-sm font-semibold">{stock?.name}</h2>
       </div>
 
-      {/* Tabs */}
-      <TerminalTab
-        tabs={tabs}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        className="mb-1"
-      />
+      {/* Tabs with better spacing */}
+      <div className="flex-shrink-0 mb-3">
+        <TerminalTab
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      </div>
 
-      {/* Main Content */}
+      {/* Main Content with better scroll behavior */}
       <div className="flex-1 overflow-y-auto">
-        {/* Valuation */}
+        {/* Valuation Tab */}
         {activeTab === 'valuation' && (
-          <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2">
-            <div className="grid grid-cols-3 gap-1">
+          <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2.5">
+            <div className="grid grid-cols-3 gap-2">
               <MetricCard
                 label="P/E Ratio"
                 value={formatRatio(getMetric(fundamentals, 'defaultKeyStatistics.trailingPE'))}
@@ -115,10 +136,10 @@ function FundamentalsPanel({ stock, onClose }) {
           </div>
         )}
 
-        {/* Financials */}
+        {/* Financials Tab */}
         {activeTab === 'financials' && (
-          <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2">
-            <div className="grid grid-cols-3 gap-1">
+          <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2.5">
+            <div className="grid grid-cols-3 gap-2">
               <MetricCard
                 label="Revenue (TTM)"
                 value={formatNumber(getMetric(fundamentals, 'financialData.totalData'))}
@@ -168,10 +189,10 @@ function FundamentalsPanel({ stock, onClose }) {
           </div>
         )}
 
-        {/* Performance */}
+        {/* Performance Tab */}
         {activeTab === 'performance' && (
-          <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2">
-            <div className="grid grid-cols-3 gap-1">
+          <div className="bg-terminal-bg-secondary border border-terminal-border rounded-lg p-2.5">
+            <div className="grid grid-cols-3 gap-2">
               <MetricCard
                 label="52W High"
                 value={formatCurrency(getMetric(fundamentals, 'summaryDetail.fiftyTwoWeekHighRaw'))}
@@ -221,6 +242,9 @@ function FundamentalsPanel({ stock, onClose }) {
     </div>
   )
 }
+
+// Add missing import for motion
+import { motion } from 'framer-motion'
 
 // Custom comparison to prevent unnecessary re-renders
 export default memo(FundamentalsPanel, (prevProps, nextProps) => {

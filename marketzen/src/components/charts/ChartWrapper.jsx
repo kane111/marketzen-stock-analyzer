@@ -95,7 +95,7 @@ function generateChartData(stock, timeframe) {
   return data
 }
 
-// Timeframe Selector Component
+// Timeframe Selector Component with improved UX
 function TimeframeSelector({ timeframes, selected, onSelect }) {
   return (
     <div className="flex items-center gap-1 p-1 bg-terminal-bg-secondary rounded-lg border border-terminal-border">
@@ -118,12 +118,16 @@ function TimeframeSelector({ timeframes, selected, onSelect }) {
   )
 }
 
-// Memoized Chart Component
+// Memoized Chart Component with improved UX
 const StockChartInner = memo(function StockChartInner({ data, isPositive, showFundamentalsPanel }) {
   return (
-    <div className={`flex-1 min-h-0 border border-terminal-border rounded-lg bg-terminal-panel p-4 transition-all duration-300 ${
-      showFundamentalsPanel ? 'p-2' : ''
-    }`}>
+    <div className={`
+      flex-1 min-h-0 
+      border border-terminal-border 
+      rounded-lg bg-terminal-panel 
+      transition-all duration-300
+      ${showFundamentalsPanel ? 'p-2' : 'p-4'}
+    `}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>
@@ -174,7 +178,7 @@ const StockChartInner = memo(function StockChartInner({ data, isPositive, showFu
   )
 })
 
-// Main Chart Wrapper Component - Completely Isolated
+// Main Chart Wrapper Component - Completely Isolated with improved UX
 function ChartWrapper({ stock, showFundamentalsPanel }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1])
   const [chartData, setChartData] = useState([])
@@ -210,12 +214,16 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
   const isPositive = stock && stock.current_price >= stock.previous_close
 
   return (
-    <div className={`flex-1 flex flex-col min-h-0 p-4 transition-all duration-300 ${
-      showFundamentalsPanel ? 'pb-1 pt-2' : ''
-    }`}>
-      <div className={`flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0 ${
-        showFundamentalsPanel ? 'mb-2' : ''
-      }`}>
+    <div className={`
+      flex-1 flex flex-col min-h-0 
+      transition-all duration-300
+      ${showFundamentalsPanel ? 'pb-1 pt-2' : 'p-4'}
+    `}>
+      {/* Header with improved spacing */}
+      <div className={`
+        flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0
+        ${showFundamentalsPanel ? 'mb-2' : ''}
+      `}>
         <div className="flex items-center gap-2">
           <span className="text-terminal-green font-bold text-sm">CHART</span>
         </div>
@@ -227,6 +235,7 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
         />
       </div>
 
+      {/* Chart or Loading State */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
           <motion.div
