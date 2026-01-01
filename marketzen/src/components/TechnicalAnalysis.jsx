@@ -36,6 +36,14 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   const [activeTab, setActiveTab] = useState('summary')
   const [localLoading, setLocalLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Handle timeframe change - update state and fetch new data
+  const handleTimeframeChange = useCallback((timeframe) => {
+    setSelectedTimeframe(timeframe)
+    if (fetchStockData && stock) {
+      fetchStockData(stock, timeframe, true)
+    }
+  }, [fetchStockData, stock])
   
   // Use the useIndicators hook for cleaner state management
   const { 
@@ -287,7 +295,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           </motion.button>
         )}
         
-        <TimeframeSelector timeframes={taTimeframes} selected={selectedTimeframe} onSelect={setSelectedTimeframe} />
+        <TimeframeSelector timeframes={taTimeframes} selected={selectedTimeframe} onSelect={handleTimeframeChange} />
       </div>
       
       {/* Signal Banner */}
