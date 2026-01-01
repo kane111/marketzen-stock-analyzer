@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X, Plus, Clock, TrendingUp, Building2 } from 'lucide-react'
+import { Spinner } from './common/LoadingSkeleton'
 
 // Yahoo Finance search API for Indian stocks
 const YAHOO_SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search'
@@ -182,11 +183,7 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
             <div className="max-h-96 overflow-y-auto">
               {loading && (
                 <div className="p-4 flex items-center justify-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-6 h-6 border-2 border-terminal-green border-t-transparent rounded-full"
-                  />
+                  <Spinner size="1.5rem" />
                 </div>
               )}
 

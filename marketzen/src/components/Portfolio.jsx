@@ -5,6 +5,7 @@ import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 
 import { usePortfolio } from '../context/PortfolioContext'
 import { useToast } from '../components/common/Toast'
 import { formatCurrency, formatChange } from '../utils/formatters'
+import { Spinner } from './common/LoadingSkeleton'
 
 // Common stocks for quick add
 const QUICK_STOCKS = [
@@ -158,16 +159,10 @@ function Portfolio({ onStockSelect }) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex items-center justify-center h-64"
+        className="flex flex-col items-center justify-center h-64"
       >
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-10 h-10 border-4 border-terminal-green border-t-transparent rounded-full mx-auto mb-4"
-          />
-          <p className="text-terminal-dim">Loading portfolio...</p>
-        </div>
+        <Spinner size="2.5rem" />
+        <p className="text-terminal-dim mt-4 font-mono">Loading portfolio...</p>
       </motion.div>
     )
   }

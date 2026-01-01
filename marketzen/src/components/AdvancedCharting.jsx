@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { TrendingUp, TrendingDown, Settings, ZoomIn, ZoomOut, MoveHorizontal, CandlestickChart, Activity, RefreshCw, X } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceDot, BarChart, Bar } from 'recharts'
 import { useTheme } from '../context/ThemeContext'
+import { Spinner } from './common/LoadingSkeleton'
 
 // Yahoo Finance API endpoints
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -396,11 +397,7 @@ function AdvancedCharting({ onStockSelect }) {
 
         {loading ? (
           <div className="h-80 flex items-center justify-center">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-            />
+            <Spinner size="2rem" color="terminal-green" />
           </div>
         ) : chartData.length === 0 ? (
           <div className="h-80 flex items-center justify-center">

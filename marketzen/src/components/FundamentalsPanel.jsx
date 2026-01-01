@@ -3,6 +3,8 @@ import { X, TrendingUp, PieChart, BarChart3 } from 'lucide-react'
 import { TerminalTab } from './UI'
 import { getMetric, formatCurrency, formatNumber, formatPercent, formatRatio } from '../hooks/useFundamentals'
 import { MetricCard } from './common/MetricCard'
+import { Spinner } from './common/LoadingSkeleton'
+import { motion } from 'framer-motion'
 
 /**
  * FundamentalsPanel - Displays fundamental data for a stock
@@ -46,11 +48,7 @@ function FundamentalsPanel({ stock, stockData, onClose, cachedFundamentals = nul
         {/* Loading skeleton */}
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 border-3 border-terminal-green border-t-transparent rounded-full"
-            />
+            <Spinner size="2rem" />
             <p className="text-xs text-terminal-dim">Loading fundamentals...</p>
           </div>
         </div>
@@ -242,9 +240,6 @@ function FundamentalsPanel({ stock, stockData, onClose, cachedFundamentals = nul
     </div>
   )
 }
-
-// Add missing import for motion
-import { motion } from 'framer-motion'
 
 // Custom comparison to prevent unnecessary re-renders
 export default memo(FundamentalsPanel, (prevProps, nextProps) => {

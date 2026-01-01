@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion } from 'framer-motion'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts'
+import { Spinner } from '../common/LoadingSkeleton'
 
 // Timeframe constants - matches Yahoo Finance API
 export const TIMEFRAMES = [
@@ -268,11 +269,7 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
       {/* Loading State */}
       {loading && !error && (
         <div className="flex-1 flex items-center justify-center border border-terminal-border rounded-lg bg-terminal-panel">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-12 h-12 border-4 border-terminal-green border-t-transparent rounded-full"
-          />
+          <Spinner size="3rem" />
         </div>
       )}
 

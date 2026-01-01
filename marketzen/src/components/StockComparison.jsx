@@ -4,6 +4,7 @@ import { X, TrendingUp, TrendingDown, Plus, Minus, Save, Download, BarChart2, Li
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine } from 'recharts'
 import { useAlerts } from '../context/AlertsContext'
 import { TimeframeSelector, COMPARE_TIMEFRAMES } from './charts/TimeframeSelector'
+import { Spinner } from './common/LoadingSkeleton'
 
 // Yahoo Finance API endpoints
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
@@ -362,11 +363,7 @@ function StockComparison({ onClose, watchlist = [] }) {
           <h3 className="text-lg font-medium mb-4">Performance Comparison (%)</h3>
           {loading ? (
             <div className="h-80 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
-              />
+              <Spinner size="2rem" color="terminal-green" />
             </div>
           ) : (
             <div className="h-80">

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Spinner } from '../common/LoadingSkeleton'
 
 // ==========================================
 // CHART CONTAINER - Chart Layout Wrapper
@@ -62,11 +63,7 @@ export function ChartContainer({
 function ChartLoadingState() {
   return (
     <div className="flex items-center justify-center h-64">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        className="w-12 h-12 border-4 border-terminal-green border-t-transparent rounded-full"
-      />
+      <Spinner size="3rem" />
     </div>
   )
 }
