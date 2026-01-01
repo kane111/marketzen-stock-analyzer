@@ -406,6 +406,13 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
     }
   }, [stockData, params])
   
+  // Trigger analysis when indicators are toggled
+  useEffect(() => {
+    if (stockData?.ohlc && stockData.ohlc.length > 0) {
+      performAnalysis()
+    }
+  }, [indicators, stockData, performAnalysis])
+  
   // Initial data load
   useEffect(() => {
     if (!stockData?.ohlc || stockData.ohlc.length === 0) {
