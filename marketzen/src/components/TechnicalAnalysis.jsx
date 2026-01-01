@@ -36,6 +36,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   const [activeTab, setActiveTab] = useState('summary')
   const [localLoading, setLocalLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [indicatorUpdateTimestamp, setIndicatorUpdateTimestamp] = useState(null)
 
   // Handle timeframe change - update state and fetch new data
   const handleTimeframeChange = useCallback((timeframe) => {
@@ -224,6 +225,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   // Toggle indicator with proper analysis trigger
   const toggleIndicator = useCallback((indicatorId) => {
     _toggleIndicator(indicatorId)
+    // Mark indicator as updated for visual feedback
+    if (indicatorId === 'stoch' || indicatorId === 'atr') {
+      setIndicatorUpdateTimestamp(Date.now())
+    }
   }, [_toggleIndicator])
   
   // Effect to trigger analysis when indicators change
@@ -503,6 +508,25 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {/* Oscillators Tab */}
         {activeTab === 'oscillators' && analysisData && (
           <motion.div key="oscillators" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            {/* Visual update indicator */}
+            {indicatorUpdateTimestamp && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 px-4 py-2 bg-terminal-green/10 border border-terminal-green/30 rounded-lg flex items-center gap-2"
+              >
+                <div className="w-2 h-2 bg-terminal-green rounded-full animate-pulse" />
+                <span className="text-sm text-terminal-green">
+                  {indicators.stoch && indicators.atr ? 'Stochastic & ATR indicators updated' : 
+                   indicators.stoch ? 'Stochastic indicator updated' : 
+                   indicators.atr ? 'ATR indicator updated' : 'Indicators updated'}
+                </span>
+                <span className="text-xs text-terminal-dim ml-auto">
+                  {new Date(indicatorUpdateTimestamp).toLocaleTimeString()}
+                </span>
+              </motion.div>
+            )}
+            
             <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
               <h3 className="text-lg font-mono mb-4 text-terminal-text">Oscillator Values</h3>
               {(() => {
@@ -516,12 +540,24 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { name: 'RSI (14)', value: currentRSI?.toFixed(2), status: currentRSI > 70 ? 'Overbought' : currentRSI < 30 ? 'Oversold' : 'Neutral', color: currentRSI > 70 ? 'negative' : currentRSI < 30 ? 'positive' : 'neutral' },
-                      { name: 'Stochastic %K', value: currentStochK?.toFixed(2), status: currentStochK > 80 ? 'Overbought' : currentStochK < 20 ? 'Oversold' : 'Neutral', color: currentStochK > 80 ? 'negative' : currentStochK < 20 ? 'positive' : 'neutral' },
-                      { name: 'MACD', value: (currentMACD - currentSignal)?.toFixed(2), status: currentMACD > currentSignal ? 'Bullish' : 'Bearish', color: currentMACD > currentSignal ? 'positive' : 'negative' },
-                      { name: 'ATR (14)', value: `₹${currentATR?.toFixed(2)}`, status: 'Volatility', color: 'neutral' }
+                      { name: 'RSI (14)', value: currentRSI?.toFixed(2), status: currentRSI > 70 ? 'Overbought' : currentRSI < 30 ? 'Oversold' : 'Neutral', color: currentRSI > 70 ? 'negative' : currentRSI < 30 ? 'positive' : 'neutral', active: true },
+                      { name: 'Stochastic %K', value: currentStochK?.toFixed(2), status: currentStochK > 80 ? 'Overbought' : currentStochK < 20 ? 'Oversold' : 'Neutral', color: currentStochK > 80 ? 'negative' : currentStochK < 20 ? 'positive' : 'neutral', active: indicators.stoch },
+                      { name: 'MACD', value: (currentMACD - currentSignal)?.toFixed(2), status: currentMACD > currentSignal ? 'Bullish' : 'Bearish', color: currentMACD > currentSignal ? 'positive' : 'negative', active: true },
+                      { name: 'ATR (14)', value: `₹${currentATR?.toFixed(2)}`, status: 'Volatility', color: 'neutral', active: indicators.atr }
                     ].map((osc, i) => (
-                      <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="p-4 bg-terminal-bg-light rounded-xl">
+                      <motion.div 
+                        key={i} 
+                        initial={{ opacity: 0, y: 20 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        transition={{ delay: i * 0.1 }} 
+                        className={`p-4 bg-terminal-bg-light rounded-xl relative overflow-hidden ${
+                          osc.active ? '' : 'opacity-50'
+                        }`}
+                      >
+                        {/* Active indicator badge */}
+                        {osc.active && (
+                          <div className="absolute top-2 right-2 w-2 h-2 bg-terminal-green rounded-full animate-pulse" />
+                        )}
                         <p className="text-sm text-terminal-dim mb-1">{osc.name}</p>
                         <p className={`text-2xl font-bold ${
                           osc.color === 'positive' ? 'text-terminal-green' : 
@@ -566,7 +602,12 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               </div>
               
               <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
-                <h3 className="text-lg font-mono mb-4 text-terminal-text">Stochastic</h3>
+                <h3 className="text-lg font-mono mb-4 text-terminal-text flex items-center gap-2">
+                  Stochastic
+                  {indicators.stoch && (
+                    <span className="px-2 py-0.5 bg-terminal-green/20 text-terminal-green text-xs rounded-full animate-pulse">Active</span>
+                  )}
+                </h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartDataStoch}>
@@ -580,6 +621,36 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                       <ReferenceLine y={20} stroke="#10b981" strokeDasharray="5 5" />
                       <RechartsLine type="monotone" dataKey="k" stroke="#3b82f6" strokeWidth={2} dot={false} name="%K" />
                       <RechartsLine type="monotone" dataKey="d" stroke="#f59e0b" strokeWidth={2} dot={false} name="%D" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              {/* ATR Chart */}
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4 lg:col-span-2">
+                <h3 className="text-lg font-mono mb-4 text-terminal-text flex items-center gap-2">
+                  ATR (Average True Range)
+                  {indicators.atr && (
+                    <span className="px-2 py-0.5 bg-terminal-green/20 text-terminal-green text-xs rounded-full animate-pulse">Active</span>
+                  )}
+                </h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={analysisData.chartDataATR}>
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
+                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `₹${v.toFixed(0)}`} />
+                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#84cc16" 
+                        fill="rgba(132, 204, 22, 0.2)" 
+                        strokeWidth={2} 
+                        name="ATR"
+                      />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
