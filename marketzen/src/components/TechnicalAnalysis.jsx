@@ -37,6 +37,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   const [localLoading, setLocalLoading] = useState(true)
   const [error, setError] = useState(null)
   const [indicatorUpdateTimestamp, setIndicatorUpdateTimestamp] = useState(null)
+  const [activeOscillatorTab, setActiveOscillatorTab] = useState('rsi')
 
   // Handle timeframe change - update state and fetch new data
   const handleTimeframeChange = useCallback((timeframe) => {
@@ -527,8 +528,132 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               </motion.div>
             )}
             
-            <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
-              <h3 className="text-lg font-mono mb-4 text-terminal-text">Oscillator Values</h3>
+            {/* Main Chart Area */}
+            <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4 mb-6">
+              {/* Oscillator Sub-tabs */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <span className="text-sm text-terminal-dim mr-2">INDICATOR:</span>
+                {[
+                  { id: 'rsi', label: 'RSI', color: '#3b82f6' },
+                  { id: 'stoch', label: 'Stochastic', color: '#f97316' },
+                  { id: 'atr', label: 'ATR', color: '#84cc16' },
+                  { id: 'macd', label: 'MACD', color: '#10b981' }
+                ].map((tab) => {
+                  const isActive = activeOscillatorTab === tab.id
+                  const isDisabled = (tab.id === 'stoch' && !indicators.stoch) || (tab.id === 'atr' && !indicators.atr)
+                  
+                  return (
+                    <motion.button
+                      key={tab.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => !isDisabled && setActiveOscillatorTab(tab.id)}
+                      disabled={isDisabled}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                        isActive 
+                          ? 'bg-terminal-green text-black shadow-lg shadow-terminal-green/20' 
+                          : isDisabled
+                            ? 'bg-terminal-bg-light text-terminal-dim cursor-not-allowed opacity-50'
+                            : 'bg-terminal-bg-light text-terminal-text hover:bg-terminal-bg-secondary'
+                      }`}
+                    >
+                      <div 
+                        className={`w-2 h-2 rounded-full ${
+                          isActive ? 'bg-black' : isDisabled ? 'bg-terminal-dim' : `bg-[${tab.color}]`
+                        }`} 
+                        style={!isActive && !isDisabled ? { backgroundColor: tab.color } : {}}
+                      />
+                      {tab.label}
+                      {isActive && (
+                        <div className="w-1.5 h-1.5 bg-black/50 rounded-full animate-pulse ml-1" />
+                      )}
+                    </motion.button>
+                  )
+                })}
+              </div>
+              
+              {/* Chart Container */}
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  {activeOscillatorTab === 'rsi' && (
+                    <ComposedChart data={analysisData.chartDataRSI}>
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
+                      <ReferenceLine y={30} stroke="#10b981" strokeDasharray="5 5" />
+                      <ReferenceLine y={50} stroke="#6b7280" strokeDasharray="3 3" />
+                      <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="rgba(59, 130, 246, 0.2)" strokeWidth={2} />
+                    </ComposedChart>
+                  )}
+                  
+                  {activeOscillatorTab === 'stoch' && (
+                    <ComposedChart data={analysisData.chartDataStoch}>
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="5 5" />
+                      <ReferenceLine y={20} stroke="#10b981" strokeDasharray="5 5" />
+                      <RechartsLine type="monotone" dataKey="k" stroke="#f97316" strokeWidth={2} dot={false} name="%K" />
+                      <RechartsLine type="monotone" dataKey="d" stroke="#3b82f6" strokeWidth={2} dot={false} name="%D" />
+                    </ComposedChart>
+                  )}
+                  
+                  {activeOscillatorTab === 'atr' && (
+                    <ComposedChart data={analysisData.chartDataATR}>
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
+                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `₹${v.toFixed(0)}`} />
+                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#84cc16" 
+                        fill="rgba(132, 204, 22, 0.2)" 
+                        strokeWidth={2} 
+                        name="ATR"
+                      />
+                    </ComposedChart>
+                  )}
+                  
+                  {activeOscillatorTab === 'macd' && (
+                    <ComposedChart data={analysisData.chartDataMACD}>
+                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
+                        const date = new Date(value)
+                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                      }} />
+                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <Bar dataKey="hist">
+                        {analysisData.chartDataMACD.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.hist >= 0 ? '#10b981' : '#ef4444'} />
+                        ))}
+                      </Bar>
+                      <RechartsLine type="monotone" dataKey="macd" stroke="#3b82f6" strokeWidth={2} dot={false} name="MACD" />
+                      <RechartsLine type="monotone" dataKey="signal" stroke="#f59e0b" strokeWidth={2} dot={false} name="Signal" />
+                    </ComposedChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+            
+            {/* Oscillator Values - Always Visible */}
+            <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-mono text-terminal-text">Oscillator Values</h3>
+                <div className="flex items-center gap-2 text-xs text-terminal-dim">
+                  <div className="w-1.5 h-1.5 bg-terminal-green rounded-full animate-pulse" />
+                  Live Data
+                </div>
+              </div>
               {(() => {
                 const currentRSI = analysisData.chartData[analysisData.chartData.length - 1]?.rsi
                 const currentStochK = analysisData.chartData[analysisData.chartData.length - 1]?.stochK
@@ -540,24 +665,65 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { name: 'RSI (14)', value: currentRSI?.toFixed(2), status: currentRSI > 70 ? 'Overbought' : currentRSI < 30 ? 'Oversold' : 'Neutral', color: currentRSI > 70 ? 'negative' : currentRSI < 30 ? 'positive' : 'neutral', active: true },
-                      { name: 'Stochastic %K', value: currentStochK?.toFixed(2), status: currentStochK > 80 ? 'Overbought' : currentStochK < 20 ? 'Oversold' : 'Neutral', color: currentStochK > 80 ? 'negative' : currentStochK < 20 ? 'positive' : 'neutral', active: indicators.stoch },
-                      { name: 'MACD', value: (currentMACD - currentSignal)?.toFixed(2), status: currentMACD > currentSignal ? 'Bullish' : 'Bearish', color: currentMACD > currentSignal ? 'positive' : 'negative', active: true },
-                      { name: 'ATR (14)', value: `₹${currentATR?.toFixed(2)}`, status: 'Volatility', color: 'neutral', active: indicators.atr }
+                      { 
+                        name: 'RSI (14)', 
+                        value: currentRSI?.toFixed(2), 
+                        status: currentRSI > 70 ? 'Overbought' : currentRSI < 30 ? 'Oversold' : 'Neutral', 
+                        color: currentRSI > 70 ? 'negative' : currentRSI < 30 ? 'positive' : 'neutral',
+                        active: true,
+                        tab: 'rsi'
+                      },
+                      { 
+                        name: 'Stochastic %K', 
+                        value: currentStochK?.toFixed(2), 
+                        status: currentStochK > 80 ? 'Overbought' : currentStochK < 20 ? 'Oversold' : 'Neutral', 
+                        color: currentStochK > 80 ? 'negative' : currentStochK < 20 ? 'positive' : 'neutral',
+                        active: indicators.stoch,
+                        tab: 'stoch'
+                      },
+                      { 
+                        name: 'MACD', 
+                        value: (currentMACD - currentSignal)?.toFixed(2), 
+                        status: currentMACD > currentSignal ? 'Bullish' : 'Bearish', 
+                        color: currentMACD > currentSignal ? 'positive' : 'negative',
+                        active: true,
+                        tab: 'macd'
+                      },
+                      { 
+                        name: 'ATR (14)', 
+                        value: `₹${currentATR?.toFixed(2)}`, 
+                        status: 'Volatility', 
+                        color: 'neutral',
+                        active: indicators.atr,
+                        tab: 'atr'
+                      }
                     ].map((osc, i) => (
                       <motion.div 
-                        key={i} 
-                        initial={{ opacity: 0, y: 20 }} 
-                        animate={{ opacity: 1, y: 0 }} 
-                        transition={{ delay: i * 0.1 }} 
-                        className={`p-4 bg-terminal-bg-light rounded-xl relative overflow-hidden ${
-                          osc.active ? '' : 'opacity-50'
+                        key={i}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        onClick={() => osc.active && setActiveOscillatorTab(osc.tab)}
+                        className={`p-4 bg-terminal-bg-light rounded-xl relative overflow-hidden cursor-pointer transition-all ${
+                          osc.active 
+                            ? activeOscillatorTab === osc.tab 
+                              ? 'ring-2 ring-terminal-green shadow-lg shadow-terminal-green/10' 
+                              : 'hover:ring-2 hover:ring-terminal-green/50'
+                            : 'opacity-50 cursor-not-allowed'
                         }`}
                       >
-                        {/* Active indicator badge */}
-                        {osc.active && (
-                          <div className="absolute top-2 right-2 w-2 h-2 bg-terminal-green rounded-full animate-pulse" />
+                        {/* Active tab indicator */}
+                        {osc.active && activeOscillatorTab === osc.tab && (
+                          <div className="absolute top-0 left-0 right-0 h-0.5 bg-terminal-green animate-pulse" />
                         )}
+                        
+                        {/* Active indicator dot */}
+                        {osc.active && (
+                          <div className={`absolute top-3 right-3 w-2 h-2 rounded-full animate-pulse ${
+                            activeOscillatorTab === osc.tab ? 'bg-terminal-green' : 'bg-terminal-dim'
+                          }`} />
+                        )}
+                        
                         <p className="text-sm text-terminal-dim mb-1">{osc.name}</p>
                         <p className={`text-2xl font-bold ${
                           osc.color === 'positive' ? 'text-terminal-green' : 
@@ -578,83 +744,6 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                   </div>
                 )
               })()}
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
-                <h3 className="text-lg font-mono mb-4 text-terminal-text">RSI Momentum</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={analysisData.chartDataRSI}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
-                        const date = new Date(value)
-                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-                      }} />
-                      <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                      <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
-                      <ReferenceLine y={30} stroke="#10b981" strokeDasharray="5 5" />
-                      <ReferenceLine y={50} stroke="#6b7280" strokeDasharray="3 3" />
-                      <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="rgba(59, 130, 246, 0.2)" strokeWidth={2} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
-              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
-                <h3 className="text-lg font-mono mb-4 text-terminal-text flex items-center gap-2">
-                  Stochastic
-                  {indicators.stoch && (
-                    <span className="px-2 py-0.5 bg-terminal-green/20 text-terminal-green text-xs rounded-full animate-pulse">Active</span>
-                  )}
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={analysisData.chartDataStoch}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
-                        const date = new Date(value)
-                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-                      }} />
-                      <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                      <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="5 5" />
-                      <ReferenceLine y={20} stroke="#10b981" strokeDasharray="5 5" />
-                      <RechartsLine type="monotone" dataKey="k" stroke="#3b82f6" strokeWidth={2} dot={false} name="%K" />
-                      <RechartsLine type="monotone" dataKey="d" stroke="#f59e0b" strokeWidth={2} dot={false} name="%D" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
-              {/* ATR Chart */}
-              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4 lg:col-span-2">
-                <h3 className="text-lg font-mono mb-4 text-terminal-text flex items-center gap-2">
-                  ATR (Average True Range)
-                  {indicators.atr && (
-                    <span className="px-2 py-0.5 bg-terminal-green/20 text-terminal-green text-xs rounded-full animate-pulse">Active</span>
-                  )}
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={analysisData.chartDataATR}>
-                      <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 10 }} interval="preserveStartEnd" tickFormatter={(value) => {
-                        const date = new Date(value)
-                        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-                      }} />
-                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `₹${v.toFixed(0)}`} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="#84cc16" 
-                        fill="rgba(132, 204, 22, 0.2)" 
-                        strokeWidth={2} 
-                        name="ATR"
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
