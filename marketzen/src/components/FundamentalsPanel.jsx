@@ -327,8 +327,9 @@ function FundamentalsPanel({ stock, stockData, onClose, onAddToComparison }) {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Main Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
+        {/* Tab Content */}
         <AnimatePresence mode="wait">
         {activeTab === 'valuation' && (
           <motion.div
