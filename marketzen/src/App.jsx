@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine, Scatter } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -109,6 +109,7 @@ function AppContent() {
   const [priceChange, setPriceChange] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileWatchlist, setShowMobileWatchlist] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [error, setError] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [refreshInterval, setRefreshInterval] = useState(null)
@@ -509,23 +510,48 @@ function AppContent() {
           <motion.header 
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="fixed top-0 left-0 right-0 z-40 glass px-4 md:px-6 py-4 flex items-center justify-between"
+            className="fixed top-0 left-0 right-0 z-50 glass px-4 lg:px-6 py-4 lg:py-5 flex items-center justify-between bg-background/80 backdrop-blur-xl border-b border-white/5"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4 lg:gap-6">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setView('dashboard')}
                 className="flex items-center gap-3"
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
+                  <TrendingUp className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                 </div>
-                <div className="hidden sm:block">
-                  <h1 className="text-lg font-semibold tracking-tight">MarketZen</h1>
+                <div className="hidden md:block">
+                  <h1 className="text-lg lg:text-xl font-bold tracking-tight">MarketZen</h1>
                   <p className="text-xs text-textSecondary">Indian Stock Tracker</p>
                 </div>
               </motion.button>
+
+              {/* Desktop Navigation Links */}
+              <nav className="hidden lg:flex items-center gap-1 ml-4">
+                {[
+                  { id: 'dashboard', label: 'Dashboard', icon: null },
+                  { id: 'sectors', label: 'Sectors', icon: BarChart3 },
+                  { id: 'news', label: 'News', icon: Newspaper },
+                  { id: 'watchlist', label: 'Watchlist', icon: Eye },
+                ].map((item) => (
+                  <motion.button
+                    key={item.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setView(isViewActive(item.id) ? 'dashboard' : item.id)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                      isViewActive(item.id) 
+                        ? 'bg-primary/10 text-primary shadow-sm' 
+                        : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
+                    }`}
+                  >
+                    {item.icon && <item.icon className="w-4 h-4" />}
+                    {item.label}
+                  </motion.button>
+                ))}
+              </nav>
             </div>
 
             {/* Market Status Indicator */}
@@ -535,234 +561,199 @@ function AppContent() {
               onRefresh={() => selectedStock && fetchStockData(selectedStock, view === 'analysis' ? TA_TIMEFRAMES[1] : selectedTimeframe, view === 'analysis')}
             />
 
-            <div className="flex items-center gap-3">
-              {/* Alerts Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('alerts') ? 'dashboard' : 'alerts')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('alerts') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Bell className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Alerts</span>
-              </motion.button>
+            {/* Desktop Action Buttons */}
+            <div className="hidden lg:flex items-center gap-3">
+              {/* Primary Actions Group */}
+              <div className="flex items-center gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSearchOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-surfaceLight/50 text-textSecondary hover:text-text hover:bg-surfaceLight transition-all duration-200 flex items-center gap-3 text-sm"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Search stocks...</span>
+                  <kbd className="px-2 py-0.5 text-xs bg-surface rounded text-textSecondary/70">⌘K</kbd>
+                </motion.button>
+              </div>
+              
+              <div className="w-px h-8 bg-white/10 mx-2" />
+              
+              {/* Secondary Actions Group */}
+              <div className="flex items-center gap-2">
+                {[
+                  { id: 'alerts', icon: Bell, label: 'Alerts' },
+                  { id: 'portfolio', icon: Wallet, label: 'Portfolio' },
+                  { id: 'comparison', icon: BarChart2, label: 'Compare' },
+                  { id: 'analysis', icon: Activity, label: 'Analysis' },
+                  { id: 'screener', icon: Filter, label: 'Screener' },
+                ].map((item) => (
+                  <motion.button
+                    key={item.id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setView(isViewActive(item.id) ? 'dashboard' : item.id)}
+                    className={`p-2.5 rounded-xl transition-all duration-200 ${
+                      isViewActive(item.id) 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
+                    }`}
+                    title={item.label}
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </motion.button>
+                ))}
+              </div>
+              
+              <div className="w-px h-8 bg-white/10 mx-2" />
+              
+              {/* Tertiary Actions Group */}
+              <div className="flex items-center gap-2">
+                {[
+                  { id: 'theme', icon: Palette, label: 'Theme' },
+                  { id: 'advancedChart', icon: CandlestickChart, label: 'Charts' },
+                  { id: 'export', icon: Download, label: 'Export' },
+                  { id: 'performance', icon: ChartIcon, label: 'Performance' },
+                ].map((item) => (
+                  <motion.button
+                    key={item.id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setView(isViewActive(item.id) ? 'dashboard' : item.id)}
+                    className={`p-2.5 rounded-xl transition-all duration-200 ${
+                      isViewActive(item.id) 
+                        ? 'bg-primary/10 text-primary' 
+                        : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
+                    }`}
+                    title={item.label}
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </motion.button>
+                ))}
+              </div>
+            </div>
 
-              {/* Comparison Button */}
+            {/* Mobile/Tablet Actions */}
+            <div className="flex lg:hidden items-center gap-2">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('comparison') ? 'dashboard' : 'comparison')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('comparison') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <BarChart2 className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Compare</span>
-              </motion.button>
-
-              {/* Performance Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('performance') ? 'dashboard' : 'performance')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('performance') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <ChartIcon className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Performance</span>
-              </motion.button>
-
-              {/* Screener Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('screener') ? 'dashboard' : 'screener')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('screener') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Screener</span>
-              </motion.button>
-
-              {/* Watchlist Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('watchlist') ? 'dashboard' : 'watchlist')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('watchlist') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Watchlist</span>
-              </motion.button>
-
-              {/* Sectors Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('sectors') ? 'dashboard' : 'sectors')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('sectors') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Sectors</span>
-              </motion.button>
-
-              {/* News Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('news') ? 'dashboard' : 'news')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('news') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Newspaper className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">News</span>
-              </motion.button>
-
-              {/* Portfolio Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('portfolio') ? 'dashboard' : 'portfolio')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('portfolio') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Wallet className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Portfolio</span>
-              </motion.button>
-
-              {/* Theme Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('theme') ? 'dashboard' : 'theme')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('theme') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Palette className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Theme</span>
-              </motion.button>
-
-              {/* Advanced Chart Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('advancedChart') ? 'dashboard' : 'advancedChart')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('advancedChart') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <CandlestickChart className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Charts</span>
-              </motion.button>
-
-              {/* Export Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView(isViewActive('export') ? 'dashboard' : 'export')}
-                className={`glass px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors ${
-                  isViewActive('export') ? 'bg-primary text-white' : 'hover:bg-surfaceLight'
-                }`}
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Export</span>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setSearchOpen(true)}
-                className="glass px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-surfaceLight transition-colors"
+                className="p-3 rounded-xl bg-surfaceLight/50 text-textSecondary"
               >
-                <Search className="w-4 h-4 text-textSecondary" />
-                <span className="hidden sm:inline text-sm text-textSecondary">Search...</span>
-                <kbd className="hidden md:inline px-2 py-0.5 text-xs bg-surfaceLight rounded text-textSecondary">⌘K</kbd>
+                <Search className="w-5 h-5" />
               </motion.button>
               
-              {isMobile && (view === 'dashboard' || view === 'analysis') && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowMobileWatchlist(true)}
-                  className="glass p-2.5 rounded-lg"
-                >
-                  <BarChart2 className="w-5 h-5 text-textSecondary" />
-                </motion.button>
-              )}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className={`p-3 rounded-xl transition-all ${
+                  showMobileMenu ? 'bg-primary text-white' : 'bg-surfaceLight/50 text-textSecondary'
+                }`}
+              >
+                {showMobileMenu ? <X className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
+              </motion.button>
             </div>
           </motion.header>
+
+          {/* Mobile Menu Overlay */}
+          <AnimatePresence>
+            {showMobileMenu && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowMobileMenu(false)}
+                  className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                />
+                <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25 }}
+                  className="fixed right-0 top-0 bottom-0 w-80 glass z-50 lg:hidden overflow-y-auto"
+                >
+                  <div className="p-6 pt-24">
+                    <h2 className="text-sm font-semibold text-textSecondary uppercase tracking-wider mb-4">Navigation</h2>
+                    <div className="space-y-2">
+                      {[
+                        { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+                        { id: 'sectors', label: 'Sectors', icon: BarChart3 },
+                        { id: 'news', label: 'News', icon: Newspaper },
+                        { id: 'watchlist', label: 'Watchlist', icon: Eye },
+                        { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+                        { id: 'alerts', label: 'Alerts', icon: Bell },
+                        { id: 'comparison', label: 'Compare', icon: BarChart2 },
+                        { id: 'analysis', label: 'Analysis', icon: Activity },
+                        { id: 'screener', label: 'Screener', icon: Filter },
+                        { id: 'theme', label: 'Theme', icon: Palette },
+                        { id: 'advancedChart', label: 'Charts', icon: CandlestickChart },
+                        { id: 'export', label: 'Export', icon: Download },
+                        { id: 'performance', label: 'Performance', icon: ChartIcon },
+                      ].map((item) => (
+                        <motion.button
+                          key={item.id}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            setView(isViewActive(item.id) ? 'dashboard' : item.id)
+                            setShowMobileMenu(false)
+                          }}
+                          className={`w-full px-4 py-4 rounded-xl text-left flex items-center gap-4 transition-all ${
+                            isViewActive(item.id) 
+                              ? 'bg-primary/10 text-primary' 
+                              : 'text-textSecondary hover:text-text hover:bg-surfaceLight/50'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-medium">{item.label}</span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Bottom Navigation for Mobile */}
           {isMobile && (
             <motion.nav
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/5 px-4 py-2 flex items-center justify-around"
+              className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/5 px-2 py-2 pb-safe flex items-center justify-around bg-background/95 backdrop-blur-xl"
             >
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('dashboard')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'dashboard' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-xs">Market</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('sectors')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'sectors' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-                <span className="text-xs">Sectors</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('news')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'news' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <Newspaper className="w-5 h-5" />
-                <span className="text-xs">News</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('watchlist')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'watchlist' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <Eye className="w-5 h-5" />
-                <span className="text-xs">Watchlist</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setView('portfolio')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg ${
-                  view === 'portfolio' ? 'text-primary' : 'text-textSecondary'
-                }`}
-              >
-                <Wallet className="w-5 h-5" />
-                <span className="text-xs">Portfolio</span>
-              </motion.button>
+              {[
+                { id: 'dashboard', icon: TrendingUp, label: 'Market' },
+                { id: 'sectors', icon: BarChart3, label: 'Sectors' },
+                { id: 'news', icon: Newspaper, label: 'News' },
+                { id: 'watchlist', icon: Eye, label: 'Watchlist' },
+                { id: 'portfolio', icon: Wallet, label: 'Portfolio' },
+              ].map((item) => (
+                <motion.button
+                  key={item.id}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setView(item.id)}
+                  className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[64px] ${
+                    view === item.id 
+                      ? 'text-primary' 
+                      : 'text-textSecondary hover:text-text'
+                  }`}
+                >
+                  <item.icon className="w-6 h-6" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                  {view === item.id && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-0 bg-primary/10 rounded-xl"
+                      transition={{ type: 'spring', damping: 25 }}
+                    />
+                  )}
+                </motion.button>
+              ))}
             </motion.nav>
           )}
 
-          <div className={`pt-20 h-screen flex ${isMobile ? 'pb-24' : ''}`}>
+          <div className={`pt-20 lg:pt-24 h-screen flex ${isMobile ? 'pb-24' : ''}`}>
             <AnimatePresence>
               {!isMobile && view === 'dashboard' && (
                 <motion.aside
