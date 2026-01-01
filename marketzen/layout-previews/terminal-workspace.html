@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketZen - Terminal Workspace Layout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0A0E11;
+            --bg-secondary: #11171D;
+            --bg-tertiary: #1A222C;
+            --primary: #3B82F6;
+            --positive: #10B981;
+            --negative: #EF4444;
+            --text-primary: #E4E8EE;
+            --text-muted: #5A6578;
+            --border: #2A3544;
+            --accent-green: #00D26A;
+            --accent-red: #FF6B6B;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .terminal-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Left Navigation Strip */
+        .nav-strip {
+            width: 70px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0;
+            flex-shrink: 0;
+        }
+
+        .nav-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary)/60);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        .nav-item {
+            width: 100%;
+            padding: 16px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 2px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-tertiary);
+            border-left-color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            opacity: 0.7;
+        }
+
+        .nav-item.active .nav-icon {
+            opacity: 1;
+        }
+
+        .nav-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.5;
+        }
+
+        .nav-item.active .nav-label {
+            opacity: 1;
+        }
+
+        /* Left Pane - Stock List (20%) */
+        .pane-stocks {
+            width: 20%;
+            min-width: 200px;
+            max-width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pane-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        .stock-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .stock-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .stock-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .stock-row.active {
+            background: var(--primary)/10;
+        }
+
+        .stock-ticker {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stock-company {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .stock-data {
+            text-align: right;
+        }
+
+        .stock-price {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .stock-change {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .stock-change.positive { color: var(--accent-green); }
+        .stock-change.negative { color: var(--accent-red); }
+
+        /* Center Pane - Main Chart (50%) */
+        .pane-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chart-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .chart-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-secondary);
+        }
+
+        .chart-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .chart-symbol {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .chart-timeframes {
+            display: flex;
+            gap: 4px;
+        }
+
+        .timeframe-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .timeframe-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+        }
+
+        .timeframe-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .chart-container {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .secondary-charts {
+            height: 180px;
+            display: flex;
+            border-top: 1px solid var(--border);
+        }
+
+        .secondary-chart {
+            flex: 1;
+            padding: 12px 16px;
+            border-right: 1px solid var(--border);
+        }
+
+        .secondary-chart:last-child {
+            border-right: none;
+        }
+
+        .secondary-title {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .mini-chart {
+            height: 100px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .volume-bar {
+            flex: 1;
+            background: var(--primary);
+            opacity: 0.6;
+            border-radius: 2px 2px 0 0;
+        }
+
+        /* Right Pane - Details (30%) */
+        .pane-details {
+            width: 30%;
+            min-width: 300px;
+            max-width: 400px;
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .details-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .details-section:last-child {
+            border-bottom: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .order-book {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .order-row.asks {
+            background: var(--negative)/5;
+        }
+
+        .order-row.bids {
+            background: var(--positive)/5;
+        }
+
+        .order-price {
+            font-weight: 600;
+        }
+
+        .order-size {
+            color: var(--text-muted);
+        }
+
+        .trade-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .trade-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 11px;
+        }
+
+        .trade-time {
+            color: var(--text-muted);
+        }
+
+        .trade-price {
+            font-weight: 600;
+        }
+
+        .trade-size {
+            color: var(--text-muted);
+        }
+
+        .fundamentals-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .fundamental-item {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+
+        .fundamental-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .fundamental-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-layout">
+        <!-- Navigation Strip -->
+        <nav class="nav-strip">
+            <div class="nav-logo">📈</div>
+            <div class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Chart</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Watch</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">💼</span>
+                <span class="nav-label">Portfolio</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">📰</span>
+                <span class="nav-label">News</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">🔔</span>
+                <span class="nav-label">Alerts</span>
+            </div>
+            <div class="nav-item" style="margin-top: auto;">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </div>
+        </nav>
+
+        <!-- Stock List Pane -->
+        <aside class="pane-stocks">
+            <div class="pane-header">
+                <span class="pane-title">WATCHLIST</span>
+                <span style="font-size: 10px; color: var(--text-muted);">5</span>
+            </div>
+            <div class="stock-list">
+                <div class="stock-row active">
+                    <div>
+                        <div class="stock-ticker">RELIANCE</div>
+                        <div class="stock-company">Reliance Industries Ltd</div>
+                    </div>
+                    <div class="stock-data">
+                        <div class="stock-price">1,592.45</div>
+                        <div class="stock-change positive">+2.34%</div>
+                    </div>
+                </div>
+                <div class="stock-row">
+                    <div>
+                        <div class="stock-ticker">TCS</div>
+                        <div class="stock-company">Tata Consultancy Services</div>
+                    </div>
+                    <div class="stock-data">
+                        <div class="stock-price">3,841.20</div>
+                        <div class="stock-change negative">-0.87%</div>
+                    </div>
+                </div>
+                <div class="stock-row">
+                    <div>
+                        <div class="stock-ticker">HDFCBANK</div>
+                        <div class="stock-company">HDFC Bank Limited</div>
+                    </div>
+                    <div class="stock-data">
+                        <div class="stock-price">1,652.80</div>
+                        <div class="stock-change positive">+1.23%</div>
+                    </div>
+                </div>
+                <div class="stock-row">
+                    <div>
+                        <div class="stock-ticker">ICICIBANK</div>
+                        <div class="stock-company">ICICI Bank Limited</div>
+                    </div>
+                    <div class="stock-data">
+                        <div class="stock-price">956.45</div>
+                        <div class="stock-change negative">-1.45%</div>
+                    </div>
+                </div>
+                <div class="stock-row">
+                    <div>
+                        <div class="stock-ticker">SBIN</div>
+                        <div class="stock-company">State Bank of India</div>
+                    </div>
+                    <div class="stock-data">
+                        <div class="stock-price">612.90</div>
+                        <div class="stock-change positive">+3.21%</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chart Pane -->
+        <main class="pane-main">
+            <div class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="chart-symbol">RELIANCE</span>
+                        <span style="color: var(--text-muted);">|</span>
+                        <span style="font-size: 14px;">₹1,592.45</span>
+                        <span style="color: var(--accent-green); font-size: 12px;">+2.34%</span>
+                    </div>
+                    <div class="chart-timeframes">
+                        <button class="timeframe-btn">1D</button>
+                        <button class="timeframe-btn">4H</button>
+                        <button class="timeframe-btn active">1H</button>
+                        <button class="timeframe-btn">15m</button>
+                        <button class="timeframe-btn">5m</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <svg class="chart-svg" viewBox="0 0 800 350" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="terminalGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10B981" stop-opacity="0.15"/>
+                                <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Grid -->
+                        <g stroke="#1E2A36" stroke-width="0.5">
+                            <line x1="50" y1="30" x2="780" y2="30"/>
+                            <line x1="50" y1="90" x2="780" y2="90"/>
+                            <line x1="50" y1="150" x2="780" y2="150"/>
+                            <line x1="50" y1="210" x2="780" y2="210"/>
+                            <line x1="50" y1="270" x2="780" y2="270"/>
+                        </g>
+                        <!-- Y-axis -->
+                        <g fill="#5A6578" font-size="10">
+                            <text x="40" y="34" text-anchor="end">1,600</text>
+                            <text x="40" y="94" text-anchor="end">1,575</text>
+                            <text x="40" y="154" text-anchor="end">1,550</text>
+                            <text x="40" y="214" text-anchor="end">1,525</text>
+                            <text x="40" y="274" text-anchor="end">1,500</text>
+                        </g>
+                        <!-- X-axis -->
+                        <g fill="#5A6578" font-size="10">
+                            <text x="50" y="320">9:30</text>
+                            <text x="200" y="320">11:00</text>
+                            <text x="350" y="320">12:30</text>
+                            <text x="500" y="320">14:00</text>
+                            <text x="650" y="320">15:30</text>
+                        </g>
+                        <!-- Chart -->
+                        <path d="M50,280 Q100,270 150,250 T250,200 T350,180 T450,150 T550,130 T650,100 T750,60" 
+                              fill="none" stroke="#10B981" stroke-width="1.5"/>
+                        <path d="M50,280 Q100,270 150,250 T250,200 T350,180 T450,150 T550,130 T650,100 T750,60 L750,320 L50,320 Z" 
+                              fill="url(#terminalGradient)"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="secondary-charts">
+                <div class="secondary-chart">
+                    <div class="secondary-title">Volume Profile</div>
+                    <div class="mini-chart">
+                        <div class="volume-bar" style="height: 40%"></div>
+                        <div class="volume-bar" style="height: 55%"></div>
+                        <div class="volume-bar" style="height: 35%"></div>
+                        <div class="volume-bar" style="height: 70%"></div>
+                        <div class="volume-bar" style="height: 50%"></div>
+                        <div class="volume-bar" style="height: 65%"></div>
+                        <div class="volume-bar" style="height: 45%"></div>
+                        <div class="volume-bar" style="height: 80%"></div>
+                        <div class="volume-bar" style="height: 60%"></div>
+                        <div class="volume-bar" style="height: 75%"></div>
+                    </div>
+                </div>
+                <div class="secondary-chart">
+                    <div class="secondary-title">Order Flow</div>
+                    <div class="mini-chart">
+                        <div class="volume-bar" style="height: 60%"></div>
+                        <div class="volume-bar" style="height: 45%"></div>
+                        <div class="volume-bar" style="height: 70%; opacity: 0.4"></div>
+                        <div class="volume-bar" style="height: 55%"></div>
+                        <div class="volume-bar" style="height: 65%"></div>
+                        <div class="volume-bar" style="height: 40%"></div>
+                        <div class="volume-bar" style="height: 75%"></div>
+                        <div class="volume-bar" style="height: 50%"></div>
+                        <div class="volume-bar" style="height: 85%"></div>
+                        <div class="volume-bar" style="height: 55%"></div>
+                    </div>
+                </div>
+                <div class="secondary-chart">
+                    <div class="secondary-title">Depth Chart</div>
+                    <div class="mini-chart">
+                        <div class="volume-bar" style="height: 30%; background: var(--accent-red)"></div>
+                        <div class="volume-bar" style="height: 45%; background: var(--accent-red)"></div>
+                        <div class="volume-bar" style="height: 60%; background: var(--accent-red)"></div>
+                        <div class="volume-bar" style="height: 50%; background: var(--accent-green)"></div>
+                        <div class="volume-bar" style="height: 70%; background: var(--accent-green)"></div>
+                        <div class="volume-bar" style="height: 40%; background: var(--accent-green)"></div>
+                        <div class="volume-bar" style="height: 65%; background: var(--accent-green)"></div>
+                        <div class="volume-bar" style="height: 55%; background: var(--accent-green)"></div>
+                        <div class="volume-bar" style="height: 35%; background: var(--accent-green)"></div>
+                        <div class="volume-bar" style="height: 75%; background: var(--accent-green)"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Details Pane -->
+        <aside class="pane-details">
+            <div class="details-section">
+                <div class="section-title">Order Book</div>
+                <div class="order-book">
+                    <div class="order-row asks">
+                        <span class="order-price">1,593.00</span>
+                        <span class="order-size">2,500</span>
+                    </div>
+                    <div class="order-row asks">
+                        <span class="order-price">1,592.75</span>
+                        <span class="order-size">1,800</span>
+                    </div>
+                    <div class="order-row asks">
+                        <span class="order-price">1,592.50</span>
+                        <span class="order-size">3,200</span>
+                    </div>
+                    <div style="text-align: center; padding: 8px 0; font-size: 12px; font-weight: 600;">
+                        1,592.45
+                    </div>
+                    <div class="order-row bids">
+                        <span class="order-price">1,592.30</span>
+                        <span class="order-size">1,200</span>
+                    </div>
+                    <div class="order-row bids">
+                        <span class="order-price">1,592.10</span>
+                        <span class="order-size">2,400</span>
+                    </div>
+                    <div class="order-row bids">
+                        <span class="order-price">1,591.85</span>
+                        <span class="order-size">800</span>
+                    </div>
+                </div>
+            </div>
+            <div class="details-section">
+                <div class="section-title">Recent Trades</div>
+                <div class="trade-list">
+                    <div class="trade-row">
+                        <span class="trade-time">15:29:45</span>
+                        <span class="trade-price" style="color: var(--accent-green)">1,592.45</span>
+                        <span class="trade-size">150</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-time">15:29:42</span>
+                        <span class="trade-price" style="color: var(--accent-red)">1,592.40</span>
+                        <span class="trade-size">200</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-time">15:29:38</span>
+                        <span class="trade-price" style="color: var(--accent-green)">1,592.55</span>
+                        <span class="trade-size">100</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-time">15:29:35</span>
+                        <span class="trade-price" style="color: var(--accent-green)">1,592.50</span>
+                        <span class="trade-size">250</span>
+                    </div>
+                    <div class="trade-row">
+                        <span class="trade-time">15:29:30</span>
+                        <span class="trade-price" style="color: var(--accent-red)">1,592.35</span>
+                        <span class="trade-size">75</span>
+                    </div>
+                </div>
+            </div>
+            <div class="details-section">
+                <div class="section-title">Key Metrics</div>
+                <div class="fundamentals-grid">
+                    <div class="fundamental-item">
+                        <div class="fundamental-label">Market Cap</div>
+                        <div class="fundamental-value">₹21.5L Cr</div>
+                    </div>
+                    <div class="fundamental-item">
+                        <div class="fundamental-label">P/E Ratio</div>
+                        <div class="fundamental-value">28.45</div>
+                    </div>
+                    <div class="fundamental-item">
+                        <div class="fundamental-label">52W High</div>
+                        <div class="fundamental-value">₹1,680</div>
+                    </div>
+                    <div class="fundamental-item">
+                        <div class="fundamental-label">52W Low</div>
+                        <div class="fundamental-value">₹1,180</div>
+                    </div>
+                    <div class="fundamental-item">
+                        <div class="fundamental-label">Dividend Yield</div>
+                        <div class="fundamental-value">0.42%</div>
+                    </div>
+                    <div class="fundamental-item">
+                        <div class="fundamental-label">Beta</div>
+                        <div class="fundamental-value">1.15</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Stock row selection
+        document.querySelectorAll('.stock-row').forEach(row => {
+            row.addEventListener('click', function() {
+                document.querySelectorAll('.stock-row').forEach(r => r.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Nav item selection
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Timeframe button selection
+        document.querySelectorAll('.timeframe-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

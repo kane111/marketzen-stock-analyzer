@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketZen - Immersive HUD Layout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0B0E11;
+            --bg-secondary: #151A21;
+            --bg-glass: rgba(21, 26, 33, 0.85);
+            --primary: #3B82F6;
+            --positive: #10B981;
+            --negative: #EF4444;
+            --text-primary: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Chart Background */
+        .hud-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, #0F1419 0%, #0B0E11 100%);
+        }
+
+        .chart-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 300px;
+            bottom: 0;
+            padding: 40px;
+        }
+
+        .main-chart {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Floating Overlay Capsules */
+        .hud-capsule {
+            position: absolute;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            transition: all 0.3s ease;
+        }
+
+        .hud-capsule:hover {
+            background: rgba(21, 26, 33, 0.95);
+            transform: scale(1.02);
+        }
+
+        /* Top Left - Price Display */
+        .capsule-price {
+            top: 24px;
+            left: 24px;
+            min-width: 200px;
+        }
+
+        .price-display {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .current-price {
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .price-change {
+            font-size: 18px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .price-change.positive {
+            background: var(--positive)/15;
+            color: var(--positive);
+        }
+
+        .price-change.negative {
+            background: var(--negative)/15;
+            color: var(--negative);
+        }
+
+        .stock-label {
+            margin-top: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Top Right - Controls */
+        .capsule-controls {
+            top: 24px;
+            right: 340px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-btn {
+            padding: 10px 16px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: var(--border);
+        }
+
+        .control-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Bottom Left - Stats */
+        .capsule-stats {
+            bottom: 24px;
+            left: 24px;
+            display: flex;
+            gap: 24px;
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label-small {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value-large {
+            font-size: 18px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Bottom Right - Mini Watchlist */
+        .capsule-watchlist {
+            bottom: 24px;
+            right: 340px;
+            min-width: 280px;
+        }
+
+        .mini-watchlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .mini-watchlist-header h4 {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .mini-watchlist-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mini-watchlist-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mini-watchlist-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .mini-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mini-item-symbol {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .mini-item-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .mini-item-change {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Left Drawer */
+        .drawer-trigger {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 80px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-left: none;
+            border-radius: 0 12px 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .drawer-trigger:hover {
+            width: 32px;
+        }
+
+        .drawer {
+            position: fixed;
+            left: -320px;
+            top: 0;
+            bottom: 0;
+            width: 320px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            transition: left 0.3s ease;
+            z-index: 99;
+            padding: 80px 20px 20px;
+            overflow-y: auto;
+        }
+
+        .drawer.open {
+            left: 0;
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .drawer-header h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .drawer-search {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .drawer-search:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .drawer-item:hover {
+            background: var(--border);
+        }
+
+        .drawer-item.active {
+            background: var(--primary)/10;
+            border: 1px solid var(--primary)/30;
+        }
+
+        .drawer-item-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .drawer-item-info span {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .drawer-item-price {
+            text-align: right;
+        }
+
+        .drawer-item-price .price {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .drawer-item-price .change {
+            font-size: 12px;
+        }
+
+        /* Top Center - Indicators */
+        .capsule-indicators {
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+        }
+
+        .indicator-btn {
+            padding: 8px 14px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .indicator-btn:hover {
+            color: var(--text-primary);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="hud-container">
+        <!-- Main Chart Area -->
+        <div class="chart-background">
+            <div class="main-chart">
+                <svg class="chart-svg" viewBox="0 0 1000 500" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="hudGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#10B981" stop-opacity="0.2"/>
+                            <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Grid -->
+                    <g stroke="#1E252E" stroke-width="0.5">
+                        <line x1="50" y1="50" x2="950" y2="50"/>
+                        <line x1="50" y1="150" x2="950" y2="150"/>
+                        <line x1="50" y1="250" x2="950" y2="250"/>
+                        <line x1="50" y1="350" x2="950" y2="350"/>
+                        <line x1="50" y1="450" x2="950" y2="450"/>
+                    </g>
+                    <!-- Y-axis -->
+                    <g fill="#6B7280" font-size="11">
+                        <text x="40" y="55" text-anchor="end">1,600</text>
+                        <text x="40" y="155" text-anchor="end">1,575</text>
+                        <text x="40" y="255" text-anchor="end">1,550</text>
+                        <text x="40" y="355" text-anchor="end">1,525</text>
+                        <text x="40" y="455" text-anchor="end">1,500</text>
+                    </g>
+                    <!-- X-axis -->
+                    <g fill="#6B7280" font-size="11">
+                        <text x="50" y="485">9:30</text>
+                        <text x="250" y="485">11:00</text>
+                        <text x="450" y="485">12:30</text>
+                        <text x="650" y="485">14:00</text>
+                        <text x="850" y="485">15:30</text>
+                    </g>
+                    <!-- Chart Line -->
+                    <path d="M50,400 Q150,380 200,350 T400,300 T500,280 T600,200 T700,220 T800,150 T900,100 T950,80" 
+                          fill="none" stroke="#10B981" stroke-width="2.5"/>
+                    <!-- Area -->
+                    <path d="M50,400 Q150,380 200,350 T400,300 T500,280 T600,200 T700,220 T800,150 T900,100 T950,80 L950,480 L50,480 Z" 
+                          fill="url(#hudGradient)"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Price Display Capsule -->
+        <div class="hud-capsule capsule-price">
+            <div class="price-display">
+                <span class="current-price">₹1,592.45</span>
+                <span class="price-change positive">+2.34%</span>
+            </div>
+            <div class="stock-label">Reliance Industries Ltd.</div>
+        </div>
+
+        <!-- Controls Capsule -->
+        <div class="hud-capsule capsule-controls">
+            <button class="control-btn active">1D</button>
+            <button class="control-btn">1W</button>
+            <button class="control-btn">1M</button>
+            <button class="control-btn">3M</button>
+            <button class="control-btn">1Y</button>
+        </div>
+
+        <!-- Indicators Capsule -->
+        <div class="hud-capsule capsule-indicators">
+            <button class="indicator-btn">MA(20)</button>
+            <button class="indicator-btn">RSI</button>
+            <button class="indicator-btn">MACD</button>
+            <button class="indicator-btn">Bollinger</button>
+        </div>
+
+        <!-- Stats Capsule -->
+        <div class="hud-capsule capsule-stats">
+            <div class="stat-group">
+                <span class="stat-label-small">Open</span>
+                <span class="stat-value-large">₹1,565</span>
+            </div>
+            <div class="stat-group">
+                <span class="stat-label-small">High</span>
+                <span class="stat-value-large">₹1,598</span>
+            </div>
+            <div class="stat-group">
+                <span class="stat-label-small">Low</span>
+                <span class="stat-value-large">₹1,558</span>
+            </div>
+            <div class="stat-group">
+                <span class="stat-label-small">Volume</span>
+                <span class="stat-value-large">8.2M</span>
+            </div>
+        </div>
+
+        <!-- Mini Watchlist Capsule -->
+        <div class="hud-capsule capsule-watchlist">
+            <div class="mini-watchlist-header">
+                <h4>Related Stocks</h4>
+            </div>
+            <div class="mini-watchlist-items">
+                <div class="mini-watchlist-item">
+                    <div class="mini-item-left">
+                        <span class="mini-item-symbol">TCS</span>
+                    </div>
+                    <span class="mini-item-price">₹3,841</span>
+                    <span class="mini-item-change" style="color: var(--negative)">-0.87%</span>
+                </div>
+                <div class="mini-watchlist-item">
+                    <div class="mini-item-left">
+                        <span class="mini-item-symbol">HDFCBANK</span>
+                    </div>
+                    <span class="mini-item-price">₹1,652</span>
+                    <span class="mini-item-change" style="color: var(--positive)">+1.23%</span>
+                </div>
+                <div class="mini-watchlist-item">
+                    <div class="mini-item-left">
+                        <span class="mini-item-symbol">ICICIBANK</span>
+                    </div>
+                    <span class="mini-item-price">₹956</span>
+                    <span class="mini-item-change" style="color: var(--negative)">-1.45%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drawer Trigger -->
+        <div class="drawer-trigger" id="drawerToggle">
+            <svg width="12" height="20" viewBox="0 0 12 20" fill="none">
+                <path d="M1 4L10 10L1 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
+        <!-- Watchlist Drawer -->
+        <div class="drawer" id="drawer">
+            <div class="drawer-header">
+                <h3>Watchlist</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">5 stocks</span>
+            </div>
+            <input type="text" class="drawer-search" placeholder="Search stocks...">
+            
+            <div class="drawer-item active">
+                <div class="drawer-item-info">
+                    <h4>RELIANCE</h4>
+                    <span>Reliance Industries</span>
+                </div>
+                <div class="drawer-item-price">
+                    <div class="price">₹1,592.45</div>
+                    <div class="change" style="color: var(--positive)">+2.34%</div>
+                </div>
+            </div>
+            
+            <div class="drawer-item">
+                <div class="drawer-item-info">
+                    <h4>TCS</h4>
+                    <span>Tata Consultancy</span>
+                </div>
+                <div class="drawer-item-price">
+                    <div class="price">₹3,841.20</div>
+                    <div class="change" style="color: var(--negative)">-0.87%</div>
+                </div>
+            </div>
+            
+            <div class="drawer-item">
+                <div class="drawer-item-info">
+                    <h4>HDFCBANK</h4>
+                    <span>HDFC Bank</span>
+                </div>
+                <div class="drawer-item-price">
+                    <div class="price">₹1,652.80</div>
+                    <div class="change" style="color: var(--positive)">+1.23%</div>
+                </div>
+            </div>
+            
+            <div class="drawer-item">
+                <div class="drawer-item-info">
+                    <h4>ICICIBANK</h4>
+                    <span>ICICI Bank</span>
+                </div>
+                <div class="drawer-item-price">
+                    <div class="price">₹956.45</div>
+                    <div class="change" style="color: var(--negative)">-1.45%</div>
+                </div>
+            </div>
+            
+            <div class="drawer-item">
+                <div class="drawer-item-info">
+                    <h4>SBIN</h4>
+                    <span>State Bank of India</span>
+                </div>
+                <div class="drawer-item-price">
+                    <div class="price">₹612.90</div>
+                    <div class="change" style="color: var(--positive)">+3.21%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Drawer toggle
+        const drawerToggle = document.getElementById('drawerToggle');
+        const drawer = document.getElementById('drawer');
+        let isDrawerOpen = false;
+
+        drawerToggle.addEventListener('click', () => {
+            isDrawerOpen = !isDrawerOpen;
+            drawer.classList.toggle('open', isDrawerOpen);
+        });
+
+        // Control button interactions
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.parentElement.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Drawer item interactions
+        document.querySelectorAll('.drawer-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.drawer-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

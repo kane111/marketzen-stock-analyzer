@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketZen - Temporal Flow Layout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0B0E11;
+            --bg-secondary: #151A21;
+            --bg-tertiary: #1E252E;
+            --bg-card: #232933;
+            --primary: #3B82F6;
+            --positive: #10B981;
+            --negative: #EF4444;
+            --text-primary: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --border: #2A3441;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .temporal-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Band - Header & Horizontal Watchlist */
+        .top-band {
+            height: 160px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .header-bar {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--primary)/60);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .logo-text h1 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .logo-text span {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 240px;
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 100%;
+            outline: none;
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-icon {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .market-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--positive);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Horizontal Watchlist Strip */
+        .watchlist-strip {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            gap: 12px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .watchlist-strip::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .watchlist-strip::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .watchlist-strip::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .watchlist-card {
+            flex-shrink: 0;
+            width: 180px;
+            padding: 14px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .watchlist-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .watchlist-card.active {
+            border-color: var(--primary);
+            background: var(--primary)/10;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .card-ticker {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .card-change {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .card-change.positive {
+            background: var(--positive)/15;
+            color: var(--positive);
+        }
+
+        .card-change.negative {
+            background: var(--negative)/15;
+            color: var(--negative);
+        }
+
+        .card-price {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .card-sparkline {
+            height: 32px;
+            width: 100%;
+        }
+
+        .card-name {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Bottom Band - Main Chart */
+        .bottom-band {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chart-toolbar {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .chart-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .current-stock {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .stock-badge {
+            width: 40px;
+            height: 40px;
+            background: var(--primary)/20;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--primary);
+        }
+
+        .stock-details h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .stock-details span {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .timeframe-selector {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .timeframe-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .timeframe-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .timeframe-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .chart-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-icon:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+
+        /* Main Chart Area */
+        .chart-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .main-chart {
+            flex: 1;
+            padding: 24px;
+            position: relative;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Stats Overlay */
+        .stats-overlay {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            gap: 16px;
+        }
+
+        .stat-card {
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Right Panel - Quick Stats */
+        .side-panel {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+        }
+
+        .panel-section h3 {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .metric-item {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .metric-value.positive { color: var(--positive); }
+        .metric-value.negative { color: var(--negative); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="temporal-container">
+        <!-- Top Band -->
+        <div class="top-band">
+            <!-- Header Bar -->
+            <div class="header-bar">
+                <div class="logo-section">
+                    <div class="logo-icon">📈</div>
+                    <div class="logo-text">
+                        <h1>MarketZen</h1>
+                        <span>Indian Stock Tracker</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" placeholder="Search stocks, indices, commodities...">
+                    </div>
+                    <div class="market-status">
+                        <div class="status-dot"></div>
+                        <span>Live • NSE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Watchlist Strip -->
+            <div class="watchlist-strip">
+                <div class="watchlist-card active">
+                    <div class="card-header">
+                        <span class="card-ticker">RELIANCE</span>
+                        <span class="card-change positive">+2.34%</span>
+                    </div>
+                    <div class="card-price">₹1,592.45</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,25 Q15,22 30,18 T60,12 T100,5" fill="none" stroke="#10B981" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">Reliance Industries Ltd</div>
+                </div>
+
+                <div class="watchlist-card">
+                    <div class="card-header">
+                        <span class="card-ticker">TCS</span>
+                        <span class="card-change negative">-0.87%</span>
+                    </div>
+                    <div class="card-price">₹3,841.20</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,10 Q15,12 30,15 T60,20 T100,22" fill="none" stroke="#EF4444" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">Tata Consultancy Services</div>
+                </div>
+
+                <div class="watchlist-card">
+                    <div class="card-header">
+                        <span class="card-ticker">HDFCBANK</span>
+                        <span class="card-change positive">+1.23%</span>
+                    </div>
+                    <div class="card-price">₹1,652.80</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,20 Q15,18 30,15 T60,12 T100,8" fill="none" stroke="#10B981" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">HDFC Bank Limited</div>
+                </div>
+
+                <div class="watchlist-card">
+                    <div class="card-header">
+                        <span class="card-ticker">ICICIBANK</span>
+                        <span class="card-change negative">-1.45%</span>
+                    </div>
+                    <div class="card-price">₹956.45</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,8 Q15,10 30,14 T60,18 T100,20" fill="none" stroke="#EF4444" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">ICICI Bank Limited</div>
+                </div>
+
+                <div class="watchlist-card">
+                    <div class="card-header">
+                        <span class="card-ticker">SBIN</span>
+                        <span class="card-change positive">+3.21%</span>
+                    </div>
+                    <div class="card-price">₹612.90</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,22 Q15,18 30,15 T60,10 T100,5" fill="none" stroke="#10B981" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">State Bank of India</div>
+                </div>
+
+                <div class="watchlist-card">
+                    <div class="card-header">
+                        <span class="card-ticker">INFY</span>
+                        <span class="card-change positive">+0.92%</span>
+                    </div>
+                    <div class="card-price">₹1,428.60</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,18 Q15,15 30,15 T60,12 T100,10" fill="none" stroke="#10B981" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">Infosys Limited</div>
+                </div>
+
+                <div class="watchlist-card">
+                    <div class="card-header">
+                        <span class="card-ticker">WIPRO</span>
+                        <span class="card-change negative">-0.45%</span>
+                    </div>
+                    <div class="card-price">₹542.30</div>
+                    <svg class="card-sparkline" viewBox="0 0 100 30">
+                        <path d="M0,12 Q15,14 30,16 T60,18 T100,20" fill="none" stroke="#EF4444" stroke-width="2"/>
+                    </svg>
+                    <div class="card-name">Wipro Limited</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Band - Chart -->
+        <div class="bottom-band">
+            <div class="chart-toolbar">
+                <div class="chart-info">
+                    <div class="current-stock">
+                        <div class="stock-badge">RE</div>
+                        <div class="stock-details">
+                            <h2>Reliance Industries Ltd.</h2>
+                            <span>NSE • RELIANCE • ₹1,592.45</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="timeframe-selector">
+                    <button class="timeframe-btn">1D</button>
+                    <button class="timeframe-btn">1W</button>
+                    <button class="timeframe-btn active">1M</button>
+                    <button class="timeframe-btn">3M</button>
+                    <button class="timeframe-btn">1Y</button>
+                    <button class="timeframe-btn">ALL</button>
+                </div>
+                <div class="chart-actions">
+                    <div class="action-icon">📊</div>
+                    <div class="action-icon">📈</div>
+                    <div class="action-icon">⚙️</div>
+                    <div class="action-icon">⬇️</div>
+                </div>
+            </div>
+
+            <div class="chart-area">
+                <div class="main-chart">
+                    <svg class="chart-svg" viewBox="0 0 1000 400" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="temporalGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10B981" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Grid -->
+                        <g stroke="#1E2A36" stroke-width="0.5">
+                            <line x1="60" y1="50" x2="960" y2="50"/>
+                            <line x1="60" y1="125" x2="960" y2="125"/>
+                            <line x1="60" y1="200" x2="960" y2="200"/>
+                            <line x1="60" y1="275" x2="960" y2="275"/>
+                            <line x1="60" y1="350" x2="960" y2="350"/>
+                        </g>
+                        <!-- Y-axis -->
+                        <g fill="#6B7280" font-size="11">
+                            <text x="50" y="55" text-anchor="end">1,600</text>
+                            <text x="50" y="130" text-anchor="end">1,575</text>
+                            <text x="50" y="205" text-anchor="end">1,550</text>
+                            <text x="50" y="280" text-anchor="end">1,525</text>
+                            <text x="50" y="355" text-anchor="end">1,500</text>
+                        </g>
+                        <!-- X-axis -->
+                        <g fill="#6B7280" font-size="11">
+                            <text x="60" y="385">Dec 1</text>
+                            <text x="260" y="385">Dec 8</text>
+                            <text x="460" y="385">Dec 15</text>
+                            <text x="660" y="385">Dec 22</text>
+                            <text x="860" y="385">Dec 29</text>
+                        </g>
+                        <!-- Chart -->
+                        <path d="M60,320 Q150,300 240,280 T420,220 T600,250 T780,180 T900,120 T960,100" 
+                              fill="none" stroke="#10B981" stroke-width="2.5"/>
+                        <path d="M60,320 Q150,300 240,280 T420,220 T600,250 T780,180 T900,120 T960,100 L960,380 L60,380 Z" 
+                              fill="url(#temporalGradient)"/>
+                    </svg>
+
+                    <!-- Stats Overlay -->
+                    <div class="stats-overlay">
+                        <div class="stat-card">
+                            <div class="stat-label">Open</div>
+                            <div class="stat-value">₹1,565</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">High</div>
+                            <div class="stat-value">₹1,598</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Low</div>
+                            <div class="stat-value">₹1,558</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Volume</div>
+                            <div class="stat-value">8.2M</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side Panel -->
+                <div class="side-panel">
+                    <div class="panel-section">
+                        <h3>Today's Performance</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">Day Change</div>
+                                <div class="metric-value positive">+₹36.45</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">% Change</div>
+                                <div class="metric-value positive">+2.34%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Prev Close</div>
+                                <div class="metric-value">₹1,556.00</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">VWAP</div>
+                                <div class="metric-value">₹1,580.25</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <h3>Key Metrics</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">Mkt Cap</div>
+                                <div class="metric-value">₹21.5L Cr</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">P/E</div>
+                                <div class="metric-value">28.45</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">52W High</div>
+                                <div class="metric-value">₹1,680</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">52W Low</div>
+                                <div class="metric-value">₹1,180</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <h3>Related News</h3>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">2 hours ago</div>
+                                <div style="font-size: 13px; line-height: 1.4;">RIL announces new renewable energy venture worth ₹75,000 crore</div>
+                            </div>
+                            <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">5 hours ago</div>
+                                <div style="font-size: 13px; line-height: 1.4;">Q3 earnings exceed estimates by 12%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Watchlist card selection
+        document.querySelectorAll('.watchlist-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.watchlist-card').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Timeframe selection
+        document.querySelectorAll('.timeframe-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

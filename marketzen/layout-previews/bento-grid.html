@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketZen - Bento Grid Layout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0B0E11;
+            --bg-secondary: #151A21;
+            --bg-tertiary: #1E252E;
+            --primary: #3B82F6;
+            --positive: #10B981;
+            --negative: #EF4444;
+            --text-primary: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --border: #2A3441;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .bento-container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: auto 1fr auto;
+            gap: 8px;
+            padding: 12px;
+            height: 100vh;
+            max-height: 100vh;
+        }
+
+        /* Header */
+        .bento-header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary)/60);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo-text h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .logo-text span {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--border);
+        }
+
+        .action-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Main Chart Widget */
+        .widget-chart {
+            grid-column: 1 / 9;
+            grid-row: 2 / 4;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stock-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stock-symbol {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .stock-price {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--positive);
+        }
+
+        .stock-change {
+            font-size: 14px;
+            padding: 4px 10px;
+            background: var(--positive)/15;
+            color: var(--positive);
+            border-radius: 20px;
+        }
+
+        .chart-area {
+            flex: 1;
+            position: relative;
+            background: var(--bg-primary)/50;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Watchlist Widget */
+        .widget-watchlist {
+            grid-column: 9 / -1;
+            grid-row: 2 / 4;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .watchlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .watchlist-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .watchlist-count {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+        }
+
+        .watchlist-items {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .watchlist-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            align-items: center;
+        }
+
+        .watchlist-item:hover {
+            background: var(--border);
+        }
+
+        .watchlist-item.active {
+            background: var(--primary)/10;
+            border: 1px solid var(--primary)/30;
+        }
+
+        .stock-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .stock-company {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .stock-mini-chart {
+            width: 60px;
+            height: 24px;
+        }
+
+        .watchlist-price {
+            text-align: right;
+        }
+
+        .watchlist-price .price {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .watchlist-price .change {
+            font-size: 12px;
+            color: var(--positive);
+        }
+
+        .change.negative {
+            color: var(--negative);
+        }
+
+        /* Stats Widget */
+        .widget-stats {
+            grid-column: 1 / 5;
+            grid-row: 4 / 5;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* News Widget */
+        .widget-news {
+            grid-column: 5 / 9;
+            grid-row: 4 / 5;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+
+        .widget-news h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .news-list {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .news-card {
+            min-width: 200px;
+            padding: 14px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+        }
+
+        .news-time {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .news-title {
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        /* Ticker Widget */
+        .widget-ticker {
+            grid-column: 9 / -1;
+            grid-row: 4 / 5;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            overflow: hidden;
+        }
+
+        .ticker-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .ticker-scroll {
+            display: flex;
+            gap: 32px;
+            animation: scroll 20s linear infinite;
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .ticker-symbol {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .ticker-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .ticker-change {
+            font-size: 12px;
+        }
+
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="bento-container">
+        <!-- Header -->
+        <header class="bento-header">
+            <div class="logo">
+                <div class="logo-icon">📈</div>
+                <div class="logo-text">
+                    <h1>MarketZen</h1>
+                    <span>Indian Stock Tracker</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn">Dashboard</button>
+                <button class="action-btn active">Markets</button>
+                <button class="action-btn">Portfolio</button>
+                <button class="action-btn">Alerts</button>
+            </div>
+        </header>
+
+        <!-- Main Chart -->
+        <div class="widget-chart">
+            <div class="widget-header">
+                <div class="stock-info">
+                    <div class="stock-symbol">RELIANCE</div>
+                    <div class="stock-price">₹1,592.45</div>
+                    <div class="stock-change">+2.34%</div>
+                </div>
+                <div class="header-actions">
+                    <button class="action-btn">1D</button>
+                    <button class="action-btn active">1W</button>
+                    <button class="action-btn">1M</button>
+                    <button class="action-btn">1Y</button>
+                </div>
+            </div>
+            <div class="chart-area">
+                <svg class="chart-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#10B981" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Grid lines -->
+                    <g stroke="#2A3441" stroke-width="0.5">
+                        <line x1="50" y1="40" x2="780" y2="40"/>
+                        <line x1="50" y1="90" x2="780" y2="90"/>
+                        <line x1="50" y1="140" x2="780" y2="140"/>
+                        <line x1="50" y1="190" x2="780" y2="190"/>
+                        <line x1="50" y1="240" x2="780" y2="240"/>
+                    </g>
+                    <!-- Y-axis labels -->
+                    <g fill="#9CA3AF" font-size="10">
+                        <text x="40" y="44" text-anchor="end">1,600</text>
+                        <text x="40" y="94" text-anchor="end">1,575</text>
+                        <text x="40" y="144" text-anchor="end">1,550</text>
+                        <text x="40" y="194" text-anchor="end">1,525</text>
+                        <text x="40" y="244" text-anchor="end">1,500</text>
+                    </g>
+                    <!-- X-axis labels -->
+                    <g fill="#9CA3AF" font-size="10">
+                        <text x="50" y="270">Mon</text>
+                        <text x="210" y="270">Tue</text>
+                        <text x="370" y="270">Wed</text>
+                        <text x="530" y="270">Thu</text>
+                        <text x="690" y="270">Fri</text>
+                    </g>
+                    <!-- Chart line -->
+                    <path d="M50,200 Q120,180 150,160 T250,140 T350,100 T450,120 T550,80 T650,60 T750,40" 
+                          fill="none" stroke="#10B981" stroke-width="2"/>
+                    <!-- Area fill -->
+                    <path d="M50,200 Q120,180 150,160 T250,140 T350,100 T450,120 T550,80 T650,60 T750,40 L750,260 L50,260 Z" 
+                          fill="url(#chartGradient)"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Watchlist -->
+        <div class="widget-watchlist">
+            <div class="watchlist-header">
+                <h3>Watchlist</h3>
+                <span class="watchlist-count">5 stocks</span>
+            </div>
+            <div class="watchlist-items">
+                <div class="watchlist-item active">
+                    <div>
+                        <div class="stock-name">RELIANCE</div>
+                        <div class="stock-company">Reliance Industries</div>
+                    </div>
+                    <svg class="stock-mini-chart" viewBox="0 0 60 24">
+                        <path d="M0,20 Q15,18 30,15 T60,8" fill="none" stroke="#10B981" stroke-width="1.5"/>
+                    </svg>
+                    <div class="watchlist-price">
+                        <div class="price">₹1,592</div>
+                        <div class="change">+2.34%</div>
+                    </div>
+                </div>
+                <div class="watchlist-item">
+                    <div>
+                        <div class="stock-name">TCS</div>
+                        <div class="stock-company">Tata Consultancy</div>
+                    </div>
+                    <svg class="stock-mini-chart" viewBox="0 0 60 24">
+                        <path d="M0,12 Q15,14 30,10 T60,15" fill="none" stroke="#EF4444" stroke-width="1.5"/>
+                    </svg>
+                    <div class="watchlist-price">
+                        <div class="price">₹3,841</div>
+                        <div class="change negative">-0.87%</div>
+                    </div>
+                </div>
+                <div class="watchlist-item">
+                    <div>
+                        <div class="stock-name">HDFCBANK</div>
+                        <div class="stock-company">HDFC Bank</div>
+                    </div>
+                    <svg class="stock-mini-chart" viewBox="0 0 60 24">
+                        <path d="M0,18 Q15,15 30,12 T60,10" fill="none" stroke="#10B981" stroke-width="1.5"/>
+                    </svg>
+                    <div class="watchlist-price">
+                        <div class="price">₹1,652</div>
+                        <div class="change">+1.23%</div>
+                    </div>
+                </div>
+                <div class="watchlist-item">
+                    <div>
+                        <div class="stock-name">ICICIBANK</div>
+                        <div class="stock-company">ICICI Bank</div>
+                    </div>
+                    <svg class="stock-mini-chart" viewBox="0 0 60 24">
+                        <path d="M0,8 Q15,10 30,14 T60,12" fill="none" stroke="#EF4444" stroke-width="1.5"/>
+                    </svg>
+                    <div class="watchlist-price">
+                        <div class="price">₹956</div>
+                        <div class="change negative">-1.45%</div>
+                    </div>
+                </div>
+                <div class="watchlist-item">
+                    <div>
+                        <div class="stock-name">SBIN</div>
+                        <div class="stock-company">State Bank of India</div>
+                    </div>
+                    <svg class="stock-mini-chart" viewBox="0 0 60 24">
+                        <path d="M0,15 Q15,12 30,10 T60,5" fill="none" stroke="#10B981" stroke-width="1.5"/>
+                    </svg>
+                    <div class="watchlist-price">
+                        <div class="price">₹612</div>
+                        <div class="change">+3.21%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="widget-stats">
+            <div class="stat-item">
+                <div class="stat-label">Open</div>
+                <div class="stat-value">₹1,565</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Day High</div>
+                <div class="stat-value">₹1,598</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Day Low</div>
+                <div class="stat-value">₹1,558</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Volume</div>
+                <div class="stat-value">8.2M</div>
+            </div>
+        </div>
+
+        <!-- News -->
+        <div class="widget-news">
+            <h3>Market News</h3>
+            <div class="news-list">
+                <div class="news-card">
+                    <div class="news-time">2 hours ago</div>
+                    <div class="news-title">RIL announces new renewable energy venture</div>
+                </div>
+                <div class="news-card">
+                    <div class="news-time">4 hours ago</div>
+                    <div class="news-title">TCS Q3 results beat expectations</div>
+                </div>
+                <div class="news-card">
+                    <div class="news-time">5 hours ago</div>
+                    <div class="news-title">HDFC Bank approves new ATM network expansion</div>
+                </div>
+                <div class="news-card">
+                    <div class="news-time">6 hours ago</div>
+                    <div class="news-title">RBI maintains repo rate at 6.5%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ticker -->
+        <div class="widget-ticker">
+            <div class="ticker-label">MARKETS</div>
+            <div class="ticker-scroll">
+                <div class="ticker-item">
+                    <span class="ticker-symbol">NIFTY 50</span>
+                    <span class="ticker-value">22,145.30</span>
+                    <span class="ticker-change" style="color: var(--positive)">+0.89%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">SENSEX</span>
+                    <span class="ticker-value">73,028.50</span>
+                    <span class="ticker-change" style="color: var(--positive)">+0.75%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">NIFTY BANK</span>
+                    <span class="ticker-value">46,892.10</span>
+                    <span class="ticker-change" style="color: var(--negative)">-0.23%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">NIFTY IT</span>
+                    <span class="ticker-value">35,672.80</span>
+                    <span class="ticker-change" style="color: var(--positive)">+1.45%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">GOLD</span>
+                    <span class="ticker-value">₹62,450</span>
+                    <span class="ticker-change" style="color: var(--positive)">+0.34%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">CRUDE</span>
+                    <span class="ticker-value">₹5,892</span>
+                    <span class="ticker-change" style="color: var(--negative)">-1.12%</span>
+                </div>
+                <!-- Duplicate for seamless loop -->
+                <div class="ticker-item">
+                    <span class="ticker-symbol">NIFTY 50</span>
+                    <span class="ticker-value">22,145.30</span>
+                    <span class="ticker-change" style="color: var(--positive)">+0.89%</span>
+                </div>
+                <div class="ticker-item">
+                    <span class="ticker-symbol">SENSEX</span>
+                    <span class="ticker-value">73,028.50</span>
+                    <span class="ticker-change" style="color: var(--positive)">+0.75%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add interaction for watchlist items
+        document.querySelectorAll('.watchlist-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.watchlist-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
