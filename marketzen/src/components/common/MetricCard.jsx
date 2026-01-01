@@ -32,7 +32,7 @@ export function MetricCard({
       className={`
         bg-terminal-bg-secondary 
         border border-terminal-border 
-        rounded-lg p-3 
+        rounded-lg p-2 
         relative 
         ${isLarge ? 'col-span-2' : ''} 
         ${className}
@@ -40,7 +40,7 @@ export function MetricCard({
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <p className="text-xs text-terminal-dim mb-1 flex items-center gap-1">
+      <p className="text-xs text-terminal-dim flex items-center gap-1">
         {label}
         {tooltip && (
           <span className="cursor-help text-terminal-dim">
