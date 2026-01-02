@@ -99,42 +99,6 @@ function formatTimeLabel(date) {
 // Demo Data Generator (used when API is unavailable)
 // =============================================================================
 
-function generateDemoData(basePrice = 2500, days = 90) {
-  const data = []
-  const now = Date.now()
-  const dayMs = 24 * 60 * 60 * 1000
-  
-  let currentPrice = basePrice
-  let trend = 0
-  
-  for (let i = days - 1; i >= 0; i--) {
-    const timestamp = Math.floor((now - i * dayMs) / 1000)
-    const date = new Date(timestamp * 1000)
-    
-    // Random walk with trend
-    trend += (Math.random() - 0.48) * 0.02
-    trend = Math.max(-0.03, Math.min(0.03, trend))
-    currentPrice = currentPrice * (1 + trend + (Math.random() - 0.5) * 0.02)
-    currentPrice = Math.max(currentPrice * 0.98, Math.min(currentPrice * 1.02, currentPrice))
-    
-    const volume = Math.floor(1000000 + Math.random() * 5000000)
-    
-    let timeLabel
-    timeLabel = formatDateLabel(date)
-    
-    const dataPoint = {
-      time: timeLabel,
-      close: currentPrice,
-      price: currentPrice,
-      volume: volume,
-      timestamp: timestamp
-    }
-    data.push(dataPoint)
-  }
-  
-  return data
-}
-
 function calculateEMA(prices, period) {
   if (!prices || prices.length < period || period <= 0) {
     return prices ? prices.map(() => null) : []
@@ -627,40 +591,19 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
 
     try {
       let data = null
-      let useDemoData = false
       
       try {
         const url = `${YAHOO_BASE}/${stockId}?range=${timeframe.range}&interval=${timeframe.interval}`
         data = await tryFetchWithProxy(url)
       } catch (apiError) {
-        useDemoData = true
+        // API failed, show empty state
+        setError('Unable to fetch chart data. Please check your connection and try again.')
+        setChartData([])
+        setLoading(false)
+        return
       }
 
-      if (useDemoData || (data && !data.chart?.result?.[0])) {
-        // Use demo data when API fails
-        const demoBasePrices = {
-          'RELIANCE.NS': 2500,
-          'TCS.NS': 3800,
-          'INFY.NS': 1500,
-          'HDFCBANK.NS': 1700,
-          'ICICIBANK.NS': 1100,
-          'SBIN.NS': 750,
-          'BHARTIARTL.NS': 1200,
-          'ADANIENT.NS': 3200,
-          'TATAMOTORS.NS': 950,
-          'SUNPHARMA.NS': 1800
-        }
-        
-        const basePrice = demoBasePrices[stockId] || 1500 + Math.random() * 2000
-        const days = timeframe.value === '1D' ? 1 : timeframe.value === '1W' ? 7 : 
-                     timeframe.value === '1M' ? 30 : timeframe.value === '3M' ? 90 :
-                     timeframe.value === '6M' ? 180 : timeframe.value === '1Y' ? 365 : 90
-        
-        const transformed = generateDemoData(basePrice, days)
-        const enrichedData = enrichChartData(transformed)
-        setChartData(enrichedData)
-        setError('Using demo data (API unavailable)')
-      } else if (data?.chart?.result?.[0]) {
+      if (data?.chart?.result?.[0]) {
         const result = data.chart.result[0]
         const quote = result.indicators?.quote?.[0] || {}
         const timestamps = result.timestamp || []
@@ -690,17 +633,21 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
           }
         }).filter(Boolean)
 
-        const enrichedData = enrichChartData(transformed)
-        setChartData(enrichedData)
+        if (transformed.length === 0) {
+          setError('No chart data available for this stock')
+          setChartData([])
+        } else {
+          const enrichedData = enrichChartData(transformed)
+          setChartData(enrichedData)
+        }
       } else {
-        setError('No data available')
+        setError('No data available for this stock')
+        setChartData([])
       }
     } catch (err) {
       console.error('Error fetching chart data:', err)
-      setError('Unable to fetch chart data')
-      const transformed = generateDemoData(1500, 90)
-      const enrichedData = enrichChartData(transformed)
-      setChartData(enrichedData)
+      setError('Unable to fetch chart data. Please try again later.')
+      setChartData([])
     } finally {
       setLoading(false)
     }
