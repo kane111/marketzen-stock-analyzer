@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu, Terminal, ChevronRight, ChevronDown, Copy, Check, RotateCcw, Play, Pause, Maximize2, Minimize2, GripVertical } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu, Terminal, ChevronRight, ChevronDown, Copy, Check, RotateCcw, Play, Pause, Maximize2, Minimize2, GripVertical, Database, Trash2 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -26,6 +26,7 @@ import { AlertsProvider } from './context/AlertsContext'
 import { PortfolioProvider } from './context/PortfolioContext'
 import { WatchlistProvider } from './context/WatchlistContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { getCache, setCache, getCacheStats, cleanupCache, generateCacheKey } from './utils/cache'
 
 // Yahoo Finance API for Indian stocks search
 const YAHOO_SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search'
@@ -119,6 +120,11 @@ function AppContent() {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [cursorBlink, setCursorBlink] = useState(true)
   const [rightPanelTab, setRightPanelTab] = useState('depth')
+  
+  // Cache management state
+  const [cacheStats, setCacheStats] = useState({ hits: 0, misses: 0, sets: 0, deletes: 0, size: 0, hitRate: '0%', memorySize: 0 })
+  const [showCacheStats, setShowCacheStats] = useState(false)
+  const [lastCacheCleanup, setLastCacheCleanup] = useState(null)
   
   // Fundamentals panel state
   const [showFundamentalsPanel, setShowFundamentalsPanel] = useState(false)
@@ -334,6 +340,43 @@ function AppContent() {
     return () => clearInterval(blinkInterval)
   }, [])
 
+  // Cache stats updater and periodic cleanup
+  useEffect(() => {
+    const updateCacheStats = () => {
+      const stats = getCacheStats()
+      setCacheStats(stats)
+    }
+    
+    // Initial stats
+    updateCacheStats()
+    
+    // Update stats every 5 seconds
+    const statsInterval = setInterval(updateCacheStats, 5000)
+    
+    // Cleanup expired cache every 30 seconds
+    const cleanupInterval = setInterval(() => {
+      const cleaned = cleanupCache()
+      if (cleaned > 0) {
+        setLastCacheCleanup(new Date())
+        updateCacheStats()
+      }
+    }, 30000)
+    
+    return () => {
+      clearInterval(statsInterval)
+      clearInterval(cleanupInterval)
+    }
+  }, [])
+
+  // Manual cache clear
+  const handleClearCache = () => {
+    import('./utils/cache').then(({ clearCache }) => {
+      clearCache()
+      setCacheStats({ hits: 0, misses: 0, sets: 0, deletes: 0, size: 0, hitRate: '0%', memorySize: 0 })
+      showNotification('Cache cleared successfully', 'success')
+    })
+  }
+
   // Market status detection
   useEffect(() => {
     const updateMarketStatus = () => {
@@ -365,7 +408,7 @@ function AppContent() {
     return () => clearInterval(interval)
   }, [])
 
-  const fetchStockData = useCallback(async (stock, timeframe, taMode = false, isMultiChart = false, multiTimeframe = null) => {
+  const fetchStockData = useCallback(async (stock, timeframe, taMode = false, isMultiChart = false, multiTimeframe = null, forceRefresh = false) => {
     if (!stock) return
     
     const effectiveTimeframe = timeframe || TIMEFRAMES[1]
@@ -374,6 +417,33 @@ function AppContent() {
     setLoading(true)
     
     const tf = taMode ? timeframe : (multiTimeframe || effectiveTimeframe)
+    
+    // Generate cache key
+    const cacheKey = generateCacheKey('stock', stock.id, tf.range, tf.interval)
+    
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cachedData = getCache(cacheKey)
+      if (cachedData) {
+        // Use cached data
+        if (isMultiChart) {
+          setMultiChartData(prev => ({
+            ...prev,
+            [multiTimeframe?.label || timeframe.label]: {
+              data: cachedData.chartData,
+              stockData: cachedData.stockData
+            }
+          }))
+        } else {
+          setStockData(cachedData.stockData)
+          setChartData(cachedData.chartData)
+        }
+        setLastUpdated(new Date())
+        setLoading(false)
+        return
+      }
+    }
+    
     const url = `${YAHOO_BASE}/${stock.id}?range=${tf.range}&interval=${tf.interval}`
     
     const tryFetchWithProxy = async (proxyIndex = 0) => {
@@ -488,6 +558,10 @@ function AppContent() {
           setStockData(stockDataObj)
           setChartData(transformed)
         }
+        
+        // Cache the data (2 minute TTL for stock data)
+        const cacheKey = generateCacheKey('stock', stock.id, tf.range, tf.interval)
+        setCache(cacheKey, { stockData: stockDataObj, chartData: transformed }, 2 * 60 * 1000)
         
         setLastUpdated(new Date())
       } else {
@@ -905,6 +979,101 @@ function AppContent() {
                 )}
               </AnimatePresence>
 
+              {/* Cache Stats Modal */}
+              <AnimatePresence>
+                {showCacheStats && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+                    onClick={() => setShowCacheStats(false)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      className="bg-terminal-panel border border-terminal-border rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-terminal-green flex items-center gap-2">
+                          <Database className="w-5 h-5" />
+                          Cache Statistics
+                        </h3>
+                        <button
+                          onClick={() => setShowCacheStats(false)}
+                          className="text-terminal-dim hover:text-terminal-text transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      
+                      {/* Cache Stats Grid */}
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-terminal-bg rounded-lg p-3 text-center">
+                          <p className="text-xs text-terminal-dim mb-1">Hit Rate</p>
+                          <p className="text-xl font-bold text-terminal-green">{cacheStats.hitRate}</p>
+                        </div>
+                        <div className="bg-terminal-bg rounded-lg p-3 text-center">
+                          <p className="text-xs text-terminal-dim mb-1">Cache Size</p>
+                          <p className="text-xl font-bold text-terminal-text">{cacheStats.memorySize}</p>
+                        </div>
+                        <div className="bg-terminal-bg rounded-lg p-3 text-center">
+                          <p className="text-xs text-terminal-dim mb-1">Cache Hits</p>
+                          <p className="text-lg font-bold text-terminal-green">{cacheStats.hits}</p>
+                        </div>
+                        <div className="bg-terminal-bg rounded-lg p-3 text-center">
+                          <p className="text-xs text-terminal-dim mb-1">Cache Misses</p>
+                          <p className="text-lg font-bold text-negative">{cacheStats.misses}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Cache Actions */}
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => {
+                            import('./utils/cache').then(({ cleanupCache }) => {
+                              const cleaned = cleanupCache()
+                              setLastCacheCleanup(new Date())
+                              const stats = getCacheStats()
+                              setCacheStats(stats)
+                              showNotification(`Cleaned ${cleaned} expired entries`, 'info')
+                            })
+                          }}
+                          className="w-full px-4 py-2 rounded-lg bg-terminal-bg border border-terminal-border hover:border-terminal-dim transition-colors flex items-center justify-center gap-2 text-sm"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Clean Expired Cache
+                        </button>
+                        
+                        <button
+                          onClick={handleClearCache}
+                          className="w-full px-4 py-2 rounded-lg bg-negative/20 border border-negative/30 hover:bg-negative/30 transition-colors flex items-center justify-center gap-2 text-sm text-negative"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Clear All Cache
+                        </button>
+                      </div>
+                      
+                      {/* Last Cleanup Info */}
+                      {lastCacheCleanup && (
+                        <p className="text-xs text-terminal-dim text-center mt-4">
+                          Last cleanup: {lastCacheCleanup.toLocaleTimeString()}
+                        </p>
+                      )}
+                      
+                      {/* Cache Info */}
+                      <div className="mt-4 pt-4 border-t border-terminal-border">
+                        <p className="text-xs text-terminal-dim text-center">
+                          Stock data cached for 2 minutes during market hours
+                        </p>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Terminal Header */}
               <motion.header 
                 initial={{ y: -20, opacity: 0 }}
@@ -941,6 +1110,20 @@ function AppContent() {
                       <div className="flex items-center gap-1 text-xs text-terminal-dim">
                         <Clock className="w-3 h-3" />
                         <span>{lastUpdated ? lastUpdated.toLocaleTimeString('en-IN', { hour12: false }) : '--:--:--'}</span>
+                      </div>
+                      
+                      {/* Cache Status Indicator */}
+                      <div className="flex items-center gap-1">
+                        <div 
+                          className={`w-2 h-2 rounded-full ${cacheStats.hitRate !== '0%' ? 'bg-terminal-green' : 'bg-terminal-dim'}`}
+                          title={`Cache Hit Rate: ${cacheStats.hitRate}`}
+                        />
+                        <button 
+                          onClick={() => setShowCacheStats(!showCacheStats)}
+                          className="text-xs text-terminal-dim hover:text-terminal-text transition-colors"
+                        >
+                          Cache
+                        </button>
                       </div>
                     </div>
                   </div>
