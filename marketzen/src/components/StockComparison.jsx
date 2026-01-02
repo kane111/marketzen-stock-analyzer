@@ -299,9 +299,14 @@ function StockComparison({ onClose, watchlist = [], onAddToWatchlist = null }) {
         </div>
 
         {comparisonStocks.length === 0 ? (
-          <div className="text-center py-8">
-            <BarChart2 className="w-12 h-12 text-textSecondary mx-auto mb-4 opacity-50" />
-            <p className="text-textSecondary mb-4">Add stocks to compare their performance</p>
+          <div className="text-center py-12 bg-terminal-bg-secondary/50 rounded-xl border border-terminal-border border-dashed">
+            <div className="w-16 h-16 rounded-full bg-terminal-bg-light flex items-center justify-center mx-auto mb-4">
+              <BarChart2 className="w-8 h-8 text-terminal-dim" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">No Stocks Added Yet</h3>
+            <p className="text-textSecondary text-sm mb-6 max-w-sm mx-auto">
+              Add stocks from your watchlist to compare their performance side by side. You can compare up to 4 stocks at once.
+            </p>
             <StockSearchButton onSelect={addStock} existingStocks={comparisonStocks} watchlist={watchlist} onAddToWatchlist={onAddToWatchlist} />
           </div>
         ) : (

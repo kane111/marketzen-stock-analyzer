@@ -116,7 +116,7 @@ const SENTIMENT_ICONS = {
   neutral: Newspaper
 }
 
-function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true, onBack, watchlist = [], onAddToWatchlist = null }) {
+function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true, onBack, watchlist = [], onAddToWatchlist = null, onNavigate = null }) {
   const [news, setNews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -477,6 +477,10 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
                 }
                 setAddedToWatchlist(true)
                 setTimeout(() => setAddedToWatchlist(false), 2000)
+                // Navigate to dashboard after adding
+                if (onNavigate) {
+                  onNavigate('dashboard')
+                }
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isInWatchlist || addedToWatchlist

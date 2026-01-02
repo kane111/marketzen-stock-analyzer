@@ -165,11 +165,7 @@ function SectorDashboard({ onSectorSelect, watchlist = [], onAddToWatchlist = nu
 
   // Handle sector selection and show constituent stocks
   const handleSectorClick = (sector) => {
-    if (onSectorSelect) {
-      onSectorSelect(sector)
-    }
-    
-    // Show sector details with constituent stocks
+    // Show sector details with constituent stocks (don't auto-add to watchlist)
     const constituents = SECTOR_STOCKS[sector.id] || []
     setSelectedSectorDetails({
       sector,
@@ -186,10 +182,17 @@ function SectorDashboard({ onSectorSelect, watchlist = [], onAddToWatchlist = nu
     return watchlist.some(s => s.id === stockId)
   }
 
-  // Handle add to watchlist
+  // Handle add single stock to watchlist
   const handleAddToWatchlist = (stock) => {
     if (onAddToWatchlist) {
       onAddToWatchlist(stock)
+    }
+  }
+
+  // Handle add all stocks to watchlist
+  const handleAddAllToWatchlist = () => {
+    if (onSectorSelect && selectedSectorDetails) {
+      onSectorSelect(selectedSectorDetails.sector)
     }
   }
 
@@ -388,6 +391,14 @@ function SectorDashboard({ onSectorSelect, watchlist = [], onAddToWatchlist = nu
             ))}
           </div>
 
+          {/* Interactive Hint */}
+          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-textSecondary">
+            <span className="px-2 py-1 bg-surfaceLight rounded text-xs">Hover</span>
+            <span>or</span>
+            <span className="px-2 py-1 bg-surfaceLight rounded text-xs">Click</span>
+            <span>on tiles to view details and add stocks</span>
+          </div>
+
           {/* Heatmap Legend - Fixed with Tailwind classes */}
           <div className="mt-6 pt-4 border-t border-white/10">
             <p className="text-xs text-textSecondary mb-2">Performance Scale</p>
@@ -519,18 +530,29 @@ function SectorDashboard({ onSectorSelect, watchlist = [], onAddToWatchlist = nu
                 <div>
                   <h3 className="text-lg font-semibold">{selectedSectorDetails.sector.name}</h3>
                   <p className="text-sm text-textSecondary">
-                    {selectedSectorDetails.constituents.length} constituents • Click to add to watchlist
+                    {selectedSectorDetails.constituents.length} constituents • Click star to add individual stocks
                   </p>
                 </div>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={closeSectorDetails}
-                className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
-              >
-                <X className="w-4 h-4 text-textSecondary" />
-              </motion.button>
+              <div className="flex items-center gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleAddAllToWatchlist}
+                  className="px-3 py-1.5 rounded-lg bg-terminal-green/20 text-terminal-green text-sm font-medium flex items-center gap-2 hover:bg-terminal-green/30 transition-colors"
+                >
+                  <Star className="w-4 h-4" />
+                  Add All to Watchlist
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={closeSectorDetails}
+                  className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+                >
+                  <X className="w-4 h-4 text-textSecondary" />
+                </motion.button>
+              </div>
             </div>
 
             {/* Constituent Stocks */}

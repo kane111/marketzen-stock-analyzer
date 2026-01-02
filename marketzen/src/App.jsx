@@ -732,8 +732,15 @@ function AppContent() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ctrl/Cmd + K for advanced search overlay
+      // Ctrl/Cmd + K for search overlay
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+        return
+      }
+      
+      // / for search (when not in input field)
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement !== searchInputRef.current && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
         e.preventDefault()
         setSearchOpen(true)
         return
@@ -754,11 +761,17 @@ function AppContent() {
         }
         return
       }
+      
+      // Escape to close search overlay
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false)
+        return
+      }
     }
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedStock, TIMEFRAMES[1], view, fetchStockData])
+  }, [selectedStock, TIMEFRAMES[1], view, fetchStockData, searchOpen])
 
   // Panel resizing handlers
   const handleMouseDownLeft = (e) => {
@@ -858,11 +871,11 @@ function AppContent() {
                       </div>
                       <div className="space-y-3 text-sm">
                         {[
-                          { keys: '/', desc: 'Open command mode' },
+                          { keys: '/', desc: 'Search stocks' },
                           { keys: 'Ctrl/Cmd + K', desc: 'Search stocks' },
-                          { keys: 'Ctrl/Cmd + /', desc: 'Show shortcuts' },
-                          { keys: 'Esc', desc: 'Close command mode' },
-                          { keys: '↑/↓', desc: 'Navigate command history' },
+                          { keys: 'Esc', desc: 'Close search' },
+                          { keys: '↑/↓', desc: 'Navigate results' },
+                          { keys: 'Enter', desc: 'Select stock' },
                           { keys: 'R', desc: 'Quick refresh data' },
                           { keys: 'A', desc: 'Go to analysis' },
                         ].map((shortcut) => (
@@ -876,7 +889,7 @@ function AppContent() {
                       </div>
                       <div className="mt-6 pt-4 border-t border-terminal-border">
                         <p className="text-xs text-terminal-dim text-center">
-                          Press <kbd className="px-2 py-0.5 bg-terminal-bg rounded text-terminal-green mx-1">?</kbd> anywhere to show this help
+                          Keyboard shortcuts for efficient navigation
                         </p>
                       </div>
                     </motion.div>
@@ -1282,6 +1295,7 @@ function AppContent() {
                         watchlist={watchlist}
                         onAddToWatchlist={addToWatchlist}
                         onBack={() => setView('dashboard')}
+                        onNavigate={(targetView) => setView(targetView)}
                       />
                     ) : view === 'analysis' ? (
                       <TechnicalAnalysis 
