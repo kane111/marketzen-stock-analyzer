@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu, Terminal, Command, ChevronRight, ChevronDown, Copy, Check, RotateCcw, Play, Pause, Maximize2, Minimize2, GripVertical } from 'lucide-react'
+import { Search, TrendingUp, TrendingDown, X, BarChart2, RefreshCw, ArrowLeft, Activity, Zap, Target, LineChart, Clock, Globe, Settings, Wifi, WifiOff, Wallet, PieChart, Sliders, BarChart3, Newspaper, Grid, List, Bell, TrendingUp as TrendingUpIcon, AlertTriangle, Eye, Filter, TrendingUp as ChartIcon, Palette, Download, CandlestickChart, Download as DownloadIcon, Menu, Terminal, ChevronRight, ChevronDown, Copy, Check, RotateCcw, Play, Pause, Maximize2, Minimize2, GripVertical } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import SearchOverlay from './components/SearchOverlay'
 import PriceCounter from './components/PriceCounter'
@@ -98,11 +98,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_PARAMS
   })
   
+  // Search bar state (replaces command mode)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searchHighlighted, setSearchHighlighted] = useState(0)
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  
   // Terminal Workspace specific state
-  const [commandMode, setCommandMode] = useState(false)
-  const [commandInput, setCommandInput] = useState('')
-  const [commandHistory, setCommandHistory] = useState([])
-  const [commandHistoryIndex, setCommandHistoryIndex] = useState(-1)
   const [copiedData, setCopiedData] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -125,12 +127,63 @@ function AppContent() {
   const [isResizingLeft, setIsResizingLeft] = useState(false)
   const [isResizingRight, setIsResizingRight] = useState(false)
   
-  // Command palette suggestions
-  const [commandSuggestions, setCommandSuggestions] = useState([])
-  const [selectedSuggestion, setSelectedSuggestion] = useState(0)
-  
-  const commandInputRef = useRef(null)
+  const searchInputRef = useRef(null)
   const resizeTimeoutRef = useRef(null)
+  
+  // Combined stock list for search (watchlist + popular stocks)
+  const allStocksForSearch = [...watchlist, ...DEFAULT_STOCKS.filter(ds => !watchlist.find(w => w.id === ds.id))]
+  
+  // Search functionality
+  const handleSearchChange = (e) => {
+    const query = e.target.value.trim().toUpperCase()
+    setSearchQuery(query)
+    
+    if (query.length > 0) {
+      const filtered = allStocksForSearch.filter(stock => 
+        stock.symbol.toUpperCase().includes(query) || 
+        stock.name.toUpperCase().includes(query)
+      ).slice(0, 8)
+      setSearchResults(filtered)
+      setShowSearchDropdown(true)
+      setSearchHighlighted(0)
+    } else {
+      setSearchResults([])
+      setShowSearchDropdown(false)
+    }
+  }
+  
+  const handleSearchKeyDown = (e) => {
+    if (!showSearchDropdown) return
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSearchHighlighted(prev => Math.min(prev + 1, searchResults.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSearchHighlighted(prev => Math.max(prev - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (searchResults[searchHighlighted]) {
+        handleStockSelect(searchResults[searchHighlighted])
+        clearSearch()
+      }
+    } else if (e.key === 'Escape') {
+      clearSearch()
+    }
+  }
+  
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchResults([])
+    setShowSearchDropdown(false)
+    setSearchHighlighted(0)
+    searchInputRef.current?.blur()
+  }
+  
+  const handleSearchResultClick = (stock) => {
+    handleStockSelect(stock)
+    clearSearch()
+  }
 
   // Show notification helper
   const showNotification = (message, type = 'success') => {
@@ -586,90 +639,6 @@ function AppContent() {
     setShowIndicatorConfig(false)
   }
 
-  // Command palette commands
-  const COMMANDS = [
-    { id: 'search', label: 'search <symbol>', description: 'Search for a stock', action: () => setSearchOpen(true) },
-    { id: 'refresh', label: 'refresh', description: 'Refresh current data', action: () => selectedStock && fetchStockData(selectedStock, TIMEFRAMES[1], view === 'analysis') },
-    { id: 'toggle-refresh', label: 'auto-refresh', description: 'Toggle auto-refresh', action: () => setAutoRefresh(!autoRefresh) },
-    { id: 'portfolio', label: 'portfolio', description: 'View portfolio', action: () => setView('portfolio') },
-    { id: 'watchlist', label: 'watchlist', description: 'View watchlist', action: () => setView('watchlist') },
-    { id: 'analysis', label: 'analysis', description: 'Technical analysis', action: () => setView('analysis') },
-    { id: 'screener', label: 'screener', description: 'Stock screener', action: () => setView('screener') },
-    { id: 'sectors', label: 'sectors', description: 'Sector overview', action: () => setView('sectors') },
-    { id: 'news', label: 'news', description: 'Market news', action: () => setView('news') },
-    { id: 'alerts', label: 'alerts', description: 'Price alerts', action: () => setView('alerts') },
-    { id: 'export', label: 'export', description: 'Export data', action: () => setView('export') },
-    { id: 'clear', label: 'clear', description: 'Clear terminal', action: () => {} },
-    { id: 'help', label: 'help', description: 'Show help', action: () => setShowKeyboardShortcuts(true) }
-  ]
-
-  // Handle command input
-  const handleCommandInput = (e) => {
-    const value = e.target.value
-    setCommandInput(value)
-    setCommandHistoryIndex(-1)
-    
-    if (value.startsWith('/')) {
-      const query = value.substring(1).toLowerCase()
-      const filtered = COMMANDS.filter(cmd => 
-        cmd.label.toLowerCase().includes(query) || 
-        cmd.description.toLowerCase().includes(query)
-      )
-      setCommandSuggestions(filtered.slice(0, 5))
-      setSelectedSuggestion(0)
-    } else {
-      setCommandSuggestions([])
-    }
-  }
-
-  const executeCommand = () => {
-    const cmd = commandInput.trim()
-    
-    if (cmd) {
-      setCommandHistory(prev => [...prev, cmd].slice(-20))
-      
-      if (cmd.startsWith('/')) {
-        const query = cmd.substring(1).toLowerCase()
-        const matchedCommand = COMMANDS.find(c => c.label.toLowerCase() === query)
-        
-        if (matchedCommand) {
-          matchedCommand.action()
-        } else if (query === 'clear') {
-          // Clear command output
-        }
-      } else if (cmd === '?') {
-        setShowKeyboardShortcuts(true)
-      }
-      
-      setCommandInput('')
-      setCommandSuggestions([])
-    }
-    
-    setCommandMode(false)
-    setCommandHistoryIndex(-1)
-  }
-
-  const navigateCommandHistory = (direction) => {
-    if (commandHistory.length === 0) return
-    
-    if (direction === 'up') {
-      if (commandHistoryIndex < commandHistory.length - 1) {
-        const newIndex = commandHistoryIndex + 1
-        setCommandHistoryIndex(newIndex)
-        setCommandInput(commandHistory[commandHistory.length - 1 - newIndex])
-      }
-    } else if (direction === 'down') {
-      if (commandHistoryIndex > 0) {
-        const newIndex = commandHistoryIndex - 1
-        setCommandHistoryIndex(newIndex)
-        setCommandInput(commandHistory[commandHistory.length - 1 - newIndex])
-      } else if (commandHistoryIndex === 0) {
-        setCommandHistoryIndex(-1)
-        setCommandInput('')
-      }
-    }
-  }
-
   // Copy data to clipboard
   const copyToClipboard = (data) => {
     const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2)
@@ -681,73 +650,7 @@ function AppContent() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Command mode (/)
-      if (e.key === '/' && !commandMode && !searchOpen && document.activeElement !== commandInputRef.current) {
-        e.preventDefault()
-        setCommandMode(true)
-        setTimeout(() => commandInputRef.current?.focus(), 50)
-        return
-      }
-      
-      // Escape to exit command mode
-      if (e.key === 'Escape' && commandMode) {
-        e.preventDefault()
-        setCommandMode(false)
-        setCommandInput('')
-        setCommandSuggestions([])
-        return
-      }
-      
-      // Command mode navigation
-      if (commandMode && commandSuggestions.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault()
-          setSelectedSuggestion(prev => (prev + 1) % commandSuggestions.length)
-          return
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault()
-          setSelectedSuggestion(prev => (prev - 1 + commandSuggestions.length) % commandSuggestions.length)
-          return
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          if (commandSuggestions[selectedSuggestion]) {
-            const cmd = commandSuggestions[selectedSuggestion]
-            setCommandInput(cmd.label)
-            executeCommand()
-          }
-          return
-        }
-      }
-      
-      // Command mode history navigation
-      if (commandMode && e.key === 'ArrowUp') {
-        e.preventDefault()
-        navigateCommandHistory('up')
-        return
-      }
-      if (commandMode && e.key === 'ArrowDown') {
-        e.preventDefault()
-        navigateCommandHistory('down')
-        return
-      }
-      
-      // Enter to execute command
-      if (commandMode && e.key === 'Enter') {
-        e.preventDefault()
-        executeCommand()
-        return
-      }
-      
-      // Ctrl/Cmd + K for search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(true)
-        return
-      }
-      
-      // Ctrl/Cmd + K for search
+      // Ctrl/Cmd + K for advanced search overlay
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setSearchOpen(true)
@@ -755,7 +658,7 @@ function AppContent() {
       }
       
       // R for quick refresh
-      if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !commandMode && document.activeElement !== commandInputRef.current) {
+      if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement !== searchInputRef.current) {
         if (selectedStock) {
           fetchStockData(selectedStock, TIMEFRAMES[1], view === 'analysis')
         }
@@ -763,7 +666,7 @@ function AppContent() {
       }
       
       // A for analysis
-      if (e.key === 'a' && !e.metaKey && !e.ctrlKey && !e.altKey && !commandMode && document.activeElement !== commandInputRef.current) {
+      if (e.key === 'a' && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement !== searchInputRef.current) {
         if (selectedStock) {
           setView('analysis')
         }
@@ -773,7 +676,7 @@ function AppContent() {
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [commandMode, commandInput, commandSuggestions, commandHistory, commandHistoryIndex, selectedSuggestion, selectedStock, TIMEFRAMES[1], view, fetchStockData])
+  }, [selectedStock, TIMEFRAMES[1], view, fetchStockData])
 
   // Panel resizing handlers
   const handleMouseDownLeft = (e) => {
@@ -939,61 +842,64 @@ function AppContent() {
                     </div>
                   </div>
 
-                  {/* Command Bar */}
-                  <div className="flex-1 max-w-xl mx-6">
-                    <div className={`flex items-center bg-terminal-bg rounded-lg border transition-all duration-200 ${
-                      commandMode ? 'border-terminal-green shadow-lg shadow-terminal-green/20' : 'border-terminal-border focus-within:border-terminal-dim'
-                    }`}>
+                  {/* Stock Search Bar */}
+                  <div className="flex-1 max-w-xl mx-6 relative">
+                    <div className="flex items-center bg-terminal-bg rounded-lg border border-terminal-border focus-within:border-terminal-green transition-all duration-200">
                       <span className="pl-3 text-terminal-dim">
-                        <Command className="w-4 h-4" />
+                        <Search className="w-4 h-4" />
                       </span>
                       <input
-                        ref={commandInputRef}
+                        ref={searchInputRef}
                         type="text"
-                        value={commandInput}
-                        onChange={handleCommandInput}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') executeCommand()
-                        }}
-                        placeholder={commandMode ? "Type command or / for help..." : "Press / to enter command mode..."}
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        onKeyDown={handleSearchKeyDown}
+                        onFocus={() => searchQuery && setShowSearchDropdown(true)}
+                        placeholder="Search stocks (e.g., RELIANCE, TCS, HDFC...)"
                         className="flex-1 bg-transparent px-3 py-2 text-sm text-terminal-text placeholder-terminal-dim focus:outline-none font-mono"
-                        readOnly={!commandMode}
                       />
-                      {commandInput && (
-                        <button
-                          onClick={() => executeCommand()}
-                          className="pr-3 text-terminal-green hover:text-terminal-text transition-colors"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      )}
+                      <div className="pr-3 flex items-center gap-2">
+                        {searchQuery && (
+                          <button
+                            onClick={clearSearch}
+                            className="text-terminal-dim hover:text-terminal-text transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                        <span className="text-xs text-terminal-dim bg-terminal-panel px-1.5 py-0.5 rounded border border-terminal-border">
+                          Ctrl+K
+                        </span>
+                      </div>
                     </div>
                     
-                    {/* Command Suggestions */}
+                    {/* Search Results Dropdown */}
                     <AnimatePresence>
-                      {commandMode && commandSuggestions.length > 0 && (
+                      {showSearchDropdown && searchResults.length > 0 && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-full max-w-xl bg-terminal-panel border border-terminal-border rounded-lg shadow-xl overflow-hidden"
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-full max-w-xl bg-terminal-panel border border-terminal-border rounded-lg shadow-xl overflow-hidden z-50"
                         >
-                          {commandSuggestions.map((cmd, index) => (
+                          {searchResults.map((stock, index) => (
                             <button
-                              key={cmd.id}
-                              onClick={() => {
-                                setCommandInput(cmd.label)
-                                executeCommand()
-                              }}
-                              className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between hover:bg-terminal-bg transition-colors ${
-                                index === selectedSuggestion ? 'bg-terminal-bg' : ''
+                              key={stock.id}
+                              onClick={() => handleSearchResultClick(stock)}
+                              className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between hover:bg-terminal-bg transition-colors ${
+                                index === searchHighlighted ? 'bg-terminal-bg' : ''
                               }`}
                             >
-                              <span>
-                                <span className="text-terminal-green font-mono">{cmd.label}</span>
-                                <span className="text-terminal-dim ml-2">{cmd.description}</span>
-                              </span>
-                              {index === selectedSuggestion && (
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded bg-terminal-bg flex items-center justify-center text-xs font-bold font-mono text-terminal-green">
+                                  {stock.symbol.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-terminal-text">{stock.symbol}</p>
+                                  <p className="text-xs text-terminal-dim truncate max-w-[200px]">{stock.name}</p>
+                                </div>
+                              </div>
+                              {index === searchHighlighted && (
                                 <ChevronRight className="w-4 h-4 text-terminal-dim" />
                               )}
                             </button>
