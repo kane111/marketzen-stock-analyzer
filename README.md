@@ -40,6 +40,18 @@ Explore sector performance and compare related stocks within each industry.
 
 ![Sector Analysis](docs/images/sectors.png)
 
+### News Feed
+
+Stay updated with the latest market news and company announcements.
+
+![News Feed](docs/images/news.png)
+
+### Portfolio Tracking
+
+Monitor your investment portfolio with real-time valuation and performance metrics.
+
+![Portfolio](docs/images/portfolio.png)
+
 ## Features
 
 ### Technical Analysis Tools
