@@ -117,6 +117,25 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       const currentStochK = stochK.length > 0 ? stochK[stochK.length - 1] : null
       const currentStochD = stochD.length > 0 ? stochD[stochD.length - 1] : null
       
+      // Calculate additional moving averages (10, 20, 44)
+      const ma10 = calculateSMA(closes, 10)
+      const ma20 = calculateSMA(closes, 20)
+      const ma44 = calculateSMA(closes, 44)
+      
+      const currentMA10 = ma10.length > 0 ? ma10[ma10.length - 1] : null
+      const currentMA20 = ma20.length > 0 ? ma20[ma20.length - 1] : null
+      const currentMA44 = ma44.length > 0 ? ma44[ma44.length - 1] : null
+      
+      // Moving Average Analysis
+      const maAnalysis = [
+        { period: 10, value: currentMA10, above: currentPrice > currentMA10 },
+        { period: 20, value: currentMA20, above: currentPrice > currentMA20 },
+        { period: 44, value: currentMA44, above: currentPrice > currentMA44 }
+      ]
+      
+      // Count how many MAs the price is above
+      const maAboveCount = maAnalysis.filter(m => m.above).length
+      
       // Generate signals
       const signals = []
       
@@ -207,7 +226,10 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         chartDataRSI: chartData.map((d, i) => ({ time: d.date, value: d.rsi })),
         chartDataMACD: chartData.map((d, i) => ({ time: d.date, macd: d.macd, signal: d.macdSignal, hist: d.macdHist })),
         chartDataStoch: chartData.map((d, i) => ({ time: d.date, k: d.stochK, d: d.stochD })),
-        chartDataATR: chartData.map((d, i) => ({ time: d.date, value: d.atr }))
+        chartDataATR: chartData.map((d, i) => ({ time: d.date, value: d.atr })),
+        maAnalysis,
+        maAboveCount,
+        currentPrice
       })
       
       setSignal({ type: overallSignal, strength: overallStrength, buyCount: buySignals, sellCount: sellSignals, total: totalSignals })
@@ -343,6 +365,109 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 <p className="text-2xl font-bold text-terminal-red">{signal.sellCount}</p>
               </div>
             </div>
+          </div>
+        </motion.div>
+      )}
+      
+      {/* Moving Average Analysis */}
+      {analysisData && (
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-terminal-green/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-terminal-green" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-terminal-text">Moving Average Analysis</h3>
+                <p className="text-sm text-terminal-dim">Price position relative to key MAs</p>
+              </div>
+            </div>
+            <div className={`px-4 py-2 rounded-lg border ${
+              analysisData.maAboveCount >= 2 
+                ? 'bg-terminal-green/10 border-terminal-green/30' 
+                : analysisData.maAboveCount >= 1 
+                  ? 'bg-amber-500/10 border-amber-500/30'
+                  : 'bg-terminal-red/10 border-terminal-red/30'
+            }`}>
+              <span className={`text-sm font-medium ${
+                analysisData.maAboveCount >= 2 
+                  ? 'text-terminal-green' 
+                  : analysisData.maAboveCount >= 1 
+                    ? 'text-amber-500'
+                    : 'text-terminal-red'
+              }`}>
+                Trading {analysisData.maAboveCount}/3 MAs
+              </span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+            {analysisData.maAnalysis.map((ma, index) => (
+              <motion.div
+                key={ma.period}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`relative overflow-hidden rounded-xl border p-4 transition-all ${
+                  ma.above 
+                    ? 'bg-terminal-green/5 border-terminal-green/30' 
+                    : 'bg-terminal-red/5 border-terminal-red/30'
+                }`}
+              >
+                {/* Status Badge */}
+                <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  ma.above 
+                    ? 'bg-terminal-green/20 text-terminal-green' 
+                    : 'bg-terminal-red/20 text-terminal-red'
+                }`}>
+                  {ma.above ? 'ABOVE' : 'BELOW'}
+                </div>
+                
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-sm text-terminal-dim mb-1">MA {ma.period}</p>
+                    <p className={`text-2xl font-bold font-mono ${
+                      ma.above ? 'text-terminal-green' : 'text-terminal-red'
+                    }`}>
+                      {formatCurrency(ma.value)}
+                    </p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    ma.above ? 'bg-terminal-green/20' : 'bg-terminal-red/20'
+                  }`}>
+                    {ma.above ? (
+                      <TrendingUp className="w-5 h-5 text-terminal-green" />
+                    ) : (
+                      <TrendingDown className="w-5 h-5 text-terminal-red" />
+                    )}
+                  </div>
+                </div>
+                
+                {/* Price comparison */}
+                <div className="mt-3 pt-3 border-t border-terminal-border/50">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-terminal-dim">Current Price</span>
+                    <span className="font-mono text-terminal-text">{formatCurrency(analysisData.currentPrice)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="text-terminal-dim">vs MA {ma.period}</span>
+                    <span className={`font-mono ${ma.above ? 'text-terminal-green' : 'text-terminal-red'}`}>
+                      {ma.above ? '+' : ''}{formatCurrency(analysisData.currentPrice - ma.value)}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Progress bar indicator */}
+                <div className="mt-3 h-1 bg-terminal-bg-light rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: ma.above ? '100%' : '0%' }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    className={`h-full rounded-full ${ma.above ? 'bg-terminal-green' : 'bg-terminal-red'}`}
+                  />
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
       )}
