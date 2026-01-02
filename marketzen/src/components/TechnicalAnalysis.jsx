@@ -1045,17 +1045,17 @@ function TechnicalAnalysis({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="flex-1 overflow-y-auto p-4"
+                    className="flex-1 overflow-hidden"
                   >
                     {fundamentalsLoading || !cachedFundamentals?.data ? (
-                      <div className="flex flex-col items-center justify-center h-48">
+                      <div className="flex flex-col items-center justify-center h-full">
                         <Spinner size="2rem" />
                         <p className="text-xs text-terminal-dim mt-2">Loading fundamentals...</p>
                       </div>
                     ) : (
-                      <FundamentalsTabContent 
-                        tab={fundamentalsTab} 
-                        fundamentals={cachedFundamentals.data}
+                      <FundamentalsPanel
+                        stock={stock}
+                        cachedFundamentals={cachedFundamentals}
                       />
                     )}
                   </motion.div>
@@ -1080,163 +1080,7 @@ function TechnicalAnalysis({
   )
 }
 
-// ============================================================================
-// FUNDAMENTALS TAB CONTENT COMPONENT
-// ============================================================================
 
-function FundamentalsTabContent({ tab, fundamentals }) {
-  const getMetric = (path) => {
-    const keys = path.split('.')
-    let value = fundamentals
-    for (const key of keys) {
-      value = value?.[key]
-    }
-    return value
-  }
-  
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined) return 'N/A'
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(value)
-  }
-  
-  const formatNumber = (value) => {
-    if (value === null || value === undefined) return 'N/A'
-    if (value >= 1e12) return `${(value / 1e12).toFixed(2)}T`
-    if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
-    if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
-    if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
-    return value.toLocaleString()
-  }
-  
-  const formatPercent = (value) => {
-    if (value === null || value === undefined) return 'N/A'
-    return `${(value * 100).toFixed(2)}%`
-  }
-  
-  const formatRatio = (value) => {
-    if (value === null || value === undefined) return 'N/A'
-    return value.toFixed(2)
-  }
-  
-  return (
-    <div className="space-y-4">
-      {tab === 'valuation' && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">P/E Ratio</p>
-              <p className="text-lg font-bold">{formatRatio(getMetric('defaultKeyStatistics.trailingPE'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Forward P/E</p>
-              <p className="text-lg font-bold">{formatRatio(getMetric('defaultKeyStatistics.forwardPE'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">P/B Ratio</p>
-              <p className="text-lg font-bold">{formatRatio(getMetric('defaultKeyStatistics.priceToBookRaw'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">P/S Ratio</p>
-              <p className="text-lg font-bold">{formatRatio(getMetric('defaultKeyStatistics.priceToSalesTrailing12Months'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">EPS (TTM)</p>
-              <p className="text-lg font-bold">{formatCurrency(getMetric('defaultKeyStatistics.trailingEps'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Dividend Yield</p>
-              <p className="text-lg font-bold">{formatPercent(getMetric('summaryDetail.dividendYieldRaw'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Beta</p>
-              <p className="text-lg font-bold">{formatRatio(getMetric('defaultKeyStatistics.beta'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Market Cap</p>
-              <p className="text-lg font-bold">{formatNumber(getMetric('summaryDetail.marketCap'))}</p>
-            </div>
-          </div>
-        </>
-      )}
-      
-      {tab === 'financials' && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Revenue (TTM)</p>
-              <p className="text-lg font-bold">{formatNumber(getMetric('financialData.totalData'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Net Income</p>
-              <p className="text-lg font-bold">{formatNumber(getMetric('financialData.netIncomeToCommon'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Gross Margin</p>
-              <p className="text-lg font-bold">{formatPercent(getMetric('financialData.grossMargins'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Operating Margin</p>
-              <p className="text-lg font-bold">{formatPercent(getMetric('financialData.operatingMargins'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Profit Margin</p>
-              <p className="text-lg font-bold">{formatPercent(getMetric('financialData.profitMargins'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">ROE</p>
-              <p className="text-lg font-bold">{formatPercent(getMetric('financialData.returnOnEquity'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">ROA</p>
-              <p className="text-lg font-bold">{formatPercent(getMetric('financialData.returnOnAssets'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Debt/Equity</p>
-              <p className="text-lg font-bold">{formatRatio(getMetric('financialData.debtToEquity'))}</p>
-            </div>
-          </div>
-        </>
-      )}
-      
-      {tab === 'performance' && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">52W High</p>
-              <p className="text-lg font-bold">{formatCurrency(getMetric('summaryDetail.fiftyTwoWeekHighRaw'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">52W Low</p>
-              <p className="text-lg font-bold">{formatCurrency(getMetric('summaryDetail.fiftyTwoWeekLowRaw'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">52W Change</p>
-              <p className={`text-lg font-bold ${getMetric('defaultKeyStatistics.fiftyTwoWeekChange') >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
-                {formatPercent(getMetric('defaultKeyStatistics.fiftyTwoWeekChange'))}
-              </p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">50 Day MA</p>
-              <p className="text-lg font-bold">{formatCurrency(getMetric('summaryDetail.fiftyDayAverage'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">200 Day MA</p>
-              <p className="text-lg font-bold">{formatCurrency(getMetric('summaryDetail.twoHundredDayAverage'))}</p>
-            </div>
-            <div className="bg-terminal-bg-light rounded-lg p-3">
-              <p className="text-xs text-terminal-dim">Avg Volume</p>
-              <p className="text-lg font-bold">{formatNumber(getMetric('summaryDetail.averageVolume'))}</p>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 
 // ============================================================================
 // SECTOR PEERS SECTION
