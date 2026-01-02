@@ -71,98 +71,78 @@ function TechnicalAnalysis({
     setFundamentalsError(null)
     setFundamentalsLoading(true)
     
-    // Step 1: Get crumb from Yahoo Finance
-    const fetchWithCrumb = async (crumb) => {
-      const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
-      const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
-      const url = `${YAHOO_QUOTE_SUMMARY}/${stock.id}?modules=${FUNDAMENTAL_MODULES}&crumb=${crumb}`
+    // Fallback to simulated data immediately
+    const useSimulatedData = () => {
+      const basePrice = stockData?.current_price || 100
+      const randomFactor = () => 0.9 + Math.random() * 0.2
       
-      const proxies = [
-        { url: 'https://corsproxy.io/?', encode: true },
-        { url: 'https://api.allorigins.win/raw?url=', encode: false },
-        { url: 'https://proxy.cors.sh/', encode: true },
-        { url: 'https://api.codetabs.com/v1/proxy?quest=', encode: true }
-      ]
-      
-      for (const proxy of proxies) {
-        try {
-          const targetUrl = proxy.encode ? encodeURIComponent(url) : url
-          const fullUrl = `${proxy.url}${targetUrl}`
-          
-          const response = await fetch(fullUrl, {
-            method: 'GET',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json',
-              'Accept-Language': 'en-US,en;q=0.9',
-              'Referer': 'https://finance.yahoo.com/'
-            }
-          })
-          
-          if (response.ok) {
-            const text = await response.text()
-            const result = JSON.parse(text)
-            
-            if (result?.quoteSummary?.result?.[0]) {
-              return result
-            }
+      const simulatedData = {
+        data: {
+          summaryDetail: {
+            marketCap: { raw: basePrice * 1000000000 * randomFactor() },
+            fiftyTwoWeekHighRaw: { raw: basePrice * 1.3 * randomFactor() },
+            fiftyTwoWeekLowRaw: { raw: basePrice * 0.7 * randomFactor() },
+            fiftyDayAverage: { raw: basePrice * 0.95 * randomFactor() },
+            twoHundredDayAverage: { raw: basePrice * 0.9 * randomFactor() },
+            dividendYieldRaw: { raw: 0.015 * randomFactor() },
+            averageVolume: { raw: 5000000 * randomFactor() }
+          },
+          defaultKeyStatistics: {
+            trailingPE: { raw: 18 * randomFactor() },
+            forwardPE: { raw: 15 * randomFactor() },
+            priceToBookRaw: { raw: 2.5 * randomFactor() },
+            priceToSalesTrailing12Months: { raw: 3.2 * randomFactor() },
+            trailingEps: { raw: basePrice / 18 },
+            beta: { raw: 1.2 * randomFactor() },
+            fiftyTwoWeekChange: { raw: 0.15 * randomFactor() - 0.05 },
+            enterpriseValue: { raw: basePrice * 1200000000 * randomFactor() }
+          },
+          financialData: {
+            totalData: { raw: 500000000000 * randomFactor() },
+            netIncomeToCommon: { raw: 50000000000 * randomFactor() },
+            grossMargins: { raw: 0.45 * randomFactor() },
+            operatingMargins: { raw: 0.25 * randomFactor() },
+            profitMargins: { raw: 0.18 * randomFactor() },
+            returnOnEquity: { raw: 0.15 * randomFactor() },
+            returnOnAssets: { raw: 0.08 * randomFactor() },
+            debtToEquity: { raw: 50 * randomFactor() },
+            currentRatio: { raw: 1.5 * randomFactor() }
           }
-        } catch (e) {
-          console.warn(`Proxy failed:`, e)
-        }
+        },
+        timestamp: Date.now(),
+        simulated: true
       }
       
-      return null
+      setCachedFundamentals(simulatedData)
+      localStorage.setItem(`fundamentals_${stock.id}`, JSON.stringify(simulatedData))
+      setFundamentalsLoading(false)
     }
     
-    // Step 2: Fetch crumb first
-    const fetchCrumb = async () => {
-      const CRUMB_URL = 'https://query1.finance.yahoo.com/v1/test/getcrumb'
-      
-      const proxies = [
-        { url: 'https://corsproxy.io/?', encode: true },
-        { url: 'https://api.allorigins.win/raw?url=', encode: false },
-        { url: 'https://proxy.cors.sh/', encode: true }
-      ]
-      
-      for (const proxy of proxies) {
-        try {
-          const targetUrl = proxy.encode ? encodeURIComponent(CRUMB_URL) : CRUMB_URL
-          const fullUrl = `${proxy.url}${targetUrl}`
-          
-          const response = await fetch(fullUrl, {
-            method: 'GET',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/plain,*/*',
-              'Accept-Language': 'en-US,en;q=0.9',
-              'Referer': 'https://finance.yahoo.com/'
-            },
-            credentials: 'include'
-          })
-          
-          if (response.ok) {
-            const crumb = await response.text()
-            if (crumb && crumb.length > 10 && !crumb.includes('error')) {
-              return crumb.trim()
-            }
-          }
-        } catch (e) {
-          console.warn(`Crumb fetch failed:`, e)
-        }
-      }
-      
-      return null
-    }
-    
-    // Execute: Get crumb, then fetch data
-    ;(async () => {
+    // Try to fetch real data with timeout
+    const tryFetchData = async () => {
       try {
-        const crumb = await fetchCrumb()
+        const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
+        const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData'
+        const url = `${YAHOO_QUOTE_SUMMARY}/${stock.id}?modules=${FUNDAMENTAL_MODULES}`
         
-        if (crumb) {
-          const result = await fetchWithCrumb(crumb)
-          
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`
+        
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000)
+        
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+          },
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        
+        if (response.ok) {
+          const result = await response.json()
           if (result?.quoteSummary?.result?.[0]) {
             const data = {
               data: result.quoteSummary.result[0],
@@ -175,62 +155,22 @@ function TechnicalAnalysis({
             return
           }
         }
-        
-        // If authenticated fetch fails, use simulated data
-        throw new Error('Authentication failed')
       } catch (err) {
-        console.warn('Yahoo Finance auth failed, using simulated data')
-        
-        // Fallback to simulated data
-        const generateSimulatedData = () => {
-          const basePrice = stockData?.current_price || 100
-          const randomFactor = () => 0.9 + Math.random() * 0.2
-          
-          return {
-            summaryDetail: {
-              marketCap: { raw: basePrice * 1000000000 * randomFactor() },
-              fiftyTwoWeekHighRaw: { raw: basePrice * 1.3 * randomFactor() },
-              fiftyTwoWeekLowRaw: { raw: basePrice * 0.7 * randomFactor() },
-              fiftyDayAverage: { raw: basePrice * 0.95 * randomFactor() },
-              twoHundredDayAverage: { raw: basePrice * 0.9 * randomFactor() },
-              dividendYieldRaw: { raw: 0.015 * randomFactor() },
-              averageVolume: { raw: 5000000 * randomFactor() }
-            },
-            defaultKeyStatistics: {
-              trailingPE: { raw: 18 * randomFactor() },
-              forwardPE: { raw: 15 * randomFactor() },
-              priceToBookRaw: { raw: 2.5 * randomFactor() },
-              priceToSalesTrailing12Months: { raw: 3.2 * randomFactor() },
-              trailingEps: { raw: basePrice / 18 },
-              beta: { raw: 1.2 * randomFactor() },
-              fiftyTwoWeekChange: { raw: 0.15 * randomFactor() - 0.05 },
-              enterpriseValue: { raw: basePrice * 1200000000 * randomFactor() }
-            },
-            financialData: {
-              totalData: { raw: 500000000000 * randomFactor() },
-              netIncomeToCommon: { raw: 50000000000 * randomFactor() },
-              grossMargins: { raw: 0.45 * randomFactor() },
-              operatingMargins: { raw: 0.25 * randomFactor() },
-              profitMargins: { raw: 0.18 * randomFactor() },
-              returnOnEquity: { raw: 0.15 * randomFactor() },
-              returnOnAssets: { raw: 0.08 * randomFactor() },
-              debtToEquity: { raw: 50 * randomFactor() },
-              currentRatio: { raw: 1.5 * randomFactor() }
-            }
-          }
-        }
-        
-        const simulatedData = {
-          data: generateSimulatedData(),
-          timestamp: Date.now(),
-          simulated: true
-        }
-        
-        setCachedFundamentals(simulatedData)
-        localStorage.setItem(`fundamentals_${stock.id}`, JSON.stringify(simulatedData))
-        setFundamentalsLoading(false)
+        console.warn('Real data fetch failed, using simulated:', err.message)
       }
-    })()
+      
+      // Always fallback to simulated data
+      useSimulatedData()
+    }
+    
+    // Start fetch with timeout protection
+    const fetchTimeout = setTimeout(() => {
+      useSimulatedData()
+    }, 5000)
+    
+    tryFetchData().finally(() => {
+      clearTimeout(fetchTimeout)
+    })
   }, [stock?.id, stockData])
 
   // Handle timeframe change - update state and fetch new data
