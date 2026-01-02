@@ -136,6 +136,9 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       // Count how many MAs the price is above
       const maAboveCount = maAnalysis.filter(m => m.above).length
       
+      // Initialize signals array
+      const signals = []
+      
       // Perfect Order Analysis - Triple Moving Average Alignment
       // Bullish: Price > MA10 > MA20 > MA44 (strong uptrend)
       // Bearish: Price < MA10 < MA20 < MA44 (strong downtrend)
