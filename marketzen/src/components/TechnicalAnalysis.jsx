@@ -581,6 +581,18 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
             </div>
+
+            {/* Sector Peers */}
+            <SectorPeersSection
+              currentStock={stock}
+              watchlist={watchlist}
+              onAddToWatchlist={onAddToWatchlist}
+              onSelectStock={(peerStock) => {
+                if (fetchStockData) {
+                  fetchStockData(peerStock, selectedTimeframe, true)
+                }
+              }}
+            />
           </motion.div>
         )}
         
@@ -632,21 +644,6 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           </motion.div>
         )}
         
-        {/* Summary Tab - Sector Peers */}
-        {activeTab === 'summary' && (
-          <motion.div key="sector-peers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="mt-4">
-            <SectorPeersSection 
-              currentStock={stock} 
-              watchlist={watchlist} 
-              onAddToWatchlist={onAddToWatchlist}
-              onSelectStock={(peerStock) => {
-                if (fetchStockData) {
-                  fetchStockData(peerStock, selectedTimeframe, true)
-                }
-              }}
-            />
-          </motion.div>
-        )}
         
         {/* Oscillators Tab */}
         {activeTab === 'oscillators' && analysisData && (
