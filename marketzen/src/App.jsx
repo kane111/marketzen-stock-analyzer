@@ -1250,6 +1250,8 @@ function AppContent() {
                       <NewsFeed 
                         key="news"
                         stockId={selectedStock?.id || null}
+                        watchlist={watchlist}
+                        onAddToWatchlist={addToWatchlist}
                         onBack={() => setView('dashboard')}
                       />
                     ) : view === 'analysis' ? (

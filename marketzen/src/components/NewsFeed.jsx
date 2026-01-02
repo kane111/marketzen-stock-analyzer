@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ExternalLink, Clock, ChevronRight, Newspaper, TrendingUp, TrendingDown, X, Filter, RefreshCw, AlertCircle } from 'lucide-react'
+import { ExternalLink, Clock, ChevronRight, Newspaper, TrendingUp, TrendingDown, X, Filter, RefreshCw, AlertCircle, Star, Check } from 'lucide-react'
 
 // Finnhub API configuration for real-time market news
 const FINNHUB_API_KEY = 'demo' // Replace with your free API key from https://finnhub.io/
@@ -116,7 +116,7 @@ const SENTIMENT_ICONS = {
   neutral: Newspaper
 }
 
-function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true, onBack }) {
+function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true, onBack, watchlist = [], onAddToWatchlist = null }) {
   const [news, setNews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -124,6 +124,10 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
   const [expandedId, setExpandedId] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [apiKeyMissing, setApiKeyMissing] = useState(false)
+  const [addedToWatchlist, setAddedToWatchlist] = useState(false)
+
+  // Check if current stock is in watchlist
+  const isInWatchlist = stockId && watchlist.some(item => item.id === stockId)
 
   // Live news fetching from Finnhub API
   useEffect(() => {
@@ -456,16 +460,56 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
           </div>
         </div>
         
-        {/* Refresh Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleRefresh}
-          className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
-          title="Refresh news"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </motion.button>
+        <div className="flex items-center gap-3">
+          {/* Add to Watchlist CTA */}
+          {stockId && onAddToWatchlist && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                const stock = watchlist.find(s => s.id === stockId)
+                if (stock) {
+                  onAddToWatchlist(stock)
+                } else {
+                  // Create stock object from stockId
+                  const symbol = stockId.replace('.NS', '')
+                  onAddToWatchlist({ id: stockId, symbol, name: symbol })
+                }
+                setAddedToWatchlist(true)
+                setTimeout(() => setAddedToWatchlist(false), 2000)
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isInWatchlist || addedToWatchlist
+                  ? 'bg-terminal-green/20 text-terminal-green border border-terminal-green/30'
+                  : 'bg-terminal-bg-light text-terminal-dim hover:bg-terminal-bg hover:text-terminal-text border border-terminal-border'
+              }`}
+              title={isInWatchlist ? 'Already in watchlist' : 'Add to watchlist'}
+            >
+              {isInWatchlist || addedToWatchlist ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>In Watchlist</span>
+                </>
+              ) : (
+                <>
+                  <Star className="w-4 h-4" />
+                  <span>Add to Watchlist</span>
+                </>
+              )}
+            </motion.button>
+          )}
+          
+          {/* Refresh Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            className="p-2 rounded-lg bg-terminal-bg-light hover:bg-terminal-bg transition-colors"
+            title="Refresh news"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </motion.button>
+        </div>
       </div>
 
       {/* Last Updated Timestamp */}
