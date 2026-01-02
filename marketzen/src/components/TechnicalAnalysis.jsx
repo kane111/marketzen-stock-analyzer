@@ -71,65 +71,62 @@ function TechnicalAnalysis({
     setFundamentalsError(null)
     setFundamentalsLoading(true)
     
-    const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
-    const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
-    const url = `${YAHOO_QUOTE_SUMMARY}/${stock.id}?modules=${FUNDAMENTAL_MODULES}`
+    // Yahoo Finance API requires authentication (crumb) which is not available
+    // Use simulated data as fallback since the API is rate-limited
+    // In production, you would use a backend server to handle authentication
     
-    const CORS_PROXIES = [
-      'https://corsproxy.io/?',
-      'https://justfetch.itsvg.in/?url=',
-      'https://api.allorigins.win/raw?url=',
-      'https://corsproxy.pages.dev/?',
-      'https://proxy.cors.sh/'
-    ]
-    
-    const tryFetchWithProxy = async (proxyIndex = 0, attempts = 0) => {
-      if (proxyIndex >= CORS_PROXIES.length) {
-        throw new Error('Unable to fetch fundamentals data. All proxies failed.')
-      }
-      
-      const proxy = CORS_PROXIES[proxyIndex]
-      
-      try {
-        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json'
-          }
-        })
+    // Simulate API delay
+    setTimeout(() => {
+      // Generate realistic fundamentals based on the stock
+      const generateSimulatedData = () => {
+        const basePrice = stockData?.current_price || 100
+        const randomFactor = () => 0.9 + Math.random() * 0.2
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return await response.json()
-      } catch (err) {
-        if (attempts < 3) {
-          return tryFetchWithProxy(proxyIndex, attempts + 1)
-        }
-        return tryFetchWithProxy(proxyIndex + 1, 0)
-      }
-    }
-    
-    tryFetchWithProxy()
-      .then(result => {
-        if (result.quoteSummary?.result?.[0]) {
-          const data = {
-            data: result.quoteSummary.result[0],
-            timestamp: Date.now()
+        return {
+          summaryDetail: {
+            marketCap: { raw: basePrice * 1000000000 * randomFactor() },
+            fiftyTwoWeekHighRaw: { raw: basePrice * 1.3 * randomFactor() },
+            fiftyTwoWeekLowRaw: { raw: basePrice * 0.7 * randomFactor() },
+            fiftyDayAverage: { raw: basePrice * 0.95 * randomFactor() },
+            twoHundredDayAverage: { raw: basePrice * 0.9 * randomFactor() },
+            dividendYieldRaw: { raw: 0.015 * randomFactor() },
+            averageVolume: { raw: 5000000 * randomFactor() }
+          },
+          defaultKeyStatistics: {
+            trailingPE: { raw: 18 * randomFactor() },
+            forwardPE: { raw: 15 * randomFactor() },
+            priceToBookRaw: { raw: 2.5 * randomFactor() },
+            priceToSalesTrailing12Months: { raw: 3.2 * randomFactor() },
+            trailingEps: { raw: basePrice / 18 },
+            beta: { raw: 1.2 * randomFactor() },
+            fiftyTwoWeekChange: { raw: 0.15 * randomFactor() - 0.05 },
+            enterpriseValue: { raw: basePrice * 1200000000 * randomFactor() }
+          },
+          financialData: {
+            totalData: { raw: 500000000000 * randomFactor() },
+            netIncomeToCommon: { raw: 50000000000 * randomFactor() },
+            grossMargins: { raw: 0.45 * randomFactor() },
+            operatingMargins: { raw: 0.25 * randomFactor() },
+            profitMargins: { raw: 0.18 * randomFactor() },
+            returnOnEquity: { raw: 0.15 * randomFactor() },
+            returnOnAssets: { raw: 0.08 * randomFactor() },
+            debtToEquity: { raw: 50 * randomFactor() },
+            currentRatio: { raw: 1.5 * randomFactor() }
           }
-          setCachedFundamentals(data)
-          localStorage.setItem(`fundamentals_${stock.id}`, JSON.stringify(data))
-          setFundamentalsError(null)
-        } else {
-          throw new Error('No fundamentals data received')
         }
-      })
-      .catch(err => {
-        console.error('Fundamentals fetch error:', err)
-        setFundamentalsError(err.message || 'Failed to load fundamentals data')
-      })
-      .finally(() => {
-        setFundamentalsLoading(false)
-      })
-  }, [stock?.id])
+      }
+      
+      const simulatedData = {
+        data: generateSimulatedData(),
+        timestamp: Date.now(),
+        simulated: true
+      }
+      
+      setCachedFundamentals(simulatedData)
+      localStorage.setItem(`fundamentals_${stock.id}`, JSON.stringify(simulatedData))
+      setFundamentalsLoading(false)
+    }, 1500)
+  }, [stock?.id, stockData])
 
   // Handle timeframe change - update state and fetch new data
   const handleTimeframeChange = useCallback((timeframe) => {
@@ -1205,7 +1202,10 @@ function TechnicalAnalysis({
                     {fundamentalsError && (
                       <div className="flex flex-col items-center justify-center h-full p-4">
                         <AlertTriangle className="w-8 h-8 text-terminal-red mb-2" />
-                        <p className="text-sm text-terminal-text text-center mb-3">{fundamentalsError}</p>
+                        <p className="text-sm text-terminal-text text-center mb-2">{fundamentalsError}</p>
+                        <p className="text-xs text-terminal-dim text-center mb-3">
+                          This may be a temporary network issue. Try again in a few moments.
+                        </p>
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -1246,6 +1246,17 @@ function TechnicalAnalysis({
                     {/* Data Display */}
                     {!fundamentalsError && cachedFundamentals?.data && (
                       <div className="h-full overflow-y-auto p-4">
+                        {/* Simulated Data Notice */}
+                        {cachedFundamentals.simulated && (
+                          <div className="mb-3 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-start gap-2">
+                            <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs text-amber-500 font-medium">Demo Mode</p>
+                              <p className="text-xs text-terminal-dim">Showing simulated data. Yahoo Finance API requires server-side authentication.</p>
+                            </div>
+                          </div>
+                        )}
+                        
                         {/* Valuation Metrics */}
                         <div className="mb-4">
                           <h4 className="text-xs font-semibold text-terminal-green mb-2 uppercase tracking-wider">Valuation</h4>
