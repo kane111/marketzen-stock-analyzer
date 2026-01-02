@@ -1049,6 +1049,32 @@ function AppContent() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
+                    {/* Navigation Menu */}
+                    <div className="hidden md:flex items-center gap-1 mr-4 px-3 py-1.5 bg-terminal-bg rounded-lg border border-terminal-border">
+                      {[
+                        { id: 'dashboard', icon: TrendingUp, label: 'Market' },
+                        { id: 'analysis', icon: Activity, label: 'Analysis' },
+                        { id: 'news', icon: Newspaper, label: 'News' },
+                        { id: 'portfolio', icon: Wallet, label: 'Portfolio' },
+                        { id: 'sectors', icon: BarChart3, label: 'Sectors' },
+                      ].map((item) => (
+                        <motion.button
+                          key={item.id}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setView(item.id)}
+                          className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                            view === item.id 
+                              ? 'text-terminal-bg bg-terminal-green' 
+                              : 'text-terminal-dim hover:text-terminal-text hover:bg-terminal-bg-light'
+                          }`}
+                        >
+                          <item.icon className="w-3.5 h-3.5" />
+                          <span>{item.label}</span>
+                        </motion.button>
+                      ))}
+                    </div>
+                    
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
