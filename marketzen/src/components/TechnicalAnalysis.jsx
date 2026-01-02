@@ -362,11 +362,20 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
   
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Header with Breadcrumb Navigation */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onBack} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border p-2.5 rounded-lg hover:bg-terminal-bg-light transition-colors">
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onBack} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border p-2.5 rounded-lg hover:bg-terminal-bg-light transition-colors" title="Back to Dashboard">
           <ArrowLeft className="w-5 h-5" />
         </motion.button>
+        
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 text-sm">
+          <button onClick={onBack} className="text-terminal-dim hover:text-terminal-text transition-colors">
+            Dashboard
+          </button>
+          <span className="text-terminal-dim/50">/</span>
+          <span className="text-terminal-green font-medium">Technical Analysis</span>
+        </nav>
         
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">

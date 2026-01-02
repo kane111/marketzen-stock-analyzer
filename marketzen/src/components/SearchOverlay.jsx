@@ -11,36 +11,56 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const [recentSearches, setRecentSearches] = useState(() => {
     const saved = localStorage.getItem('marketzen_recent')
     return saved ? JSON.parse(saved) : []
   })
   const inputRef = useRef(null)
 
-  // Robust focus handling - try multiple approaches
+  // Get all items combined (recent + results) for keyboard navigation
+  const getAllItems = () => {
+    if (query.length < 2) return recentSearches
+    return results
+  }
+
+  // Keyboard navigation handler
+  const handleKeyDown = (e) => {
+    const items = getAllItems()
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightedIndex(prev => Math.min(prev + 1, items.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex(prev => Math.max(prev - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightedIndex >= 0 && items[highlightedIndex]) {
+        handleSelect(items[highlightedIndex])
+      }
+    } else if (e.key === 'Escape') {
+      onClose()
+    }
+  }
+
+  // Reset highlighted index when query changes
+  useEffect(() => {
+    setHighlightedIndex(-1)
+  }, [query, results, recentSearches])
+
+  // Focus handling
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      // Immediate focus attempt
       inputRef.current.focus()
-      
-      // Backup focus attempts with increasing delays
       const timeouts = [
         setTimeout(() => inputRef.current?.focus(), 50),
         setTimeout(() => inputRef.current?.focus(), 150),
         setTimeout(() => inputRef.current?.focus(), 300),
       ]
-      
-      const handleKeyDown = (e) => {
-        if (e.key === 'Escape') onClose()
-      }
-      window.addEventListener('keydown', handleKeyDown)
-      
-      return () => {
-        timeouts.forEach(clearTimeout)
-        window.removeEventListener('keydown', handleKeyDown)
-      }
+      return () => timeouts.forEach(clearTimeout)
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   useEffect(() => {
     if (query.length < 2) {
@@ -167,6 +187,7 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Search NSE/BSE stocks..."
                 autoFocus
                 className="flex-1 bg-transparent text-lg outline-none placeholder:text-terminal-dim font-mono"
@@ -182,8 +203,9 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
             {/* Results */}
             <div className="max-h-96 overflow-y-auto">
               {loading && (
-                <div className="p-4 flex items-center justify-center">
+                <div className="p-8 flex flex-col items-center justify-center">
                   <Spinner size="1.5rem" />
+                  <p className="text-sm text-terminal-dim mt-3 font-mono">Searching stocks...</p>
                 </div>
               )}
 
@@ -194,12 +216,16 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                     <span>Recent Searches</span>
                   </div>
                   <div className="space-y-1">
-                    {recentSearches.map((stock) => (
+                    {recentSearches.map((stock, index) => (
                       <motion.button
                         key={stock.id}
                         onClick={() => handleSelect(stock)}
                         whileHover={{ x: 4 }}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-terminal-bg transition-colors text-left"
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                          index === highlightedIndex 
+                            ? 'bg-terminal-green/20 border border-terminal-green/30' 
+                            : 'hover:bg-terminal-bg'
+                        }`}
                       >
                         <div className="w-8 h-8 rounded bg-terminal-green/20 flex items-center justify-center">
                           <span className="text-xs font-bold font-mono text-terminal-green">{stock.symbol.substring(0, 2)}</span>
@@ -211,6 +237,15 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                         <span className="text-xs px-2 py-0.5 bg-terminal-bg rounded text-terminal-dim font-mono">
                           {stock.exchange || 'NSE'}
                         </span>
+                        {index === highlightedIndex && (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-terminal-green"
+                          >
+                            <TrendingUp className="w-4 h-4" />
+                          </motion.div>
+                        )}
                       </motion.button>
                     ))}
                   </div>
@@ -222,6 +257,7 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                   <div className="flex items-center gap-2 px-3 py-2 text-sm text-terminal-dim font-mono">
                     <Building2 className="w-4 h-4" />
                     <span>Indian Stocks</span>
+                    <span className="text-xs text-terminal-dim/50">({results.length} found)</span>
                   </div>
                   {results.map((stock, index) => (
                     <motion.button
@@ -231,7 +267,11 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                       transition={{ delay: index * 0.05 }}
                       onClick={() => handleSelect(stock)}
                       whileHover={{ x: 4 }}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-terminal-bg transition-colors text-left"
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
+                        index === highlightedIndex 
+                          ? 'bg-terminal-green/20 border border-terminal-green/30' 
+                          : 'hover:bg-terminal-bg'
+                      }`}
                     >
                       <div className="w-10 h-10 rounded bg-terminal-green/20 flex items-center justify-center">
                         <span className="text-sm font-bold font-mono text-terminal-green">{stock.symbol.substring(0, 2)}</span>
@@ -240,12 +280,21 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
                         <p className="font-medium text-sm">{stock.name}</p>
                         <p className="text-sm text-terminal-dim font-mono">{stock.symbol}</p>
                       </div>
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        className="p-2 rounded-lg bg-terminal-green/20"
-                      >
-                        <Plus className="w-4 h-4 text-terminal-green" />
-                      </motion.div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-2 py-0.5 bg-terminal-bg rounded text-terminal-dim font-mono">
+                          {stock.exchange || 'NSE'}
+                        </span>
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          className={`p-2 rounded-lg ${
+                            index === highlightedIndex 
+                              ? 'bg-terminal-green text-terminal-bg' 
+                              : 'bg-terminal-green/20'
+                          }`}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </motion.div>
+                      </div>
                     </motion.button>
                   ))}
                 </div>
@@ -260,12 +309,17 @@ function SearchOverlay({ isOpen, onClose, onAdd }) {
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-terminal-border text-xs text-terminal-dim flex items-center justify-between font-mono">
+            <div className="p-3 border-t border-terminal-border text-xs text-terminal-dim flex items-center justify-between font-mono bg-terminal-bg/50">
+              <div className="flex items-center gap-3">
+                <kbd className="px-2 py-1 bg-terminal-panel border border-terminal-border rounded">↑↓</kbd>
+                <span>to navigate</span>
+                <kbd className="px-2 py-1 bg-terminal-panel border border-terminal-border rounded">↵</kbd>
+                <span>to select</span>
+              </div>
               <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-terminal-bg rounded">ESC</kbd>
+                <kbd className="px-2 py-1 bg-terminal-panel border border-terminal-border rounded">ESC</kbd>
                 <span>to close</span>
               </div>
-              <span>Press ↵ to select</span>
             </div>
           </motion.div>
         </motion.div>

@@ -1882,7 +1882,7 @@ function AppContent() {
                 <motion.nav
                   initial={{ y: 50, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  className="fixed bottom-0 left-0 right-0 z-40 px-2 py-2 pb-safe flex items-center justify-around bg-terminal-panel border-t border-terminal-border"
+                  className="fixed bottom-0 left-0 right-0 z-40 px-2 py-2 pb-safe flex items-center justify-around bg-terminal-panel border-t border-terminal-border safe-area-pb"
                 >
                   {[
                     { id: 'dashboard', icon: TrendingUp, label: 'Market' },
@@ -1893,7 +1893,6 @@ function AppContent() {
                   ].map((item) => (
                     <motion.button
                       key={item.id}
-                      whileTap={{ scale: 0.9 }}
                       onClick={() => setView(item.id)}
                       className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[64px] ${
                         view === item.id 
@@ -1901,7 +1900,11 @@ function AppContent() {
                           : 'text-terminal-dim hover:text-terminal-text'
                       }`}
                     >
-                      <item.icon className="w-6 h-6" />
+                      <div className={`p-1.5 rounded-xl transition-colors ${
+                        view === item.id ? 'bg-terminal-green/10' : 'hover:bg-terminal-bg/50'
+                      }`}>
+                        <item.icon className="w-6 h-6" />
+                      </div>
                       <span className="text-[10px] font-medium font-mono">{item.label}</span>
                       {view === item.id && (
                         <motion.div
