@@ -386,215 +386,92 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         <TimeframeSelector timeframes={taTimeframes} selected={selectedTimeframe} onSelect={handleTimeframeChange} />
       </div>
       
-      {/* Signal Banner */}
-      {signal && (
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6 border-2 ${getSignalBg(signal.type)}`}>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+      {/* Combined Signal & MA Analysis Section */}
+      {signal && analysisData && (
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-4 mb-4">
+          {/* Signal Header */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-terminal-border/50">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                 signal.type.includes('BUY') ? 'bg-terminal-green/20' : signal.type.includes('SELL') ? 'bg-terminal-red/20' : 'bg-terminal-bg-light'
               }`}>
                 {signal.type.includes('BUY') ? (
-                  <TrendingUp className="w-8 h-8 text-terminal-green" />
+                  <TrendingUp className="w-5 h-5 text-terminal-green" />
                 ) : signal.type.includes('SELL') ? (
-                  <TrendingDown className="w-8 h-8 text-terminal-red" />
+                  <TrendingDown className="w-5 h-5 text-terminal-red" />
                 ) : (
-                  <Target className="w-8 h-8 text-terminal-dim" />
+                  <Target className="w-5 h-5 text-terminal-dim" />
                 )}
               </div>
               <div>
-                <p className="text-sm text-terminal-dim mb-1">Overall Signal</p>
-                <p className={`text-3xl font-bold ${getSignalColor(signal.type)}`}>{signal.type}</p>
-                <p className="text-sm text-terminal-dim mt-1">{signal.strength}</p>
+                <p className="text-sm text-terminal-dim">Signal</p>
+                <p className={`text-xl font-bold ${getSignalColor(signal.type)}`}>{signal.type}</p>
               </div>
             </div>
-            <div className="flex items-center gap-8">
-              <div className="text-center">
-                <p className="text-sm text-terminal-dim">Buy Signals</p>
-                <p className="text-2xl font-bold text-terminal-green">{signal.buyCount}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-terminal-dim">Sell Signals</p>
-                <p className="text-2xl font-bold text-terminal-red">{signal.sellCount}</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {/* Moving Average Analysis */}
-      {analysisData && (
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
-          {/* Perfect Order Status Banner */}
-          {(analysisData.isBullishPerfectOrder || analysisData.isBearishPerfectOrder || analysisData.isPartialBullish || analysisData.isPartialBearish) && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`mb-4 p-4 rounded-xl border-2 ${
-                analysisData.isBullishPerfectOrder 
-                  ? 'bg-terminal-green/10 border-terminal-green' 
-                  : analysisData.isBearishPerfectOrder
-                    ? 'bg-terminal-red/10 border-terminal-red'
-                    : analysisData.isPartialBullish
-                      ? 'bg-amber-500/10 border-amber-500'
-                      : 'bg-amber-500/10 border-amber-500'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    analysisData.isBullishPerfectOrder 
-                      ? 'bg-terminal-green/20' 
-                      : analysisData.isBearishPerfectOrder
-                        ? 'bg-terminal-red/20'
-                        : 'bg-amber-500/20'
-                  }`}>
-                    {analysisData.isBullishPerfectOrder ? (
-                      <TrendingUp className="w-6 h-6 text-terminal-green" />
-                    ) : analysisData.isBearishPerfectOrder ? (
-                      <TrendingDown className="w-6 h-6 text-terminal-red" />
-                    ) : (
-                      <Target className="w-6 h-6 text-amber-500" />
-                    )}
-                  </div>
-                  <div>
-                    <p className={`text-lg font-bold ${
-                      analysisData.isBullishPerfectOrder 
-                        ? 'text-terminal-green' 
-                        : analysisData.isBearishPerfectOrder
-                          ? 'text-terminal-red'
-                          : 'text-amber-500'
-                    }`}>
-                      {analysisData.isBullishPerfectOrder 
-                        ? 'PERFECT ORDER - BULLISH' 
-                        : analysisData.isBearishPerfectOrder
-                          ? 'PERFECT ORDER - BEARISH'
-                          : analysisData.isPartialBullish
-                            ? 'PARTIAL ALIGNMENT - BULLISH'
-                            : 'PARTIAL ALIGNMENT - BEARISH'
-                      }
-                    </p>
-                    <p className="text-sm text-terminal-dim">
-                      {analysisData.isBullishPerfectOrder 
-                        ? 'Price > MA10 > MA20 > MA44 - Strong uptrend confirmed'
-                        : analysisData.isBearishPerfectOrder
-                          ? 'Price < MA10 < MA20 < MA44 - Strong downtrend confirmed'
-                          : analysisData.isPartialBullish
-                            ? 'Building uptrend - Price > MA10 > MA20'
-                            : 'Building downtrend - Price < MA10 < MA20'
-                      }
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {analysisData.isBullishPerfectOrder && (
-                    <span className="px-3 py-1 bg-terminal-green/20 text-terminal-green rounded-full text-sm font-medium">STRONG BUY</span>
-                  )}
-                  {analysisData.isBearishPerfectOrder && (
-                    <span className="px-3 py-1 bg-terminal-red/20 text-terminal-red rounded-full text-sm font-medium">STRONG SELL</span>
-                  )}
-                  {(analysisData.isPartialBullish || analysisData.isPartialBearish) && (
-                    <span className="px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full text-sm font-medium">WATCH</span>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-          
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-terminal-green/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-terminal-green" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-terminal-text">Moving Average Analysis</h3>
-                <p className="text-sm text-terminal-dim">Price position relative to key MAs</p>
-              </div>
-            </div>
-            <div className={`px-4 py-2 rounded-lg border ${
-              analysisData.maAboveCount >= 2 
-                ? 'bg-terminal-green/10 border-terminal-green/30' 
-                : analysisData.maAboveCount >= 1 
-                  ? 'bg-amber-500/10 border-amber-500/30'
-                  : 'bg-terminal-red/10 border-terminal-red/30'
+            
+            {/* MA Alignment Status */}
+            <div className={`px-3 py-1.5 rounded-lg border text-sm ${
+              analysisData.isBullishPerfectOrder 
+                ? 'bg-terminal-green/10 border-terminal-green/50 text-terminal-green' 
+                : analysisData.isBearishPerfectOrder
+                  ? 'bg-terminal-red/10 border-terminal-red/50 text-terminal-red'
+                  : analysisData.isPartialBullish || analysisData.isPartialBearish
+                    ? 'bg-amber-500/10 border-amber-500/50 text-amber-500'
+                    : 'bg-terminal-bg-light border-terminal-border text-terminal-dim'
             }`}>
-              <span className={`text-sm font-medium ${
-                analysisData.maAboveCount >= 2 
-                  ? 'text-terminal-green' 
-                  : analysisData.maAboveCount >= 1 
-                    ? 'text-amber-500'
-                    : 'text-terminal-red'
-              }`}>
-                Trading {analysisData.maAboveCount}/3 MAs
-              </span>
+              {analysisData.isBullishPerfectOrder 
+                ? 'Perfect Order ↑' 
+                : analysisData.isBearishPerfectOrder
+                  ? 'Perfect Order ↓'
+                  : `MA: ${analysisData.maAboveCount}/3`
+              }
+            </div>
+            
+            {/* Signal Counts */}
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-xs text-terminal-dim">BUY</p>
+                <p className="text-lg font-bold text-terminal-green">{signal.buyCount}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-terminal-dim">SELL</p>
+                <p className="text-lg font-bold text-terminal-red">{signal.sellCount}</p>
+              </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4">
+          {/* Compact MA Cards */}
+          <div className="grid grid-cols-3 gap-3">
             {analysisData.maAnalysis.map((ma, index) => (
               <motion.div
                 key={ma.period}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`relative overflow-hidden rounded-xl border p-4 transition-all ${
+                transition={{ delay: index * 0.05 }}
+                className={`rounded-lg border p-3 ${
                   ma.above 
                     ? 'bg-terminal-green/5 border-terminal-green/30' 
                     : 'bg-terminal-red/5 border-terminal-red/30'
                 }`}
               >
-                {/* Status Badge */}
-                <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                  ma.above 
-                    ? 'bg-terminal-green/20 text-terminal-green' 
-                    : 'bg-terminal-red/20 text-terminal-red'
-                }`}>
-                  {ma.above ? 'ABOVE' : 'BELOW'}
-                </div>
-                
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-sm text-terminal-dim mb-1">MA {ma.period}</p>
-                    <p className={`text-2xl font-bold font-mono ${
-                      ma.above ? 'text-terminal-green' : 'text-terminal-red'
-                    }`}>
-                      {formatCurrency(ma.value)}
-                    </p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    ma.above ? 'bg-terminal-green/20' : 'bg-terminal-red/20'
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-terminal-dim">MA{ma.period}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                    ma.above ? 'bg-terminal-green/20 text-terminal-green' : 'bg-terminal-red/20 text-terminal-red'
                   }`}>
-                    {ma.above ? (
-                      <TrendingUp className="w-5 h-5 text-terminal-green" />
-                    ) : (
-                      <TrendingDown className="w-5 h-5 text-terminal-red" />
-                    )}
-                  </div>
+                    {ma.above ? '↑' : '↓'}
+                  </span>
                 </div>
-                
-                {/* Price comparison */}
-                <div className="mt-3 pt-3 border-t border-terminal-border/50">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-terminal-dim">Current Price</span>
-                    <span className="font-mono text-terminal-text">{formatCurrency(analysisData.currentPrice)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs mt-1">
-                    <span className="text-terminal-dim">vs MA {ma.period}</span>
-                    <span className={`font-mono ${ma.above ? 'text-terminal-green' : 'text-terminal-red'}`}>
-                      {ma.above ? '+' : ''}{formatCurrency(analysisData.currentPrice - ma.value)}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Progress bar indicator */}
-                <div className="mt-3 h-1 bg-terminal-bg-light rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: ma.above ? '100%' : '0%' }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className={`h-full rounded-full ${ma.above ? 'bg-terminal-green' : 'bg-terminal-red'}`}
-                  />
-                </div>
+                <p className={`text-lg font-bold font-mono ${
+                  ma.above ? 'text-terminal-green' : 'text-terminal-red'
+                }`}>
+                  {formatCurrency(ma.value)}
+                </p>
+                <p className={`text-xs mt-1 ${
+                  ma.above ? 'text-terminal-green/70' : 'text-terminal-red/70'
+                }`}>
+                  {ma.above ? '+' : ''}{formatCurrency(analysisData.currentPrice - ma.value)}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -602,7 +479,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       )}
       
       {/* Indicator Toggles */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 flex-wrap">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 flex-wrap">
         {[
           { id: 'smaShort', label: `SMA ${params.sma.shortPeriod}`, color: '#f59e0b' },
           { id: 'smaLong', label: `SMA ${params.sma.longPeriod}`, color: '#8b5cf6' },
@@ -640,13 +517,13 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         {/* Summary Tab */}
         {activeTab === 'summary' && analysisData && (
           <motion.div key="summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 border border-terminal-border rounded-lg bg-terminal-panel p-4">
-                <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
-                  <Activity className="w-5 h-5 text-terminal-green" />
-                  Price Chart
-                </h3>
-                <div className="h-80">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 border border-terminal-border rounded-lg bg-terminal-panel p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="w-4 h-4 text-terminal-green" />
+                  <h3 className="text-sm font-mono text-terminal-text">Price Chart</h3>
+                </div>
+                <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={analysisData.chartData}>
                       <defs>
@@ -677,21 +554,21 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                 </div>
               </div>
               
-              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-4">
-                <h3 className="text-lg font-mono mb-4 flex items-center gap-2 text-terminal-text">
-                  <Target className="w-5 h-5 text-terminal-green" />
-                  Trading Signals
-                </h3>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {analysisData.signals.map((sig, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className={`p-3 rounded-xl border ${
+              <div className="border border-terminal-border rounded-lg bg-terminal-panel p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="w-4 h-4 text-terminal-green" />
+                  <h3 className="text-sm font-mono text-terminal-text">Signals</h3>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {analysisData.signals.slice(0, 6).map((sig, i) => (
+                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }} className={`p-2 rounded-lg border ${
                       sig.color === 'positive' ? 'bg-terminal-green/10 border-terminal-green/30' :
                       sig.color === 'negative' ? 'bg-terminal-red/10 border-terminal-red/30' :
                       'bg-terminal-bg-light border-terminal-border'
                     }`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-sm">{sig.indicator}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium">{sig.indicator}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
                           sig.signal === 'BUY' ? 'bg-terminal-green/20 text-terminal-green' :
                           sig.signal === 'SELL' ? 'bg-terminal-red/20 text-terminal-red' :
                           'bg-terminal-bg-light text-terminal-dim'
@@ -699,7 +576,6 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                           {sig.signal}
                         </span>
                       </div>
-                      <p className="text-xs text-terminal-dim">{sig.description}</p>
                     </motion.div>
                   ))}
                 </div>
