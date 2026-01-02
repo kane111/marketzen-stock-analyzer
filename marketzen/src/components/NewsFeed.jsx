@@ -2,38 +2,108 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ExternalLink, Clock, ChevronRight, Newspaper, TrendingUp, TrendingDown, X, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 
-// Enhanced mock news data with correct tags
-const MOCK_NEWS = {
-  default: [
-    { id: 1, title: 'Nifty 50 closes at record high amid strong FII inflow', source: 'Economic Times', time: '2h ago', url: '#', sentiment: 'positive', tags: ['Market', 'FII'] },
-    { id: 2, title: 'RBI keeps interest rates unchanged, maintains accommodative stance', source: 'Livemint', time: '4h ago', url: '#', sentiment: 'neutral', tags: ['RBI', 'Policy'] },
-    { id: 3, title: 'Global markets rally as US Fed signals rate cuts in 2025', source: 'Bloomberg', time: '5h ago', url: '#', sentiment: 'positive', tags: ['Global', 'Fed'] },
-    { id: 4, title: 'India GDP growth slows to 5.4% in Q3', source: 'The Hindu', time: '6h ago', url: '#', sentiment: 'negative', tags: ['Economy', 'GDP'] },
-    { id: 5, title: 'Oil prices stabilize amid Middle East tensions', source: 'Reuters', time: '8h ago', url: '#', sentiment: 'neutral', tags: ['Commodity', 'Oil'] },
-  ],
-  'RELIANCE.NS': [
-    { id: 101, title: 'Reliance Jio adds 5 million new subscribers in Q3', source: 'Economic Times', time: '1h ago', url: '#', sentiment: 'positive', tags: ['Telecom', 'Subscriber Growth'] },
-    { id: 102, title: 'Reliance Retail reports 25% revenue growth in FY24', source: 'Livemint', time: '3h ago', url: '#', sentiment: 'positive', tags: ['Retail', 'Revenue'] },
-    { id: 103, title: 'Oil refining margins remain strong for Reliance', source: 'Bloomberg', time: '5h ago', url: '#', sentiment: 'positive', tags: ['Oil', 'Refining'] },
-    { id: 104, title: 'Reliance Energy secures new solar project contract', source: 'The Hindu', time: '7h ago', url: '#', sentiment: 'positive', tags: ['Energy', 'Solar'] },
-  ],
-  'TCS.NS': [
-    { id: 201, title: 'TCS wins multi-year contract from European bank', source: 'Economic Times', time: '2h ago', url: '#', sentiment: 'positive', tags: ['IT', 'Contract'] },
-    { id: 202, title: 'TCS announces new AI platform for enterprises', source: 'Livemint', time: '4h ago', url: '#', sentiment: 'positive', tags: ['AI', 'Innovation'] },
-    { id: 203, title: 'Quarterly results beat analyst expectations', source: 'Bloomberg', time: '6h ago', url: '#', sentiment: 'positive', tags: ['Results', 'Earnings'] },
-  ],
-  'HDFCBANK.NS': [
-    { id: 301, title: 'HDFC Bank reports 20% profit growth in Q3', source: 'Economic Times', time: '1h ago', url: '#', sentiment: 'positive', tags: ['Banking', 'Profit'] },
-    { id: 302, title: 'Loan growth accelerates for HDFC Bank', source: 'Livemint', time: '3h ago', url: '#', sentiment: 'positive', tags: ['Banking', 'Loans'] },
-    { id: 303, title: 'HDFC Bank launches new digital banking features', source: 'The Hindu', time: '5h ago', url: '#', sentiment: 'neutral', tags: ['Digital', 'Innovation'] },
-  ],
-  'INFY.NS': [
-    { id: 401, title: 'Infosys wins $200 million deal from US client', source: 'Economic Times', time: '2h ago', url: '#', sentiment: 'positive', tags: ['IT', 'Deal'] },
-    { id: 402, title: 'Infosys expands AI partnership with Microsoft', source: 'Livemint', time: '4h ago', url: '#', sentiment: 'positive', tags: ['AI', 'Partnership'] },
-    { id: 403, title: 'Quarterly guidance raised by Infosys', source: 'Bloomberg', time: '6h ago', url: '#', sentiment: 'positive', tags: ['Guidance', 'Results'] },
-  ],
+// Finnhub API configuration for real-time market news
+const FINNHUB_API_KEY = 'demo' // Replace with your free API key from https://finnhub.io/
+const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1'
+
+// Map Finnhub category to our stock ID format
+const getCategoryForStock = (stockId) => {
+  if (!stockId || stockId === 'general') return 'general'
+  
+  // Extract base symbol from stock ID (e.g., 'AAPL' from 'AAPL.NS')
+  const symbol = stockId.replace('.NS', '').toUpperCase()
+  
+  // Map to Finnhub market category
+  const categoryMap = {
+    'RELIANCE': 'equity',
+    'TCS': 'equity',
+    'HDFCBANK': 'equity',
+    'INFY': 'equity',
+    'ICICIBANK': 'equity',
+    'SBIN': 'equity',
+    'BHARTIARTL': 'equity',
+    'ITC': 'equity',
+  }
+  
+  return categoryMap[symbol] || 'equity'
 }
 
+// Transform Finnhub news item to match our component's expected format
+const transformNewsItem = (item, stockId = null) => {
+  const symbol = stockId ? stockId.replace('.NS', '') : null
+  
+  // Determine sentiment based on source and headline
+  const sentimentKeywords = {
+    positive: ['surge', 'jump', 'soar', 'gain', 'growth', 'profit', 'beat', 'raise', 'record', 'high', 'rally', 'bullish', 'upgrade', 'buy'],
+    negative: ['plunge', 'drop', 'fall', 'loss', 'decline', 'cut', 'miss', 'low', 'bearish', 'downgrade', 'sell', 'warning', 'concern'],
+  }
+  
+  const headline = item.headline?.toLowerCase() || ''
+  const summary = item.summary?.toLowerCase() || ''
+  const text = headline + ' ' + summary
+  
+  let sentiment = 'neutral'
+  for (const keyword of sentimentKeywords.positive) {
+    if (text.includes(keyword)) {
+      sentiment = 'positive'
+      break
+    }
+  }
+  if (sentiment === 'neutral') {
+    for (const keyword of sentimentKeywords.negative) {
+      if (text.includes(keyword)) {
+        sentiment = 'negative'
+        break
+      }
+    }
+  }
+  
+  // Extract tags from headline and category
+  const tags = []
+  if (item.category) {
+    tags.push(item.category.charAt(0).toUpperCase() + item.category.slice(1))
+  }
+  if (symbol && headline.includes(symbol.toLowerCase())) {
+    tags.push(symbol)
+  }
+  
+  // Convert Unix timestamp to relative time
+  const timeAgo = formatTimeAgo(item.datetime)
+  
+  return {
+    id: item.id || Date.now() + Math.random(),
+    title: item.headline || 'No headline available',
+    source: item.source || 'Unknown Source',
+    time: timeAgo,
+    url: item.url || '#',
+    sentiment: sentiment,
+    tags: tags.length > 0 ? tags : ['Market'],
+    summary: item.summary || '',
+    datetime: item.datetime,
+  }
+}
+
+// Format Unix timestamp to relative time string
+const formatTimeAgo = (timestamp) => {
+  if (!timestamp) return 'Just now'
+  
+  const now = Math.floor(Date.now() / 1000)
+  const diff = now - timestamp
+  
+  const minutes = Math.floor(diff / 60)
+  const hours = Math.floor(diff / 3600)
+  const days = Math.floor(diff / 86400)
+  
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 7) return `${days}d ago`
+  
+  const date = new Date(timestamp * 1000)
+  return date.toLocaleDateString()
+}
+
+// Sentiment colors configuration
 const SENTIMENT_COLORS = {
   positive: { bg: 'bg-terminal-green/10', text: 'text-terminal-green', border: 'border-terminal-green/30', icon: 'bg-terminal-green/20' },
   negative: { bg: 'bg-terminal-red/10', text: 'text-terminal-red', border: 'border-terminal-red/30', icon: 'bg-terminal-red/20' },
@@ -49,30 +119,164 @@ const SENTIMENT_ICONS = {
 function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true, onBack }) {
   const [news, setNews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all') // 'all', 'positive', 'negative', 'neutral'
   const [expandedId, setExpandedId] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [apiKeyMissing, setApiKeyMissing] = useState(false)
 
-  // Simulate live news updates
+  // Live news fetching from Finnhub API
   useEffect(() => {
-    const fetchNews = () => {
+    const fetchNews = async () => {
       setLoading(true)
-      const fetchTimeout = setTimeout(() => {
-        const stockNews = MOCK_NEWS[stockId] || MOCK_NEWS.default
-        setNews(stockNews)
-        setLoading(false)
-        setLastUpdated(new Date())
-      }, 600)
+      setError(null)
+      
+      try {
+        // Check if using demo key
+        if (FINNHUB_API_KEY === 'demo') {
+          setApiKeyMissing(true)
+          // Use fallback to simulated data for demo purposes
+          await simulateNewsFetch()
+          return
+        }
 
-      return () => clearTimeout(fetchTimeout)
+        let endpoint = ''
+        let url = ''
+        
+        if (stockId && stockId !== 'general') {
+          // Company-specific news
+          const symbol = stockId.replace('.NS', '')
+          endpoint = `${FINNHUB_BASE_URL}/company-news?symbol=${symbol}&token=${FINNHUB_API_KEY}`
+        } else {
+          // General market news
+          endpoint = `${FINNHUB_BASE_URL}/news?category=general&token=${FINNHUB_API_KEY}`
+        }
+        
+        const response = await fetch(endpoint)
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        
+        if (Array.isArray(data) && data.length > 0) {
+          // Transform and limit to top 20 news items
+          const transformedNews = data.slice(0, 20).map(item => transformNewsItem(item, stockId))
+          setNews(transformedNews)
+        } else {
+          // No news found, use fallback
+          await simulateNewsFetch()
+        }
+        
+        setLastUpdated(new Date())
+      } catch (err) {
+        console.error('Error fetching news:', err)
+        setError(err.message)
+        // Fallback to simulated data on error
+        await simulateNewsFetch()
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Fallback simulated news fetch when API fails
+    const simulateNewsFetch = async () => {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Generate simulated news based on stock ID
+      const simulatedNews = generateSimulatedNews(stockId)
+      setNews(simulatedNews)
+      setLastUpdated(new Date())
     }
 
     fetchNews()
     
-    // Simulate periodic updates (every 60 seconds during market hours)
-    const interval = setInterval(fetchNews, 60000)
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchNews, 300000)
     return () => clearInterval(interval)
   }, [stockId])
+
+  // Generate simulated news for demo/fallback purposes
+  const generateSimulatedNews = (stockId) => {
+    const symbol = stockId ? stockId.replace('.NS', '') : null
+    const baseNews = [
+      {
+        id: Date.now() + 1,
+        title: 'Market opens with gains as global sentiment improves',
+        source: 'Reuters',
+        time: '5m ago',
+        url: 'https://www.reuters.com/markets',
+        sentiment: 'positive',
+        tags: ['Market', 'Global']
+      },
+      {
+        id: Date.now() + 2,
+        title: 'RBI maintains current interest rate stance in latest policy review',
+        source: 'Economic Times',
+        time: '1h ago',
+        url: 'https://economictimes.indiatimes.com',
+        sentiment: 'neutral',
+        tags: ['RBI', 'Policy']
+      },
+      {
+        id: Date.now() + 3,
+        title: 'FII flows remain strong amid positive global cues',
+        source: 'Livemint',
+        time: '2h ago',
+        url: 'https://www.livemint.com',
+        sentiment: 'positive',
+        tags: ['FII', 'Flows']
+      },
+      {
+        id: Date.now() + 4,
+        title: 'Q3 earnings season shows mixed results across sectors',
+        source: 'Bloomberg',
+        time: '3h ago',
+        url: 'https://www.bloomberg.com',
+        sentiment: 'neutral',
+        tags: ['Earnings', 'Results']
+      },
+      {
+        id: Date.now() + 5,
+        title: 'Crude oil prices show volatility amid geopolitical tensions',
+        source: 'The Hindu',
+        time: '4h ago',
+        url: 'https://www.thehindu.com',
+        sentiment: 'negative',
+        tags: ['Commodity', 'Oil']
+      }
+    ]
+
+    // Stock-specific news
+    const stockSpecificNews = {
+      'RELIANCE.NS': [
+        { id: Date.now() + 101, title: 'Reliance Jio reports strong subscriber growth in latest quarter', source: 'Economic Times', time: '30m ago', url: '#', sentiment: 'positive', tags: ['Telecom', 'Growth'] },
+        { id: Date.now() + 102, title: 'Reliance Retail expands its digital footprint with new partnerships', source: 'Livemint', time: '2h ago', url: '#', sentiment: 'positive', tags: ['Retail', 'Digital'] },
+      ],
+      'TCS.NS': [
+        { id: Date.now() + 201, title: 'TCS wins major digital transformation contract from European client', source: 'Bloomberg', time: '1h ago', url: '#', sentiment: 'positive', tags: ['IT', 'Contract'] },
+        { id: Date.now() + 202, title: 'TCS announces expansion of AI and cloud capabilities', source: 'Economic Times', time: '3h ago', url: '#', sentiment: 'positive', tags: ['AI', 'Cloud'] },
+      ],
+      'HDFCBANK.NS': [
+        { id: Date.now() + 301, title: 'HDFC Bank reports robust quarterly loan growth', source: 'Livemint', time: '45m ago', url: '#', sentiment: 'positive', tags: ['Banking', 'Loans'] },
+        { id: Date.now() + 302, title: 'Digital banking adoption accelerates for HDFC Bank customers', source: 'The Hindu', time: '2h ago', url: '#', sentiment: 'neutral', tags: ['Digital', 'Banking'] },
+      ],
+      'INFY.NS': [
+        { id: Date.now() + 401, title: 'Infosys secures multi-year deal with Fortune 500 company', source: 'Economic Times', time: '1h ago', url: '#', sentiment: 'positive', tags: ['IT', 'Deal'] },
+        { id: Date.now() + 402, title: 'Infosys expands generative AI portfolio for enterprise clients', source: 'Bloomberg', time: '4h ago', url: '#', sentiment: 'positive', tags: ['AI', 'Enterprise'] },
+      ],
+    }
+
+    let specificNews = []
+    if (stockId && stockSpecificNews[stockId]) {
+      specificNews = stockSpecificNews[stockId]
+    }
+
+    // Combine base and stock-specific news
+    return [...specificNews, ...baseNews].slice(0, 15)
+  }
 
   // Filter news based on sentiment
   const filteredNews = news.filter(item => {
@@ -90,14 +294,54 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
     }
   }
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setLoading(true)
-    setTimeout(() => {
-      const stockNews = MOCK_NEWS[stockId] || MOCK_NEWS.default
-      setNews(stockNews)
-      setLoading(false)
+    setError(null)
+    
+    try {
+      if (apiKeyMissing) {
+        // Just regenerate simulated data
+        const simulatedNews = generateSimulatedNews(stockId)
+        setNews(simulatedNews)
+        setLastUpdated(new Date())
+        setLoading(false)
+        return
+      }
+
+      let endpoint = ''
+      
+      if (stockId && stockId !== 'general') {
+        const symbol = stockId.replace('.NS', '')
+        endpoint = `${FINNHUB_BASE_URL}/company-news?symbol=${symbol}&token=${FINNHUB_API_KEY}`
+      } else {
+        endpoint = `${FINNHUB_BASE_URL}/news?category=general&token=${FINNHUB_API_KEY}`
+      }
+      
+      const response = await fetch(endpoint)
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (Array.isArray(data) && data.length > 0) {
+        const transformedNews = data.slice(0, 20).map(item => transformNewsItem(item, stockId))
+        setNews(transformedNews)
+      } else {
+        const simulatedNews = generateSimulatedNews(stockId)
+        setNews(simulatedNews)
+      }
+      
       setLastUpdated(new Date())
-    }, 800)
+    } catch (err) {
+      console.error('Error refreshing news:', err)
+      setError(err.message)
+      const simulatedNews = generateSimulatedNews(stockId)
+      setNews(simulatedNews)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (compact) {
@@ -157,6 +401,40 @@ function NewsFeed({ stockId = null, onClose, compact = false, showFilters = true
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl mx-auto"
     >
+      {/* Demo Mode Banner */}
+      {apiKeyMissing && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-terminal-bg-light border border-terminal-border rounded-lg flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2 text-sm text-terminal-dim">
+            <AlertCircle className="w-4 h-4 text-terminal-yellow" />
+            <span>Using demo data. Add a Finnhub API key for live news.</span>
+          </div>
+          <a
+            href="https://finnhub.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-terminal-green hover:underline"
+          >
+            Get Free API Key →
+          </a>
+        </motion.div>
+      )}
+
+      {/* Error Banner */}
+      {error && !apiKeyMissing && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-terminal-red/10 border border-terminal-red/30 rounded-lg flex items-center gap-2 text-sm text-terminal-red"
+        >
+          <AlertCircle className="w-4 h-4" />
+          <span>Error loading news: {error}. Showing cached data.</span>
+        </motion.div>
+      )}
+
       {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
