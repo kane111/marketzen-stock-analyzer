@@ -20,6 +20,26 @@ MarketZen is a sophisticated stock market technical analysis application that pr
 
 The platform focuses on technical analysis, providing comprehensive indicator calculations including Moving Averages (SMA, EMA), Momentum Oscillators (RSI, Stochastic), Trend Indicators (MACD, Bollinger Bands), and Volatility Measures (ATR, VWAP). The application fetches data from Yahoo Finance API to provide accurate and timely market data.
 
+## Screenshots
+
+### Main Dashboard
+
+The MarketZen dashboard provides a comprehensive overview of the stock market with real-time data, watchlists, and sector performance metrics.
+
+![Main Dashboard](docs/images/dashboard.png)
+
+### Technical Analysis
+
+Deep dive into stock analysis with multiple technical indicators, signal generation, and interactive charts.
+
+![Technical Analysis](docs/images/technical-analysis.png)
+
+### Sector Analysis
+
+Explore sector performance and compare related stocks within each industry.
+
+![Sector Analysis](docs/images/sectors.png)
+
 ## Features
 
 ### Technical Analysis Tools
