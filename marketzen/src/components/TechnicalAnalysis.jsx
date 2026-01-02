@@ -62,6 +62,74 @@ function TechnicalAnalysis({
   // Local fundamentals state
   const [cachedFundamentals, setCachedFundamentals] = useState(null)
   const [fundamentalsLoading, setFundamentalsLoading] = useState(false)
+  const [fundamentalsError, setFundamentalsError] = useState(null)
+  
+  // Refetch fundamentals manually
+  const refetchFundamentals = useCallback(() => {
+    if (!stock?.id) return
+    
+    setFundamentalsError(null)
+    setFundamentalsLoading(true)
+    
+    const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
+    const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
+    const url = `${YAHOO_QUOTE_SUMMARY}/${stock.id}?modules=${FUNDAMENTAL_MODULES}`
+    
+    const CORS_PROXIES = [
+      'https://corsproxy.io/?',
+      'https://justfetch.itsvg.in/?url=',
+      'https://api.allorigins.win/raw?url=',
+      'https://corsproxy.pages.dev/?',
+      'https://proxy.cors.sh/'
+    ]
+    
+    const tryFetchWithProxy = async (proxyIndex = 0, attempts = 0) => {
+      if (proxyIndex >= CORS_PROXIES.length) {
+        throw new Error('Unable to fetch fundamentals data. All proxies failed.')
+      }
+      
+      const proxy = CORS_PROXIES[proxyIndex]
+      
+      try {
+        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+          }
+        })
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return await response.json()
+      } catch (err) {
+        if (attempts < 3) {
+          return tryFetchWithProxy(proxyIndex, attempts + 1)
+        }
+        return tryFetchWithProxy(proxyIndex + 1, 0)
+      }
+    }
+    
+    tryFetchWithProxy()
+      .then(result => {
+        if (result.quoteSummary?.result?.[0]) {
+          const data = {
+            data: result.quoteSummary.result[0],
+            timestamp: Date.now()
+          }
+          setCachedFundamentals(data)
+          localStorage.setItem(`fundamentals_${stock.id}`, JSON.stringify(data))
+          setFundamentalsError(null)
+        } else {
+          throw new Error('No fundamentals data received')
+        }
+      })
+      .catch(err => {
+        console.error('Fundamentals fetch error:', err)
+        setFundamentalsError(err.message || 'Failed to load fundamentals data')
+      })
+      .finally(() => {
+        setFundamentalsLoading(false)
+      })
+  }, [stock?.id])
 
   // Handle timeframe change - update state and fetch new data
   const handleTimeframeChange = useCallback((timeframe) => {
@@ -346,7 +414,7 @@ function TechnicalAnalysis({
   useEffect(() => {
     if (!stock?.id) return
     
-    // Check for cached data
+    // Check for cached data first
     const cacheKey = `fundamentals_${stock.id}`
     const cached = localStorage.getItem(cacheKey)
     let cachedData = null
@@ -357,7 +425,7 @@ function TechnicalAnalysis({
         const cacheAge = Date.now() - parsed.timestamp
         const CACHE_MAX_AGE = 15 * 60 * 1000 // 15 minutes
         
-        if (cacheAge < CACHE_MAX_AGE) {
+        if (cacheAge < CACHE_MAX_AGE && parsed.data) {
           cachedData = parsed
         }
       } catch (e) {
@@ -370,72 +438,9 @@ function TechnicalAnalysis({
       return
     }
     
-    // Fetch fundamentals
-    setFundamentalsLoading(true)
-    const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
-    const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
-    const url = `${YAHOO_QUOTE_SUMMARY}/${stock.id}?modules=${FUNDAMENTAL_MODULES}`
-    
-    const CORS_PROXIES = [
-      'https://corsproxy.io/?',
-      'https://justfetch.itsvg.in/?url=',
-      'https://api.allorigins.win/raw?url=',
-      'https://corsproxy.pages.dev/?',
-      'https://proxy.cors.sh/'
-    ]
-    
-    const tryFetchWithProxy = async (proxyIndex = 0, attempts = 0) => {
-      if (proxyIndex >= CORS_PROXIES.length) {
-        throw new Error('All proxies failed')
-      }
-      
-      const proxy = CORS_PROXIES[proxyIndex]
-      
-      try {
-        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json'
-          }
-        })
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return await response.json()
-      } catch (err) {
-        if (attempts < 3) {
-          return tryFetchWithProxy(proxyIndex, attempts + 1)
-        }
-        return tryFetchWithProxy(proxyIndex + 1, 0)
-      }
-    }
-    
-    tryFetchWithProxy()
-      .then(result => {
-        if (result.quoteSummary?.result?.[0]) {
-          const data = {
-            data: result.quoteSummary.result[0],
-            timestamp: Date.now()
-          }
-          setCachedFundamentals(data)
-          localStorage.setItem(cacheKey, JSON.stringify(data))
-        }
-      })
-      .catch(err => {
-        console.error('Fundamentals fetch error:', err)
-      })
-      .finally(() => {
-        setFundamentalsLoading(false)
-      })
-  }, [stock?.id])
-  
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined) return 'N/A'
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(value)
-  }
+    // No cache, fetch fresh data
+    refetchFundamentals()
+  }, [stock?.id, refetchFundamentals])
   
   const getSignalColor = (type) => {
     if (type?.includes('BUY')) return 'text-terminal-green'
@@ -449,6 +454,84 @@ function TechnicalAnalysis({
     { id: 'split', label: 'Split', icon: Columns, desc: 'Chart + Fundamentals' },
     { id: 'fundamentals', label: 'Data', icon: PieChart, desc: 'Fundamentals only' }
   ]
+
+  // Helper function to get nested metric values
+  const getMetric = (data, path) => {
+    if (!data) return null
+    const keys = path.split('.')
+    let value = data
+    for (const key of keys) {
+      value = value?.[key]
+      if (value === undefined || value === null) return null
+    }
+    return value
+  }
+
+  // Format functions
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined) return 'N/A'
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2
+    }).format(value)
+  }
+
+  const formatNumber = (value) => {
+    if (value === null || value === undefined) return 'N/A'
+    if (value >= 1e12) return `${(value / 1e12).toFixed(2)}T`
+    if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
+    if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
+    if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
+    return value.toLocaleString()
+  }
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined) return 'N/A'
+    return `${(value * 100).toFixed(2)}%`
+  }
+
+  const formatPercentChange = (value) => {
+    if (value === null || value === undefined) return 'N/A'
+    const formatted = (value * 100).toFixed(2)
+    return `${value >= 0 ? '+' : ''}${formatted}%`
+  }
+
+  const formatRatio = (value) => {
+    if (value === null || value === undefined) return 'N/A'
+    return value.toFixed(2)
+  }
+
+  // Metric item component
+  const MetricItem = ({ label, value, format = 'text' }) => {
+    const getFormattedValue = () => {
+      switch (format) {
+        case 'currency': return formatCurrency(value)
+        case 'number': return formatNumber(value)
+        case 'percent': return formatPercent(value)
+        case 'percentChange': return formatPercentChange(value)
+        case 'ratio': return formatRatio(value)
+        default: return value ?? 'N/A'
+      }
+    }
+
+    const getValueColor = () => {
+      if (format === 'percentChange') {
+        return value >= 0 ? 'text-terminal-green' : 'text-terminal-red'
+      }
+      return 'text-terminal-text'
+    }
+
+    return (
+      <div className="bg-terminal-bg-light rounded-lg p-2">
+        <p className="text-xs text-terminal-dim">{label}</p>
+        <p className={`text-sm font-semibold ${getValueColor()}`}>{getFormattedValue()}</p>
+      </div>
+    )
+  }
+
+  // Check if we should show loading (initial load only, not for cached data)
+  const showInitialLoading = localLoading || (fundamentalsLoading && !cachedFundamentals)
 
   // Loading state
   if (localLoading) {
@@ -1083,11 +1166,18 @@ function TechnicalAnalysis({
             >
               {/* Fundamentals Header */}
               <div className="p-4 border-b border-terminal-border flex-shrink-0">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <PieChart className="w-5 h-5 text-terminal-green" />
-                    <h3 className="text-lg font-semibold">{stock?.name}</h3>
-                    <span className="text-xs px-2 py-0.5 rounded bg-terminal-bg-light text-terminal-dim">{stock?.symbol}</span>
+                    <h3 className="text-lg font-semibold">Fundamentals</h3>
+                    {fundamentalsLoading && (
+                      <motion.div 
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                      >
+                        <RefreshCw className="w-4 h-4 text-terminal-dim" />
+                      </motion.div>
+                    )}
                   </div>
                   {viewMode === 'split' && (
                     <motion.button
@@ -1100,51 +1190,109 @@ function TechnicalAnalysis({
                     </motion.button>
                   )}
                 </div>
-                
-                {/* Fundamentals Tabs */}
-                <div className="flex gap-1">
-                  {[
-                    { id: 'valuation', label: 'Valuation' },
-                    { id: 'financials', label: 'Financials' },
-                    { id: 'performance', label: 'Performance' }
-                  ].map((tab) => (
-                    <motion.button
-                      key={tab.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setFundamentalsTab(tab.id)}
-                      className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        fundamentalsTab === tab.id
-                          ? 'bg-terminal-green text-black'
-                          : 'bg-terminal-bg-light text-terminal-dim hover:text-terminal-text'
-                      }`}
-                    >
-                      {tab.label}
-                    </motion.button>
-                  ))}
-                </div>
               </div>
               
               {/* Fundamentals Content */}
               <AnimatePresence mode="wait">
                 {!isPanelCollapsed && (
                   <motion.div
-                    key={fundamentalsTab}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className="flex-1 overflow-hidden"
                   >
-                    {fundamentalsLoading || !cachedFundamentals?.data ? (
+                    {/* Error State */}
+                    {fundamentalsError && (
+                      <div className="flex flex-col items-center justify-center h-full p-4">
+                        <AlertTriangle className="w-8 h-8 text-terminal-red mb-2" />
+                        <p className="text-sm text-terminal-text text-center mb-3">{fundamentalsError}</p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={refetchFundamentals}
+                          className="px-4 py-2 bg-terminal-green/20 text-terminal-green border border-terminal-green/50 rounded-lg text-sm flex items-center gap-2 hover:bg-terminal-green/30 transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Retry
+                        </motion.button>
+                      </div>
+                    )}
+                    
+                    {/* Loading State */}
+                    {!fundamentalsError && fundamentalsLoading && (
                       <div className="flex flex-col items-center justify-center h-full">
                         <Spinner size="2rem" />
                         <p className="text-xs text-terminal-dim mt-2">Loading fundamentals...</p>
                       </div>
-                    ) : (
-                      <FundamentalsPanel
-                        stock={stock}
-                        cachedFundamentals={cachedFundamentals}
-                      />
+                    )}
+                    
+                    {/* Empty State - No Data */}
+                    {!fundamentalsError && !fundamentalsLoading && !cachedFundamentals?.data && (
+                      <div className="flex flex-col items-center justify-center h-full p-4">
+                        <PieChart className="w-8 h-8 text-terminal-dim mb-2" />
+                        <p className="text-sm text-terminal-dim text-center mb-3">No fundamentals data available</p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={refetchFundamentals}
+                          className="px-4 py-2 bg-terminal-bg-light text-terminal-text border border-terminal-border rounded-lg text-sm flex items-center gap-2 hover:bg-terminal-border transition-colors"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Load Data
+                        </motion.button>
+                      </div>
+                    )}
+                    
+                    {/* Data Display */}
+                    {!fundamentalsError && cachedFundamentals?.data && (
+                      <div className="h-full overflow-y-auto p-4">
+                        {/* Valuation Metrics */}
+                        <div className="mb-4">
+                          <h4 className="text-xs font-semibold text-terminal-green mb-2 uppercase tracking-wider">Valuation</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <MetricItem label="P/E Ratio" value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.trailingPE')} format="ratio" />
+                            <MetricItem label="Forward P/E" value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.forwardPE')} format="ratio" />
+                            <MetricItem label="P/B Ratio" value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.priceToBookRaw')} format="ratio" />
+                            <MetricItem label="P/S Ratio" value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.priceToSalesTrailing12Months')} format="ratio" />
+                            <MetricItem label="EPS (TTM)" value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.trailingEps')} format="currency" />
+                            <MetricItem label="Dividend Yield" value={getMetric(cachedFundamentals.data, 'summaryDetail.dividendYieldRaw')} format="percent" />
+                            <MetricItem label="Beta" value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.beta')} format="ratio" />
+                            <MetricItem label="Market Cap" value={getMetric(cachedFundamentals.data, 'summaryDetail.marketCap')} format="number" />
+                          </div>
+                        </div>
+                        
+                        {/* Financial Metrics */}
+                        <div className="mb-4">
+                          <h4 className="text-xs font-semibold text-terminal-green mb-2 uppercase tracking-wider">Financials</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <MetricItem label="Revenue (TTM)" value={getMetric(cachedFundamentals.data, 'financialData.totalData')} format="number" />
+                            <MetricItem label="Net Income" value={getMetric(cachedFundamentals.data, 'financialData.netIncomeToCommon')} format="number" />
+                            <MetricItem label="Gross Margin" value={getMetric(cachedFundamentals.data, 'financialData.grossMargins')} format="percent" />
+                            <MetricItem label="Operating Margin" value={getMetric(cachedFundamentals.data, 'financialData.operatingMargins')} format="percent" />
+                            <MetricItem label="Profit Margin" value={getMetric(cachedFundamentals.data, 'financialData.profitMargins')} format="percent" />
+                            <MetricItem label="ROE" value={getMetric(cachedFundamentals.data, 'financialData.returnOnEquity')} format="percent" />
+                            <MetricItem label="ROA" value={getMetric(cachedFundamentals.data, 'financialData.returnOnAssets')} format="percent" />
+                            <MetricItem label="Debt/Equity" value={getMetric(cachedFundamentals.data, 'financialData.debtToEquity')} format="ratio" />
+                          </div>
+                        </div>
+                        
+                        {/* Performance Metrics */}
+                        <div>
+                          <h4 className="text-xs font-semibold text-terminal-green mb-2 uppercase tracking-wider">Performance</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <MetricItem label="52W High" value={getMetric(cachedFundamentals.data, 'summaryDetail.fiftyTwoWeekHighRaw')} format="currency" />
+                            <MetricItem label="52W Low" value={getMetric(cachedFundamentals.data, 'summaryDetail.fiftyTwoWeekLowRaw')} format="currency" />
+                            <MetricItem 
+                              label="52W Change" 
+                              value={getMetric(cachedFundamentals.data, 'defaultKeyStatistics.fiftyTwoWeekChange')} 
+                              format="percentChange" 
+                            />
+                            <MetricItem label="50 Day MA" value={getMetric(cachedFundamentals.data, 'summaryDetail.fiftyDayAverage')} format="currency" />
+                            <MetricItem label="200 Day MA" value={getMetric(cachedFundamentals.data, 'twoHundredDayAverage')} format="currency" />
+                            <MetricItem label="Avg Volume" value={getMetric(cachedFundamentals.data, 'summaryDetail.averageVolume')} format="number" />
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </motion.div>
                 )}
