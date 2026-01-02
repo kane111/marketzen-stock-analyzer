@@ -836,6 +836,8 @@
 **/node_modules/
 **/package-lock.json
 **/.npm/
+**/.npm-cache/
+**/.npm/**
 
 # Yarn
 **/yarn.lock
