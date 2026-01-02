@@ -982,7 +982,7 @@ function AppContent() {
                                 <button
                                   key={stock.id}
                                   onClick={() => handleSearchResultClick(stock)}
-                                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-terminal-bg transition-colors rounded"
+                                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 bg-terminal-panel hover:bg-terminal-bg transition-colors rounded"
                                 >
                                   <div className="w-8 h-8 rounded bg-terminal-bg flex items-center justify-center text-xs font-bold font-mono text-terminal-green">
                                     {stock.symbol.substring(0, 2).toUpperCase()}
@@ -1009,7 +1009,7 @@ function AppContent() {
                                 <button
                                   key={stock.id}
                                   onClick={() => handleSearchResultClick(stock)}
-                                  className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between hover:bg-terminal-bg transition-colors ${
+                                  className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between bg-terminal-panel hover:bg-terminal-bg transition-colors ${
                                     index === searchHighlighted ? 'bg-terminal-bg' : ''
                                   }`}
                                 >
