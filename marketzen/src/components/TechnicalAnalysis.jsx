@@ -4,7 +4,7 @@ import {
   ArrowLeft, Activity, TrendingUp, TrendingDown, Target, Zap, AlertTriangle, Info, 
   RefreshCw, LineChart, BarChart2, Sliders,
   PenTool, Eye, Settings, X, ChevronDown, Minus,
-  Grid3X3
+  Grid3X3, Star, Check, Users
 } from 'lucide-react'
 import { 
   ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line as RechartsLine, 
@@ -31,7 +31,7 @@ import {
 // MAIN COMPONENT
 // ============================================================================
 
-function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockData, loading: propLoading, indicatorParams = {}, onOpenConfig }) {
+function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockData, loading: propLoading, indicatorParams = {}, onOpenConfig, watchlist = [], onAddToWatchlist = null }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(taTimeframes[1])
   const [analysisData, setAnalysisData] = useState(null)
   const [signal, setSignal] = useState(null)
@@ -632,6 +632,22 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
           </motion.div>
         )}
         
+        {/* Summary Tab - Sector Peers */}
+        {activeTab === 'summary' && (
+          <motion.div key="sector-peers" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="mt-4">
+            <SectorPeersSection 
+              currentStock={stock} 
+              watchlist={watchlist} 
+              onAddToWatchlist={onAddToWatchlist}
+              onSelectStock={(peerStock) => {
+                if (fetchStockData) {
+                  fetchStockData(peerStock, selectedTimeframe, true)
+                }
+              }}
+            />
+          </motion.div>
+        )}
+        
         {/* Oscillators Tab */}
         {activeTab === 'oscillators' && analysisData && (
           <motion.div key="oscillators" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -923,6 +939,146 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         </div>
       </div>
     </motion.div>
+  )
+}
+
+// ============================================================================
+// SECTOR PEERS SECTION
+// ============================================================================
+
+function SectorPeersSection({ currentStock, watchlist, onAddToWatchlist, onSelectStock }) {
+  // Define sector peers for common Indian stocks
+  const getSectorPeers = (stockId) => {
+    const peers = {
+      'RELIANCE.NS': [
+        { id: 'ONGC.NS', symbol: 'ONGC', name: 'Oil & Natural Gas' },
+        { id: 'IOC.NS', symbol: 'IOC', name: 'Indian Oil Corporation' },
+        { id: 'NTPC.NS', symbol: 'NTPC', name: 'NTPC' },
+        { id: 'BPCL.NS', symbol: 'BPCL', name: 'Bharat Petroleum' },
+      ],
+      'TCS.NS': [
+        { id: 'INFY.NS', symbol: 'INFY', name: 'Infosys' },
+        { id: 'WIPRO.NS', symbol: 'WIPRO', name: 'Wipro' },
+        { id: 'HCLTECH.NS', symbol: 'HCLTECH', name: 'HCL Technologies' },
+        { id: 'TECHM.NS', symbol: 'TECHM', name: 'Tech Mahindra' },
+      ],
+      'HDFCBANK.NS': [
+        { id: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank' },
+        { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India' },
+        { id: 'KOTAKBANK.NS', symbol: 'KOTAKBANK', name: 'Kotak Mahindra' },
+        { id: 'AXISBANK.NS', symbol: 'AXISBANK', name: 'Axis Bank' },
+      ],
+      'INFY.NS': [
+        { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy' },
+        { id: 'WIPRO.NS', symbol: 'WIPRO', name: 'Wipro' },
+        { id: 'HCLTECH.NS', symbol: 'HCLTECH', name: 'HCL Technologies' },
+        { id: 'TECHM.NS', symbol: 'TECHM', name: 'Tech Mahindra' },
+      ],
+    }
+    
+    // Default peers for other stocks
+    const symbol = stockId?.replace('.NS', '') || ''
+    if (!peers[stockId]) {
+      // Generate generic peers
+      return [
+        { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries' },
+        { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy' },
+        { id: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank' },
+        { id: 'INFY.NS', symbol: 'INFY', name: 'Infosys' },
+      ]
+    }
+    
+    return peers[stockId]
+  }
+
+  const peers = getSectorPeers(currentStock?.id)
+
+  // Check if stock is in watchlist
+  const isInWatchlist = (stockId) => {
+    return watchlist.some(s => s.id === stockId)
+  }
+
+  // Generate demo data for peers
+  const peersWithData = peers.map((peer, index) => ({
+    ...peer,
+    price: Math.random() * 5000 + 100,
+    change: (Math.random() - 0.5) * 5,
+  }))
+
+  return (
+    <div className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Users className="w-4 h-4 text-terminal-green" />
+        <h3 className="text-sm font-mono font-semibold text-terminal-text">Sector Peers</h3>
+        <span className="text-xs text-terminal-dim">Click to analyze • Add to watchlist</span>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {peersWithData.map((peer, index) => {
+          const inWatchlist = isInWatchlist(peer.id)
+          const isPositive = peer.change >= 0
+
+          return (
+            <motion.div
+              key={peer.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="flex items-center justify-between p-3 bg-terminal-bg-light rounded-lg hover:bg-terminal-panel/50 transition-colors group cursor-pointer"
+              onClick={() => onSelectStock(peer)}
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                  isPositive 
+                    ? 'bg-terminal-green/20 text-terminal-green' 
+                    : 'bg-terminal-red/20 text-terminal-red'
+                }`}>
+                  {peer.symbol.substring(0, 2)}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-terminal-text">{peer.symbol}</p>
+                  <p className="text-xs text-terminal-dim truncate max-w-[80px]">{peer.name}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <p className="text-xs font-mono">₹{peer.price.toFixed(0)}</p>
+                  <p className={`text-xs font-mono ${isPositive ? 'text-terminal-green' : 'text-terminal-red'}`}>
+                    {isPositive ? '+' : ''}{peer.change.toFixed(2)}%
+                  </p>
+                </div>
+                
+                {/* Add to Watchlist Button */}
+                {onAddToWatchlist && (
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAddToWatchlist(peer)
+                    }}
+                    disabled={inWatchlist}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      inWatchlist
+                        ? 'text-terminal-dim cursor-not-allowed'
+                        : 'text-terminal-green hover:bg-terminal-green/20 opacity-0 group-hover:opacity-100'
+                    }`}
+                    title={inWatchlist ? 'Already in watchlist' : 'Add to watchlist'}
+                  >
+                    {inWatchlist ? (
+                      <Check className="w-3 h-3" />
+                    ) : (
+                      <Star className="w-3 h-3" />
+                    )}
+                  </motion.button>
+                )}
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

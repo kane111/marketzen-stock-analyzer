@@ -1258,6 +1258,7 @@ function AppContent() {
                         key="comparison"
                         onClose={() => setView('dashboard')}
                         watchlist={watchlist}
+                        onAddToWatchlist={addToWatchlist}
                       />
                     )}
 
@@ -1271,6 +1272,8 @@ function AppContent() {
                       <SectorDashboard 
                         key="sectors"
                         onSectorSelect={handleSectorSelect}
+                        watchlist={watchlist}
+                        onAddToWatchlist={addToWatchlist}
                       />
                     ) : view === 'news' ? (
                       <NewsFeed 
@@ -1291,6 +1294,8 @@ function AppContent() {
                         loading={loading}
                         indicatorParams={indicatorParams}
                         onOpenConfig={() => setShowIndicatorConfig(true)}
+                        watchlist={watchlist}
+                        onAddToWatchlist={addToWatchlist}
                       />
                     ) : loading ? (
                       <LoadingSkeleton key="loading" />

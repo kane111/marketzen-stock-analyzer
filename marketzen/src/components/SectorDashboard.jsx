@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, BarChart3, PieChart, ArrowUpRight, ArrowDownRight, RefreshCw, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, BarChart3, PieChart, ArrowUpRight, ArrowDownRight, RefreshCw, X, Star, Check } from 'lucide-react'
 import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts'
 
 // Note: Sector data is representative. For production, integrate with NSE India API
@@ -19,6 +19,94 @@ const SECTOR_DATA = [
   { id: 'nifty healthcare', name: 'Nifty Healthcare', change: 1.56, marketCap: 55000, constituents: 10, symbol: '^NIFTYHC' },
 ]
 
+// Sector to constituent stocks mapping
+const SECTOR_STOCKS = {
+  'nifty50': [
+    { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries' },
+    { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy Services' },
+    { id: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank' },
+    { id: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank' },
+    { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India' },
+  ],
+  'niftybank': [
+    { id: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank' },
+    { id: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank' },
+    { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India' },
+    { id: 'KOTAKBANK.NS', symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank' },
+    { id: 'AXISBANK.NS', symbol: 'AXISBANK', name: 'Axis Bank' },
+  ],
+  'niftyit': [
+    { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy Services' },
+    { id: 'INFY.NS', symbol: 'INFY', name: 'Infosys' },
+    { id: 'WIPRO.NS', symbol: 'WIPRO', name: 'Wipro' },
+    { id: 'TECHM.NS', symbol: 'TECHM', name: 'Tech Mahindra' },
+    { id: 'HCLTECH.NS', symbol: 'HCLTECH', name: 'HCL Technologies' },
+  ],
+  'nifty pharma': [
+    { id: 'SUNPHARMA.NS', symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical' },
+    { id: 'DRREDDY.NS', symbol: 'DRREDDY', name: 'Dr. Reddy\'s' },
+    { id: 'CIPLA.NS', symbol: 'CIPLA', name: 'Cipla' },
+    { id: 'APOLLOPHARM.NS', symbol: 'APOLLOPHARM', name: 'Apollo Pharmacy' },
+    { id: 'ZYDUSLIFE.NS', symbol: 'ZYDUSLIFE', name: 'Zydus Life' },
+  ],
+  'nifty auto': [
+    { id: 'MARUTI.NS', symbol: 'MARUTI', name: 'Maruti Suzuki' },
+    { id: 'TATAMOTORS.NS', symbol: 'TATAMOTORS', name: 'Tata Motors' },
+    { id: 'MOTHERSUMI.NS', symbol: 'MOTHERSUMI', name: 'MotherSumi' },
+    { id: 'BAJAJ-AUTO.NS', symbol: 'BAJAJ-AUTO', name: 'Bajaj Auto' },
+    { id: 'EICHERMOT.NS', symbol: 'EICHERMOT', name: 'Eicher Motors' },
+  ],
+  'nifty fmcg': [
+    { id: 'HINDUNILVR.NS', symbol: 'HINDUNILVR', name: 'Hindustan Unilever' },
+    { id: 'NESTLEIND.NS', symbol: 'NESTLEIND', name: 'Nestle India' },
+    { id: 'ASIANPAINT.NS', symbol: 'ASIANPAINT', name: 'Asian Paints' },
+    { id: 'DABUR.NS', symbol: 'DABUR', name: 'Dabur' },
+    { id: 'BRITANNIA.NS', symbol: 'BRITANNIA', name: 'Britannia' },
+  ],
+  'nifty metal': [
+    { id: 'TATASTEEL.NS', symbol: 'TATASTEEL', name: 'Tata Steel' },
+    { id: 'JSWSTEEL.NS', symbol: 'JSWSTEEL', name: 'JSW Steel' },
+    { id: 'HINDALCO.NS', symbol: 'HINDALCO', name: 'Hindalco' },
+    { id: 'COALINDIA.NS', symbol: 'COALINDIA', name: 'Coal India' },
+    { id: 'VEDL.NS', symbol: 'VEDL', name: 'Vedanta' },
+  ],
+  'nifty realty': [
+    { id: 'DLF.NS', symbol: 'DLF', name: 'DLF' },
+    { id: 'GODREJPROP.NS', symbol: 'GODREJPROP', name: 'Godrej Properties' },
+    { id: 'SOBHA.NS', symbol: 'SOBHA', name: 'Sobha' },
+    { id: 'PRESTIGE.NS', symbol: 'PRESTIGE', name: 'Prestige Estates' },
+    { id: 'LODHA.NS', symbol: 'LODHA', name: 'Macrotech Development' },
+  ],
+  'nifty energy': [
+    { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries' },
+    { id: 'ONGC.NS', symbol: 'ONGC', name: 'Oil & Natural Gas' },
+    { id: 'IOC.NS', symbol: 'IOC', name: 'Indian Oil' },
+    { id: 'NTPC.NS', symbol: 'NTPC', name: 'NTPC' },
+    { id: 'POWERGRID.NS', symbol: 'POWERGRID', name: 'Power Grid' },
+  ],
+  'nifty media': [
+    { id: 'ZEE.NS', symbol: 'ZEE', name: 'Zee Entertainment' },
+    { id: 'PVR.NS', symbol: 'PVR', name: 'PVR INOX' },
+    { id: 'INOXLEISUR.NS', symbol: 'INOXLEISUR', name: 'INOX Leisure' },
+    { id: 'DISHTV.NS', symbol: 'DISHTV', name: 'Dish TV' },
+    { id: 'SUNTV.NS', symbol: 'SUNTV', name: 'Sun TV Network' },
+  ],
+  'nifty consumer': [
+    { id: 'HINDUNILVR.NS', symbol: 'HINDUNILVR', name: 'Hindustan Unilever' },
+    { id: 'NESTLEIND.NS', symbol: 'NESTLEIND', name: 'Nestle India' },
+    { id: 'BRITANNIA.NS', symbol: 'BRITANNIA', name: 'Britannia' },
+    { id: 'ITC.NS', symbol: 'ITC', name: 'ITC' },
+    { id: 'GODREJCP.NS', symbol: 'GODREJCP', name: 'Godrej Consumer' },
+  ],
+  'nifty healthcare': [
+    { id: 'APOLLOHOSP.NS', symbol: 'APOLLOHOSP', name: 'Apollo Hospitals' },
+    { id: 'FORTIS.NS', symbol: 'FORTIS', name: 'Fortis Healthcare' },
+    { id: 'MAXHEALTH.NS', symbol: 'MAXHEALTH', name: 'Max Healthcare' },
+    { id: 'METROPOLIS.NS', symbol: 'METROPOLIS', name: 'Metropolis Healthcare' },
+    { id: 'DRREDDY.NS', symbol: 'DRREDDY', name: 'Dr. Reddy\'s' },
+  ],
+}
+
 // Get heatmap color based on performance - improved contrast
 const getHeatmapColor = (change) => {
   if (change >= 2) return '#047857' // Emerald 700 - strong positive
@@ -35,12 +123,13 @@ const getHeatmapTextColor = (change) => {
   return 'text-white'
 }
 
-function SectorDashboard({ onSectorSelect }) {
+function SectorDashboard({ onSectorSelect, watchlist = [], onAddToWatchlist = null }) {
   const [view, setView] = useState('heatmap') // 'heatmap', 'list', 'chart'
   const [sortBy, setSortBy] = useState('change') // 'change', 'name', 'marketCap'
   const [hoveredSector, setHoveredSector] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [sectorData, setSectorData] = useState(SECTOR_DATA)
+  const [selectedSectorDetails, setSelectedSectorDetails] = useState(null)
 
   // Sort sectors based on selected criteria
   const sortedSectors = [...sectorData].sort((a, b) => {
@@ -72,6 +161,41 @@ function SectorDashboard({ onSectorSelect }) {
     if (value >= 1e5) return `${(value / 1e5).toFixed(1)}L Cr`
     if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K Cr`
     return value.toString()
+  }
+
+  // Handle sector selection and show constituent stocks
+  const handleSectorClick = (sector) => {
+    if (onSectorSelect) {
+      onSectorSelect(sector)
+    }
+    
+    // Show sector details with constituent stocks
+    const constituents = SECTOR_STOCKS[sector.id] || []
+    setSelectedSectorDetails({
+      sector,
+      constituents: constituents.map((stock, index) => ({
+        ...stock,
+        change: (Math.random() - 0.5) * 3, // Demo change percentage
+        price: Math.random() * 5000 + 100
+      }))
+    })
+  }
+
+  // Check if stock is in watchlist
+  const isInWatchlist = (stockId) => {
+    return watchlist.some(s => s.id === stockId)
+  }
+
+  // Handle add to watchlist
+  const handleAddToWatchlist = (stock) => {
+    if (onAddToWatchlist) {
+      onAddToWatchlist(stock)
+    }
+  }
+
+  // Close sector details panel
+  const closeSectorDetails = () => {
+    setSelectedSectorDetails(null)
   }
 
   return (
@@ -229,7 +353,7 @@ function SectorDashboard({ onSectorSelect }) {
                 transition={{ delay: index * 0.05 }}
                 onMouseEnter={() => setHoveredSector(sector)}
                 onMouseLeave={() => setHoveredSector(null)}
-                onClick={() => onSectorSelect && onSectorSelect(sector)}
+                onClick={() => handleSectorClick(sector)}
                 whileHover={{ scale: 1.02 }}
                 className="rounded-xl p-4 cursor-pointer transition-all relative overflow-hidden"
                 style={{ 
@@ -304,7 +428,7 @@ function SectorDashboard({ onSectorSelect }) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03 }}
                 className="grid grid-cols-4 gap-4 p-4 hover:bg-surfaceLight/50 transition-colors cursor-pointer"
-                onClick={() => onSectorSelect && onSectorSelect(sector)}
+                onClick={() => handleSectorClick(sector)}
               >
                 <div className="flex items-center gap-3">
                   <div 
@@ -375,6 +499,107 @@ function SectorDashboard({ onSectorSelect }) {
           </div>
         </motion.div>
       )}
+
+      {/* Sector Details Panel - Constituent Stocks with Watchlist */}
+      <AnimatePresence>
+        {selectedSectorDetails && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="mt-6 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: getHeatmapColor(selectedSectorDetails.sector.change) }}
+                />
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedSectorDetails.sector.name}</h3>
+                  <p className="text-sm text-textSecondary">
+                    {selectedSectorDetails.constituents.length} constituents • Click to add to watchlist
+                  </p>
+                </div>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={closeSectorDetails}
+                className="p-2 rounded-lg bg-surfaceLight hover:bg-surface transition-colors"
+              >
+                <X className="w-4 h-4 text-textSecondary" />
+              </motion.button>
+            </div>
+
+            {/* Constituent Stocks */}
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {selectedSectorDetails.constituents.map((stock, index) => {
+                  const inWatchlist = isInWatchlist(stock.id)
+                  const isPositive = stock.change >= 0
+                  
+                  return (
+                    <motion.div
+                      key={stock.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-3 bg-terminal-bg-light rounded-xl hover:bg-surfaceLight/50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
+                          isPositive 
+                            ? 'bg-terminal-green/20 text-terminal-green' 
+                            : 'bg-terminal-red/20 text-terminal-red'
+                        }`}>
+                          {stock.symbol.substring(0, 2)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{stock.symbol}</p>
+                          <p className="text-xs text-textSecondary truncate max-w-[120px]">{stock.name}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="text-right mr-2">
+                          <p className="text-sm font-mono font-medium">₹{stock.price.toFixed(2)}</p>
+                          <p className={`text-xs font-mono ${isPositive ? 'text-terminal-green' : 'text-terminal-red'}`}>
+                            {isPositive ? '+' : ''}{stock.change.toFixed(2)}%
+                          </p>
+                        </div>
+                        
+                        {/* Add to Watchlist Button */}
+                        {onAddToWatchlist && (
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleAddToWatchlist(stock)}
+                            disabled={inWatchlist}
+                            className={`p-2 rounded-lg transition-all ${
+                              inWatchlist
+                                ? 'text-textSecondary cursor-not-allowed'
+                                : 'text-terminal-green hover:bg-terminal-green/20 opacity-0 group-hover:opacity-100'
+                            }`}
+                            title={inWatchlist ? 'Already in watchlist' : 'Add to watchlist'}
+                          >
+                            {inWatchlist ? (
+                              <Check className="w-4 h-4" />
+                            ) : (
+                              <Star className="w-4 h-4" />
+                            )}
+                          </motion.button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

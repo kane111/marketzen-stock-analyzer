@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, TrendingUp, TrendingDown, Plus, Minus, Save, Download, BarChart2, LineChart, PieChart, ArrowRight } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, Plus, Minus, Save, Download, BarChart2, LineChart, PieChart, ArrowRight, Star, Check } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, ReferenceLine } from 'recharts'
 import { useAlerts } from '../context/AlertsContext'
 import { TimeframeSelector, COMPARE_TIMEFRAMES } from './charts/TimeframeSelector'
@@ -19,7 +19,7 @@ const CORS_PROXIES = [
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
-function StockComparison({ onClose, watchlist = [] }) {
+function StockComparison({ onClose, watchlist = [], onAddToWatchlist = null }) {
   const [comparisonStocks, setComparisonStocks] = useState([])
   const [comparisonData, setComparisonData] = useState({})
   const [selectedTimeframe, setSelectedTimeframe] = useState(COMPARE_TIMEFRAMES[1])
@@ -294,7 +294,7 @@ function StockComparison({ onClose, watchlist = [] }) {
                 ))}
               </select>
             )}
-            <StockSearchButton onSelect={addStock} existingStocks={comparisonStocks} watchlist={watchlist} />
+            <StockSearchButton onSelect={addStock} existingStocks={comparisonStocks} watchlist={watchlist} onAddToWatchlist={onAddToWatchlist} />
           </div>
         </div>
 
@@ -302,7 +302,7 @@ function StockComparison({ onClose, watchlist = [] }) {
           <div className="text-center py-8">
             <BarChart2 className="w-12 h-12 text-textSecondary mx-auto mb-4 opacity-50" />
             <p className="text-textSecondary mb-4">Add stocks to compare their performance</p>
-            <StockSearchButton onSelect={addStock} existingStocks={comparisonStocks} watchlist={watchlist} />
+            <StockSearchButton onSelect={addStock} existingStocks={comparisonStocks} watchlist={watchlist} onAddToWatchlist={onAddToWatchlist} />
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -535,9 +535,14 @@ function StockComparison({ onClose, watchlist = [] }) {
   )
 }
 
-function StockSearchButton({ onSelect, existingStocks, watchlist }) {
+function StockSearchButton({ onSelect, existingStocks, watchlist, onAddToWatchlist }) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Check if a stock is in watchlist
+  const isInWatchlist = (stockId) => {
+    return watchlist.some(s => s.id === stockId)
+  }
 
   const availableStocks = watchlist.filter(s => 
     !existingStocks.find(es => es.id === s.id) &&
@@ -565,7 +570,7 @@ function StockSearchButton({ onSelect, existingStocks, watchlist }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute right-0 top-full mt-2 w-72 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl overflow-hidden z-50"
+              className="absolute right-0 top-full mt-2 w-80 bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-xl overflow-hidden z-50"
             >
               <div className="p-3 border-b border-white/5">
                 <input
@@ -584,23 +589,52 @@ function StockSearchButton({ onSelect, existingStocks, watchlist }) {
                   </div>
                 ) : (
                   availableStocks.map((stock) => (
-                    <button
+                    <div
                       key={stock.id}
-                      onClick={() => {
-                        onSelect(stock)
-                        setShowDropdown(false)
-                        setSearchTerm('')
-                      }}
-                      className="w-full p-3 flex items-center gap-3 hover:bg-surfaceLight transition-colors text-left"
+                      className="flex items-center justify-between p-3 hover:bg-surfaceLight transition-colors group"
                     >
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <span className="text-xs font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{stock.symbol}</p>
-                        <p className="text-xs text-textSecondary truncate">{stock.name}</p>
-                      </div>
-                    </button>
+                      <button
+                        onClick={() => {
+                          onSelect(stock)
+                          setShowDropdown(false)
+                          setSearchTerm('')
+                        }}
+                        className="flex items-center gap-3 flex-1 text-left"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">{stock.symbol.substring(0, 2)}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{stock.symbol}</p>
+                          <p className="text-xs text-textSecondary truncate">{stock.name}</p>
+                        </div>
+                      </button>
+                      
+                      {/* Add to Watchlist Button */}
+                      {onAddToWatchlist && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onAddToWatchlist(stock)
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isInWatchlist(stock.id)
+                              ? 'text-terminal-dim cursor-not-allowed'
+                              : 'text-terminal-green hover:bg-terminal-green/20 opacity-0 group-hover:opacity-100'
+                          }`}
+                          title={isInWatchlist(stock.id) ? 'Already in watchlist' : 'Add to watchlist'}
+                          disabled={isInWatchlist(stock.id)}
+                        >
+                          {isInWatchlist(stock.id) ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Star className="w-4 h-4" />
+                          )}
+                        </motion.button>
+                      )}
+                    </div>
                   ))
                 )}
               </div>
