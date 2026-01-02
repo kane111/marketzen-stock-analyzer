@@ -27,7 +27,11 @@ import { PortfolioProvider } from './context/PortfolioContext'
 import { WatchlistProvider } from './context/WatchlistContext'
 import { ThemeProvider } from './context/ThemeContext'
 
-// Yahoo Finance API for Indian stocks (NSE)
+// Yahoo Finance API for Indian stocks search
+const YAHOO_SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search'
+const CORS_PROXY = 'https://corsproxy.io/?'
+
+// Yahoo Finance API for chart data
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
 
 // Multiple CORS proxy options for better reliability in different regions
@@ -101,8 +105,13 @@ function AppContent() {
   // Search bar state (replaces command mode)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [searchLoading, setSearchLoading] = useState(false)
   const [searchHighlighted, setSearchHighlighted] = useState(0)
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  const [recentSearches, setRecentSearches] = useState(() => {
+    const saved = localStorage.getItem('marketzen_recent')
+    return saved ? JSON.parse(saved) : []
+  })
   
   // Terminal Workspace specific state
   const [copiedData, setCopiedData] = useState(false)
@@ -130,25 +139,90 @@ function AppContent() {
   const searchInputRef = useRef(null)
   const resizeTimeoutRef = useRef(null)
   
-  // Combined stock list for search (watchlist + popular stocks)
-  const allStocksForSearch = [...watchlist, ...DEFAULT_STOCKS.filter(ds => !watchlist.find(w => w.id === ds.id))]
+  // Combined stock list for fallback (watchlist + popular stocks)
+  const fallbackStocks = [...watchlist, ...DEFAULT_STOCKS.filter(ds => !watchlist.find(w => w.id === ds.id))]
+  
+  // Fallback results when API fails
+  const createFallbackResults = (q) => {
+    const commonStocks = [
+      { id: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance Industries Ltd', exchange: 'NSE' },
+      { id: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy Services Ltd', exchange: 'NSE' },
+      { id: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', exchange: 'NSE' },
+      { id: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', exchange: 'NSE' },
+      { id: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India', exchange: 'NSE' },
+      { id: 'INFY.NS', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE' },
+      { id: 'BAJFINANCE.NS', symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd', exchange: 'NSE' },
+      { id: 'BHARTIARTL.NS', symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', exchange: 'NSE' },
+      { id: 'ASIANPAINT.NS', symbol: 'ASIANPAINT', name: 'Asian Paints Ltd', exchange: 'NSE' },
+      { id: 'MARUTI.NS', symbol: 'MARUTI', name: 'Maruti Suzuki India Ltd', exchange: 'NSE' },
+    ]
+    
+    const lowerQ = q.toLowerCase()
+    return commonStocks.filter(s => 
+      s.symbol.toLowerCase().includes(lowerQ) || 
+      s.name.toLowerCase().includes(lowerQ)
+    ).slice(0, 8)
+  }
+  
+  // Search functionality using Yahoo Finance API
+  const fetchSearchResults = async (query) => {
+    if (query.length < 2) {
+      setSearchResults([])
+      setSearchLoading(false)
+      return
+    }
+    
+    try {
+      const res = await fetch(`${CORS_PROXY}${encodeURIComponent(YAHOO_SEARCH + '?q=' + encodeURIComponent(query) + '&quotes_count=15)')}`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      const data = await res.json()
+      
+      if (data.quotes) {
+        // Filter for Indian stocks (NSE suffix) and format them
+        const formatted = data.quotes
+          .filter(q => q.symbol && (q.symbol.endsWith('.NS') || q.symbol.endsWith('.BO')))
+          .map(q => ({
+            id: q.symbol,
+            symbol: q.symbol.replace('.NS', '').replace('.BO', ''),
+            name: q.shortname || q.longname || q.symbol,
+            exchange: q.symbol.endsWith('.NS') ? 'NSE' : 'BSE'
+          }))
+        setSearchResults(formatted)
+      } else {
+        setSearchResults(createFallbackResults(query))
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+      setSearchResults(createFallbackResults(query))
+    } finally {
+      setSearchLoading(false)
+    }
+  }
   
   // Search functionality
   const handleSearchChange = (e) => {
-    const query = e.target.value.trim().toUpperCase()
+    const query = e.target.value.trim()
     setSearchQuery(query)
+    setSearchLoading(true)
     
     if (query.length > 0) {
-      const filtered = allStocksForSearch.filter(stock => 
-        stock.symbol.toUpperCase().includes(query) || 
-        stock.name.toUpperCase().includes(query)
-      ).slice(0, 8)
-      setSearchResults(filtered)
       setShowSearchDropdown(true)
       setSearchHighlighted(0)
+      
+      // Debounce API calls
+      const searchTimeout = setTimeout(() => {
+        fetchSearchResults(query)
+      }, 300)
+      
+      // Store timeout ID for cleanup
+      e.target._searchTimeout = searchTimeout
     } else {
       setSearchResults([])
       setShowSearchDropdown(false)
+      setSearchLoading(false)
     }
   }
   
@@ -183,6 +257,14 @@ function AppContent() {
   const handleSearchResultClick = (stock) => {
     handleStockSelect(stock)
     clearSearch()
+    
+    // Add to recent searches
+    setRecentSearches(prev => {
+      const filtered = prev.filter(p => p.id !== stock.id)
+      const updated = [stock, ...filtered].slice(0, 5)
+      localStorage.setItem('marketzen_recent', JSON.stringify(updated))
+      return updated
+    })
   }
 
   // Show notification helper
@@ -875,35 +957,91 @@ function AppContent() {
                     
                     {/* Search Results Dropdown */}
                     <AnimatePresence>
-                      {showSearchDropdown && searchResults.length > 0 && (
+                      {showSearchDropdown && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-full max-w-xl bg-terminal-panel border border-terminal-border rounded-lg shadow-xl overflow-hidden z-50"
                         >
-                          {searchResults.map((stock, index) => (
-                            <button
-                              key={stock.id}
-                              onClick={() => handleSearchResultClick(stock)}
-                              className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between hover:bg-terminal-bg transition-colors ${
-                                index === searchHighlighted ? 'bg-terminal-bg' : ''
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded bg-terminal-bg flex items-center justify-center text-xs font-bold font-mono text-terminal-green">
-                                  {stock.symbol.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <p className="font-bold text-terminal-text">{stock.symbol}</p>
-                                  <p className="text-xs text-terminal-dim truncate max-w-[200px]">{stock.name}</p>
-                                </div>
+                          {/* Loading State */}
+                          {searchLoading && (
+                            <div className="p-4 flex items-center justify-center">
+                              <div className="w-5 h-5 border-2 border-terminal-green border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          )}
+                          
+                          {/* Recent Searches (when query is empty) */}
+                          {!searchLoading && searchQuery.length < 2 && recentSearches.length > 0 && (
+                            <div className="p-3 border-b border-terminal-border/50">
+                              <div className="flex items-center gap-2 text-xs text-terminal-dim mb-2 px-1">
+                                <Clock className="w-3 h-3" />
+                                <span>Recent Searches</span>
                               </div>
-                              {index === searchHighlighted && (
-                                <ChevronRight className="w-4 h-4 text-terminal-dim" />
+                              {recentSearches.slice(0, 3).map((stock) => (
+                                <button
+                                  key={stock.id}
+                                  onClick={() => handleSearchResultClick(stock)}
+                                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-terminal-bg transition-colors rounded"
+                                >
+                                  <div className="w-8 h-8 rounded bg-terminal-bg flex items-center justify-center text-xs font-bold font-mono text-terminal-green">
+                                    {stock.symbol.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-terminal-text text-sm">{stock.symbol}</p>
+                                    <p className="text-xs text-terminal-dim truncate max-w-[150px]">{stock.name}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Search Results */}
+                          {!searchLoading && searchResults.length > 0 && (
+                            <>
+                              {searchQuery.length >= 2 && (
+                                <div className="px-3 py-2 text-xs text-terminal-dim border-b border-terminal-border/50 flex items-center gap-2">
+                                  <Search className="w-3 h-3" />
+                                  <span>Indian Stocks</span>
+                                </div>
                               )}
-                            </button>
-                          ))}
+                              {searchResults.map((stock, index) => (
+                                <button
+                                  key={stock.id}
+                                  onClick={() => handleSearchResultClick(stock)}
+                                  className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between hover:bg-terminal-bg transition-colors ${
+                                    index === searchHighlighted ? 'bg-terminal-bg' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded bg-terminal-bg flex items-center justify-center text-xs font-bold font-mono text-terminal-green">
+                                      {stock.symbol.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-terminal-text">{stock.symbol}</p>
+                                      <p className="text-xs text-terminal-dim truncate max-w-[200px]">{stock.name}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs px-2 py-0.5 bg-terminal-bg rounded text-terminal-dim">
+                                      {stock.exchange || 'NSE'}
+                                    </span>
+                                    {index === searchHighlighted && (
+                                      <ChevronRight className="w-4 h-4 text-terminal-dim" />
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                            </>
+                          )}
+                          
+                          {/* No Results */}
+                          {!searchLoading && searchQuery.length >= 2 && searchResults.length === 0 && (
+                            <div className="p-6 text-center text-terminal-dim">
+                              <p className="font-mono text-sm">No stocks found for "{searchQuery}"</p>
+                              <p className="text-xs mt-1">Try searching with stock symbol or company name</p>
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
