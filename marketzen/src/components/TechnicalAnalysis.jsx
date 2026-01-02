@@ -136,8 +136,54 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       // Count how many MAs the price is above
       const maAboveCount = maAnalysis.filter(m => m.above).length
       
-      // Generate signals
-      const signals = []
+      // Perfect Order Analysis - Triple Moving Average Alignment
+      // Bullish: Price > MA10 > MA20 > MA44 (strong uptrend)
+      // Bearish: Price < MA10 < MA20 < MA44 (strong downtrend)
+      const isBullishPerfectOrder = currentPrice > currentMA10 && currentMA10 > currentMA20 && currentMA20 > currentMA44
+      const isBearishPerfectOrder = currentPrice < currentMA10 && currentMA10 < currentMA20 && currentMA20 < currentMA44
+      
+      // Partial alignment signals
+      const isPartialBullish = currentPrice > currentMA10 && currentMA10 > currentMA20 && currentMA20 <= currentMA44
+      const isPartialBearish = currentPrice < currentMA10 && currentMA10 < currentMA20 && currentMA20 >= currentMA44
+      
+      // Moving Average alignment signal
+      if (isBullishPerfectOrder) {
+        signals.push({ 
+          indicator: 'MA Alignment', 
+          signal: 'BUY', 
+          strength: 'STRONG', 
+          description: 'Perfect Order: MA10 > MA20 > MA44 - Strong Uptrend',
+          color: 'positive',
+          alignmentType: 'bullish'
+        })
+      } else if (isBearishPerfectOrder) {
+        signals.push({ 
+          indicator: 'MA Alignment', 
+          signal: 'SELL', 
+          strength: 'STRONG', 
+          description: 'Perfect Order: MA10 < MA20 < MA44 - Strong Downtrend',
+          color: 'negative',
+          alignmentType: 'bearish'
+        })
+      } else if (isPartialBullish) {
+        signals.push({ 
+          indicator: 'MA Alignment', 
+          signal: 'BUY', 
+          strength: 'MODERATE', 
+          description: 'Partial Alignment: Price > MA10 > MA20 - Building Uptrend',
+          color: 'positive',
+          alignmentType: 'partial_bullish'
+        })
+      } else if (isPartialBearish) {
+        signals.push({ 
+          indicator: 'MA Alignment', 
+          signal: 'SELL', 
+          strength: 'MODERATE', 
+          description: 'Partial Alignment: Price < MA10 < MA20 - Building Downtrend',
+          color: 'negative',
+          alignmentType: 'partial_bearish'
+        })
+      }
       
       // RSI Analysis
       if (currentRSI < params.rsi.oversold) {
@@ -229,7 +275,11 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
         chartDataATR: chartData.map((d, i) => ({ time: d.date, value: d.atr })),
         maAnalysis,
         maAboveCount,
-        currentPrice
+        currentPrice,
+        isBullishPerfectOrder,
+        isBearishPerfectOrder,
+        isPartialBullish,
+        isPartialBearish
       })
       
       setSignal({ type: overallSignal, strength: overallStrength, buyCount: buySignals, sellCount: sellSignals, total: totalSignals })
@@ -372,6 +422,82 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       {/* Moving Average Analysis */}
       {analysisData && (
         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-terminal-bg-secondary/80 backdrop-blur-xl border border-terminal-border rounded-2xl p-6 mb-6">
+          {/* Perfect Order Status Banner */}
+          {(analysisData.isBullishPerfectOrder || analysisData.isBearishPerfectOrder || analysisData.isPartialBullish || analysisData.isPartialBearish) && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mb-4 p-4 rounded-xl border-2 ${
+                analysisData.isBullishPerfectOrder 
+                  ? 'bg-terminal-green/10 border-terminal-green' 
+                  : analysisData.isBearishPerfectOrder
+                    ? 'bg-terminal-red/10 border-terminal-red'
+                    : analysisData.isPartialBullish
+                      ? 'bg-amber-500/10 border-amber-500'
+                      : 'bg-amber-500/10 border-amber-500'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                    analysisData.isBullishPerfectOrder 
+                      ? 'bg-terminal-green/20' 
+                      : analysisData.isBearishPerfectOrder
+                        ? 'bg-terminal-red/20'
+                        : 'bg-amber-500/20'
+                  }`}>
+                    {analysisData.isBullishPerfectOrder ? (
+                      <TrendingUp className="w-6 h-6 text-terminal-green" />
+                    ) : analysisData.isBearishPerfectOrder ? (
+                      <TrendingDown className="w-6 h-6 text-terminal-red" />
+                    ) : (
+                      <Target className="w-6 h-6 text-amber-500" />
+                    )}
+                  </div>
+                  <div>
+                    <p className={`text-lg font-bold ${
+                      analysisData.isBullishPerfectOrder 
+                        ? 'text-terminal-green' 
+                        : analysisData.isBearishPerfectOrder
+                          ? 'text-terminal-red'
+                          : 'text-amber-500'
+                    }`}>
+                      {analysisData.isBullishPerfectOrder 
+                        ? 'PERFECT ORDER - BULLISH' 
+                        : analysisData.isBearishPerfectOrder
+                          ? 'PERFECT ORDER - BEARISH'
+                          : analysisData.isPartialBullish
+                            ? 'PARTIAL ALIGNMENT - BULLISH'
+                            : 'PARTIAL ALIGNMENT - BEARISH'
+                      }
+                    </p>
+                    <p className="text-sm text-terminal-dim">
+                      {analysisData.isBullishPerfectOrder 
+                        ? 'Price > MA10 > MA20 > MA44 - Strong uptrend confirmed'
+                        : analysisData.isBearishPerfectOrder
+                          ? 'Price < MA10 < MA20 < MA44 - Strong downtrend confirmed'
+                          : analysisData.isPartialBullish
+                            ? 'Building uptrend - Price > MA10 > MA20'
+                            : 'Building downtrend - Price < MA10 < MA20'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {analysisData.isBullishPerfectOrder && (
+                    <span className="px-3 py-1 bg-terminal-green/20 text-terminal-green rounded-full text-sm font-medium">STRONG BUY</span>
+                  )}
+                  {analysisData.isBearishPerfectOrder && (
+                    <span className="px-3 py-1 bg-terminal-red/20 text-terminal-red rounded-full text-sm font-medium">STRONG SELL</span>
+                  )}
+                  {(analysisData.isPartialBullish || analysisData.isPartialBearish) && (
+                    <span className="px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full text-sm font-medium">WATCH</span>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-terminal-green/20 flex items-center justify-center">
