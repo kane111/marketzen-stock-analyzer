@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { PieChart, BarChart2, Activity, Copy, Check } from 'lucide-react'
+import { BarChart2, Activity, Copy, Check } from 'lucide-react'
 
 // ==========================================
 // STOCK HEADER - Unified Header Component
@@ -8,8 +8,6 @@ import { PieChart, BarChart2, Activity, Copy, Check } from 'lucide-react'
 export function StockHeader({
   stock,
   stockData,
-  onOpenFundamentals,
-  showFundamentals,
   onOpenAnalysis,
   onCopyData,
   copiedData,
@@ -78,21 +76,6 @@ export function StockHeader({
 
           {/* Quick Actions */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {/* Fundamentals Toggle */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onOpenFundamentals}
-              className={`px-3 py-1 rounded text-xs flex items-center gap-2 transition-colors ${
-                showFundamentals 
-                  ? 'bg-terminal-green text-terminal-bg border border-terminal-green' 
-                  : 'bg-terminal-bg border border-terminal-border hover:border-terminal-dim'
-              }`}
-            >
-              <PieChart className="w-3 h-3" />
-              Fundamentals
-            </motion.button>
-
             {/* Multi Chart Toggle */}
             {onToggleMultiChart && (
               <motion.button

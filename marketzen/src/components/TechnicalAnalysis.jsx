@@ -43,9 +43,7 @@ function TechnicalAnalysis({
   indicatorParams = {}, 
   onOpenConfig, 
   watchlist = [], 
-  onAddToWatchlist = null,
-  cachedFundamentals = null,
-  fundamentalsLoading = false
+  onAddToWatchlist = null
 }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(taTimeframes[1])
   const [analysisData, setAnalysisData] = useState(null)
@@ -60,6 +58,10 @@ function TechnicalAnalysis({
   const [viewMode, setViewMode] = useState('split') // 'chart', 'split', 'fundamentals'
   const [fundamentalsTab, setFundamentalsTab] = useState('valuation')
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
+  
+  // Local fundamentals state
+  const [cachedFundamentals, setCachedFundamentals] = useState(null)
+  const [fundamentalsLoading, setFundamentalsLoading] = useState(false)
 
   // Handle timeframe change - update state and fetch new data
   const handleTimeframeChange = useCallback((timeframe) => {
@@ -339,6 +341,92 @@ function TechnicalAnalysis({
       performAnalysis()
     }
   }, [stockData, stock, fetchStockData, taTimeframes])
+  
+  // Fundamentals fetching - only in TechnicalAnalysis
+  useEffect(() => {
+    if (!stock?.id) return
+    
+    // Check for cached data
+    const cacheKey = `fundamentals_${stock.id}`
+    const cached = localStorage.getItem(cacheKey)
+    let cachedData = null
+    
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached)
+        const cacheAge = Date.now() - parsed.timestamp
+        const CACHE_MAX_AGE = 15 * 60 * 1000 // 15 minutes
+        
+        if (cacheAge < CACHE_MAX_AGE) {
+          cachedData = parsed
+        }
+      } catch (e) {
+        console.error('Error parsing fundamentals cache:', e)
+      }
+    }
+    
+    if (cachedData) {
+      setCachedFundamentals(cachedData)
+      return
+    }
+    
+    // Fetch fundamentals
+    setFundamentalsLoading(true)
+    const YAHOO_QUOTE_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary'
+    const FUNDAMENTAL_MODULES = 'summaryDetail,defaultKeyStatistics,financialData,incomeStatementHistory,balanceSheetHistory'
+    const url = `${YAHOO_QUOTE_SUMMARY}/${stock.id}?modules=${FUNDAMENTAL_MODULES}`
+    
+    const CORS_PROXIES = [
+      'https://corsproxy.io/?',
+      'https://justfetch.itsvg.in/?url=',
+      'https://api.allorigins.win/raw?url=',
+      'https://corsproxy.pages.dev/?',
+      'https://proxy.cors.sh/'
+    ]
+    
+    const tryFetchWithProxy = async (proxyIndex = 0, attempts = 0) => {
+      if (proxyIndex >= CORS_PROXIES.length) {
+        throw new Error('All proxies failed')
+      }
+      
+      const proxy = CORS_PROXIES[proxyIndex]
+      
+      try {
+        const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+          }
+        })
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return await response.json()
+      } catch (err) {
+        if (attempts < 3) {
+          return tryFetchWithProxy(proxyIndex, attempts + 1)
+        }
+        return tryFetchWithProxy(proxyIndex + 1, 0)
+      }
+    }
+    
+    tryFetchWithProxy()
+      .then(result => {
+        if (result.quoteSummary?.result?.[0]) {
+          const data = {
+            data: result.quoteSummary.result[0],
+            timestamp: Date.now()
+          }
+          setCachedFundamentals(data)
+          localStorage.setItem(cacheKey, JSON.stringify(data))
+        }
+      })
+      .catch(err => {
+        console.error('Fundamentals fetch error:', err)
+      })
+      .finally(() => {
+        setFundamentalsLoading(false)
+      })
+  }, [stock?.id])
   
   const formatCurrency = (value) => {
     if (value === null || value === undefined) return 'N/A'

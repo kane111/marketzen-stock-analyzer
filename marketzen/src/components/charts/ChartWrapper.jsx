@@ -365,7 +365,6 @@ function TimeframeSelector({ timeframes, selected, onSelect }) {
 const StockChartInner = memo(function StockChartInner({
   data,
   isPositive,
-  showFundamentalsPanel,
   showEMAs,
   showSignals,
   showVolume,
@@ -379,13 +378,12 @@ const StockChartInner = memo(function StockChartInner({
   const maxVolume = volumes.length > 0 ? Math.max(...volumes) : 1000
 
   return (
-    <div className={`
+    <div className="
       flex-1 min-h-0 
       border border-terminal-border 
       rounded-lg bg-terminal-panel 
-      transition-all duration-300
-      ${showFundamentalsPanel ? 'p-2' : 'p-4'}
-    `}>
+      p-4
+    ">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data}>
           <defs>
@@ -521,7 +519,7 @@ const StockChartInner = memo(function StockChartInner({
 })
 
 // Main Chart Wrapper Component
-function ChartWrapper({ stock, showFundamentalsPanel }) {
+function ChartWrapper({ stock }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[3])
   const [chartData, setChartData] = useState([])
   const [loading, setLoading] = useState(true)
@@ -676,16 +674,14 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
   }, [chartData])
 
   return (
-    <div className={`
+    <div className="
       flex-1 flex flex-col min-h-0 
-      transition-all duration-300
-      ${showFundamentalsPanel ? 'pb-1 pt-2' : 'p-4'}
-    `}>
+      p-4
+    ">
       {/* Header */}
-      <div className={`
+      <div className="
         flex items-center justify-between mb-4 flex-wrap gap-3 flex-shrink-0
-        ${showFundamentalsPanel ? 'mb-2' : ''}
-      `}>
+      ">
         <div className="flex items-center gap-3">
           <span className="text-terminal-green font-bold text-sm">CHART</span>
 
@@ -742,7 +738,6 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
         <StockChartInner
           data={chartData}
           isPositive={isPositive}
-          showFundamentalsPanel={showFundamentalsPanel}
           showEMAs={showEMAs}
           showSignals={showSignals}
           showVolume={showVolume}
