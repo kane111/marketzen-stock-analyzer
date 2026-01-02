@@ -7,13 +7,14 @@ import {
   Grid3X3, Star, Check, Users
 } from 'lucide-react'
 import { 
-  ComposedChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Line as RechartsLine, 
+  ComposedChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Line as RechartsLine, 
   Bar, Cell 
 } from 'recharts'
 import TimeframeSelector from './charts/TimeframeSelector'
 import { TerminalTab, TerminalIndicatorToggle } from './UI'
 import { Spinner } from './common/LoadingSkeleton'
 import { InlineError } from './common/ErrorDisplay'
+import { InfoTooltip } from './common/Tooltip'
 import { 
   useIndicators, 
   useIndicatorParams,
@@ -490,21 +491,22 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
       {/* Indicator Toggles */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2 flex-wrap">
         {[
-          { id: 'smaShort', label: `SMA ${params.sma.shortPeriod}`, color: '#f59e0b' },
-          { id: 'smaLong', label: `SMA ${params.sma.longPeriod}`, color: '#8b5cf6' },
-          { id: 'emaShort', label: `EMA ${params.ema.shortPeriod}`, color: '#10b981' },
-          { id: 'bollinger', label: 'Bollinger', color: '#06b6d4' },
-          { id: 'vwap', label: 'VWAP', color: '#ec4899' },
-          { id: 'stoch', label: 'Stochastic', color: '#f97316' },
-          { id: 'atr', label: 'ATR', color: '#84cc16' }
+          { id: 'smaShort', label: `SMA ${params.sma.shortPeriod}`, color: '#f59e0b', tooltip: `Simple Moving Average over ${params.sma.shortPeriod} periods - smooths price data to identify trends` },
+          { id: 'smaLong', label: `SMA ${params.sma.longPeriod}`, color: '#8b5cf6', tooltip: `Simple Moving Average over ${params.sma.longPeriod} periods - identifies longer-term trends` },
+          { id: 'emaShort', label: `EMA ${params.sma.shortPeriod}`, color: '#10b981', tooltip: `Exponential Moving Average - more responsive to recent price changes` },
+          { id: 'bollinger', label: 'Bollinger', color: '#06b6d4', tooltip: 'Bollinger Bands - shows volatility and potential overbought/oversold levels' },
+          { id: 'vwap', label: 'VWAP', color: '#ec4899', tooltip: 'Volume Weighted Average Price - intraday trading benchmark' },
+          { id: 'stoch', label: 'Stochastic', color: '#f97316', tooltip: 'Stochastic Oscillator - identifies momentum and potential reversal points' },
+          { id: 'atr', label: 'ATR', color: '#84cc16', tooltip: 'Average True Range - measures market volatility' }
         ].map(indicator => (
-          <TerminalIndicatorToggle
-            key={indicator.id}
-            label={indicator.label}
-            color={indicator.color}
-            isActive={indicators[indicator.id]}
-            onToggle={() => toggleIndicator(indicator.id)}
-          />
+          <InfoTooltip key={indicator.id} content={indicator.tooltip} position="bottom">
+            <TerminalIndicatorToggle
+              label={indicator.label}
+              color={indicator.color}
+              isActive={indicators[indicator.id]}
+              onToggle={() => toggleIndicator(indicator.id)}
+            />
+          </InfoTooltip>
         ))}
       </div>
       
@@ -546,7 +548,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis domain={['auto', 'auto']} tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `₹${v}`} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <Area type="monotone" dataKey="close" stroke="none" fill="url(#priceGradientTA)" />
                       {indicators.smaShort && <RechartsLine type="monotone" dataKey="smaShort" stroke="#f59e0b" strokeWidth={2} dot={false} name={`SMA ${params.sma.shortPeriod}`} />}
                       {indicators.smaLong && <RechartsLine type="monotone" dataKey="smaLong" stroke="#8b5cf6" strokeWidth={2} dot={false} name={`SMA ${params.sma.longPeriod}`} />}
@@ -619,7 +621,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
                       <ReferenceLine y={30} stroke="#10b981" strokeDasharray="5 5" />
                       <ReferenceLine y={50} stroke="#6b7280" strokeDasharray="3 3" />
@@ -639,7 +641,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <Bar dataKey="hist">
                         {analysisData.chartDataMACD.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.hist >= 0 ? '#10b981' : '#ef4444'} />))}
                       </Bar>
@@ -682,40 +684,41 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
               <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <span className="text-sm text-terminal-dim mr-2">INDICATOR:</span>
                 {[
-                  { id: 'rsi', label: 'RSI', color: '#3b82f6' },
-                  { id: 'stoch', label: 'Stochastic', color: '#f97316' },
-                  { id: 'atr', label: 'ATR', color: '#84cc16' },
-                  { id: 'macd', label: 'MACD', color: '#10b981' }
+                  { id: 'rsi', label: 'RSI', color: '#3b82f6', tooltip: 'Relative Strength Index - Measures overbought/oversold levels (70/30)' },
+                  { id: 'stoch', label: 'Stochastic', color: '#f97316', tooltip: 'Stochastic Oscillator - Compares closing price to price range over time' },
+                  { id: 'atr', label: 'ATR', color: '#84cc16', tooltip: 'Average True Range - Measures market volatility' },
+                  { id: 'macd', label: 'MACD', color: '#10b981', tooltip: 'Moving Average Convergence Divergence - Shows momentum and trend changes' }
                 ].map((tab) => {
                   const isActive = activeOscillatorTab === tab.id
                   const isDisabled = (tab.id === 'stoch' && !indicators.stoch) || (tab.id === 'atr' && !indicators.atr)
                   
                   return (
-                    <motion.button
-                      key={tab.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => !isDisabled && setActiveOscillatorTab(tab.id)}
-                      disabled={isDisabled}
-                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                        isActive 
-                          ? 'bg-terminal-green text-black shadow-lg shadow-terminal-green/20' 
-                          : isDisabled
-                            ? 'bg-terminal-bg-light text-terminal-dim cursor-not-allowed opacity-50'
-                            : 'bg-terminal-bg-light text-terminal-text hover:bg-terminal-bg-secondary'
-                      }`}
-                    >
-                      <div 
-                        className={`w-2 h-2 rounded-full ${
-                          isActive ? 'bg-black' : isDisabled ? 'bg-terminal-dim' : `bg-[${tab.color}]`
-                        }`} 
-                        style={!isActive && !isDisabled ? { backgroundColor: tab.color } : {}}
-                      />
-                      {tab.label}
-                      {isActive && (
-                        <div className="w-1.5 h-1.5 bg-black/50 rounded-full animate-pulse ml-1" />
-                      )}
-                    </motion.button>
+                    <InfoTooltip key={tab.id} content={tab.tooltip} position="bottom">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => !isDisabled && setActiveOscillatorTab(tab.id)}
+                        disabled={isDisabled}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                          isActive 
+                            ? 'bg-terminal-green text-black shadow-lg shadow-terminal-green/20' 
+                            : isDisabled
+                              ? 'bg-terminal-bg-light text-terminal-dim cursor-not-allowed opacity-50'
+                              : 'bg-terminal-bg-light text-terminal-text hover:bg-terminal-bg-secondary'
+                        }`}
+                      >
+                        <div 
+                          className={`w-2 h-2 rounded-full ${
+                            isActive ? 'bg-black' : isDisabled ? 'bg-terminal-dim' : `bg-[${tab.color}]`
+                          }`} 
+                          style={!isActive && !isDisabled ? { backgroundColor: tab.color } : {}}
+                        />
+                        {tab.label}
+                        {isActive && (
+                          <div className="w-1.5 h-1.5 bg-black/50 rounded-full animate-pulse ml-1" />
+                        )}
+                      </motion.button>
+                    </InfoTooltip>
                   )
                 })}
               </div>
@@ -730,7 +733,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 5" />
                       <ReferenceLine y={30} stroke="#10b981" strokeDasharray="5 5" />
                       <ReferenceLine y={50} stroke="#6b7280" strokeDasharray="3 3" />
@@ -745,7 +748,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis domain={[0, 100]} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="5 5" />
                       <ReferenceLine y={20} stroke="#10b981" strokeDasharray="5 5" />
                       <RechartsLine type="monotone" dataKey="k" stroke="#f97316" strokeWidth={2} dot={false} name="%K" />
@@ -760,7 +763,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `₹${v.toFixed(0)}`} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <Area 
                         type="monotone" 
                         dataKey="value" 
@@ -779,7 +782,7 @@ function TechnicalAnalysis({ stock, stockData, onBack, taTimeframes, fetchStockD
                         return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
                       }} />
                       <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <Tooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                      <RechartsTooltip contentStyle={{ background: 'rgba(21, 26, 33, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
                       <Bar dataKey="hist">
                         {analysisData.chartDataMACD.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.hist >= 0 ? '#10b981' : '#ef4444'} />

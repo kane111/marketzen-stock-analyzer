@@ -290,13 +290,77 @@ function Portfolio({ onStockSelect }) {
 
           {contextHoldings.length === 0 ? (
             <div className="bg-terminal-bg-secondary border border-terminal-border rounded-2xl p-8 text-center">
-              <Wallet className="w-12 h-12 text-terminal-dim mx-auto mb-4 opacity-50" />
-              <p className="text-terminal-dim mb-4">No holdings yet</p>
+              <div className="w-16 h-16 rounded-2xl bg-terminal-green/10 flex items-center justify-center mx-auto mb-4">
+                <Wallet className="w-8 h-8 text-terminal-green/60" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Start Building Your Portfolio</h3>
+              <p className="text-terminal-dim text-sm mb-6 max-w-md mx-auto">
+                Track your investments, monitor gains/losses, and analyze your portfolio allocation across sectors.
+              </p>
+              
+              {/* Quick Start Guide */}
+              <div className="bg-terminal-bg rounded-xl p-4 mb-6 text-left max-w-md mx-auto">
+                <p className="text-xs text-terminal-dim uppercase tracking-wider mb-3 font-medium">Quick Start</p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-terminal-green/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Plus className="w-3 h-3 text-terminal-green" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Add your first holding</p>
+                      <p className="text-xs text-terminal-dim">Click the button below to add stocks</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-terminal-blue/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <TrendingUp className="w-3 h-3 text-terminal-blue" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Track performance</p>
+                      <p className="text-xs text-terminal-dim">Monitor real-time gains and losses</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-terminal-purple/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <PieChartIcon className="w-3 h-3 text-terminal-purple" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Analyze allocation</p>
+                      <p className="text-xs text-terminal-dim">See sector-wise distribution</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Popular Stocks Quick Add */}
+              <div className="mb-6">
+                <p className="text-xs text-terminal-dim uppercase tracking-wider mb-3 font-medium">Popular Stocks</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {QUICK_STOCKS.slice(0, 6).map((stock) => (
+                    <button
+                      key={stock.id}
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          stockId: stock.id,
+                          symbol: stock.symbol,
+                          name: stock.name
+                        }))
+                        setShowAddModal(true)
+                      }}
+                      className="px-3 py-1.5 bg-terminal-bg hover:bg-terminal-bg-light border border-terminal-border rounded-lg text-sm transition-colors"
+                    >
+                      {stock.symbol}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 rounded-lg bg-terminal-green text-terminal-bg font-medium inline-flex items-center gap-2"
+                className="px-6 py-2.5 rounded-lg bg-terminal-green text-terminal-bg font-medium inline-flex items-center gap-2 hover:bg-terminal-green/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Your First Holding

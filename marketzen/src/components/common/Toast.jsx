@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react'
 
 /**
  * Toast/Notification component for displaying temporary messages
@@ -11,23 +11,26 @@ import { X, CheckCircle, AlertCircle, Info } from 'lucide-react'
  * @param {function} onDismiss - Callback when toast is dismissed
  */
 export function Toast({ message, type = 'success', duration = 3000, onDismiss }) {
+  const progressRef = useRef(null)
+  const [isPaused, setIsPaused] = useState(false)
+
   useEffect(() => {
-    if (duration > 0) {
+    if (duration > 0 && !isPaused) {
       const timer = setTimeout(onDismiss, duration)
       return () => clearTimeout(timer)
     }
-  }, [duration, onDismiss])
+  }, [duration, onDismiss, isPaused])
 
   const getStyles = () => {
     switch (type) {
       case 'success':
-        return 'bg-terminal-green/20 text-terminal-green border-terminal-green/30'
+        return 'bg-terminal-green/15 text-terminal-green border-terminal-green/30'
       case 'error':
-        return 'bg-terminal-red/20 text-terminal-red border-terminal-red/30'
+        return 'bg-terminal-red/15 text-terminal-red border-terminal-red/30'
       case 'warning':
-        return 'bg-terminal-yellow/20 text-terminal-yellow border-terminal-yellow/30'
+        return 'bg-amber-500/15 text-amber-500 border-amber-500/30'
       default:
-        return 'bg-terminal-blue/20 text-terminal-blue border-terminal-blue/30'
+        return 'bg-terminal-blue/15 text-terminal-blue border-terminal-blue/30'
     }
   }
 
@@ -37,8 +40,23 @@ export function Toast({ message, type = 'success', duration = 3000, onDismiss })
         return <CheckCircle className="w-4 h-4" />
       case 'error':
         return <AlertCircle className="w-4 h-4" />
+      case 'warning':
+        return <AlertTriangle className="w-4 h-4" />
       default:
         return <Info className="w-4 h-4" />
+    }
+  }
+
+  const getProgressColor = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-terminal-green'
+      case 'error':
+        return 'bg-terminal-red'
+      case 'warning':
+        return 'bg-amber-500'
+      default:
+        return 'bg-terminal-blue'
     }
   }
 
@@ -47,13 +65,33 @@ export function Toast({ message, type = 'success', duration = 3000, onDismiss })
       initial={{ opacity: 0, y: -20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border ${getStyles()}`}
+      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      className={`relative flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border ${getStyles()}`}
     >
-      {getIcon()}
-      <p className="text-sm font-medium">{message}</p>
+      {/* Progress Bar */}
+      {duration > 0 && (
+        <motion.div
+          initial={{ width: '100%' }}
+          animate={{ width: '0%' }}
+          transition={{ duration: duration / 1000, ease: 'linear' }}
+          className={`absolute bottom-0 left-0 h-0.5 ${getProgressColor()} rounded-b-lg`}
+        />
+      )}
+      
+      {/* Icon */}
+      <div className="flex-shrink-0">
+        {getIcon()}
+      </div>
+      
+      {/* Message */}
+      <p className="text-sm font-medium flex-1">{message}</p>
+      
+      {/* Dismiss Button */}
       <button
         onClick={onDismiss}
-        className="ml-2 p-1 rounded hover:bg-white/10 transition-colors"
+        className="p-1 rounded hover:bg-white/10 transition-colors flex-shrink-0"
       >
         <X className="w-3 h-3" />
       </button>
