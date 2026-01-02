@@ -926,8 +926,8 @@ function AppContent() {
 
                   {/* Stock Search Bar */}
                   <div className="flex-1 max-w-xl mx-6 relative">
-                    <div className="flex items-center bg-terminal-bg rounded-lg border border-terminal-border focus-within:border-terminal-green transition-all duration-200">
-                      <span className="pl-3 text-terminal-dim">
+                    <div className="flex items-center h-10 bg-terminal-bg rounded-lg border border-terminal-border focus-within:border-terminal-green transition-all duration-200">
+                      <span className="pl-3 text-terminal-dim flex-shrink-0">
                         <Search className="w-4 h-4" />
                       </span>
                       <input
@@ -938,9 +938,9 @@ function AppContent() {
                         onKeyDown={handleSearchKeyDown}
                         onFocus={() => searchQuery && setShowSearchDropdown(true)}
                         placeholder="Search stocks (e.g., RELIANCE, TCS, HDFC...)"
-                        className="flex-1 bg-transparent px-3 py-2 text-sm text-terminal-text placeholder-terminal-dim focus:outline-none font-mono"
+                        className="flex-1 bg-transparent px-3 text-sm text-terminal-text placeholder-terminal-dim focus:outline-none font-mono h-full"
                       />
-                      <div className="pr-3 flex items-center gap-2">
+                      <div className="pr-3 flex items-center gap-2 flex-shrink-0">
                         {searchQuery && (
                           <button
                             onClick={clearSearch}
