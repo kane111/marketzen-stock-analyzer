@@ -22,15 +22,41 @@ const MONTH_ABBREVIATIONS = {
   'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'
 }
 
-// Yahoo Finance API configuration
+// Yahoo Finance API configuration - Chart API
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart'
+
+// Alternative: Use Yahoo Finance 7-day historical data API (less restricted)
+const YAHOO_HISTORY_BASE = 'https://finance.yahoo.com/quote'
+
+// Enhanced proxy configurations with better browser simulation
 const CORS_PROXIES = [
-  'https://corsproxy.io/?',
-  'https://justfetch.itsvg.in/?url=',
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.pages.dev/?',
-  'https://proxy.cors.sh/'
+  { 
+    url: 'https://api.allorigins.win/get?url=',
+    encode: true,
+    timeout: 15000
+  },
+  { 
+    url: 'https://corsproxy.io/?',
+    encode: true,
+    timeout: 15000
+  },
+  { 
+    url: 'https://api.corsproxy.io/?',
+    encode: true,
+    timeout: 15000
+  },
+  { 
+    url: 'https://thingproxy.freeboard.io/fetch?url=',
+    encode: true,
+    timeout: 15000
+  }
 ]
+
+// Browser headers that Yahoo Finance accepts (minimal to avoid CORS issues)
+const YAHOO_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json'
+}
 
 // EMA Period Constants
 const EMA_PERIODS = {
@@ -70,8 +96,44 @@ function formatTimeLabel(date) {
 }
 
 // =============================================================================
-// EMA Calculation Functions
+// Demo Data Generator (used when API is unavailable)
 // =============================================================================
+
+function generateDemoData(basePrice = 2500, days = 90) {
+  const data = []
+  const now = Date.now()
+  const dayMs = 24 * 60 * 60 * 1000
+  
+  let currentPrice = basePrice
+  let trend = 0
+  
+  for (let i = days - 1; i >= 0; i--) {
+    const timestamp = Math.floor((now - i * dayMs) / 1000)
+    const date = new Date(timestamp * 1000)
+    
+    // Random walk with trend
+    trend += (Math.random() - 0.48) * 0.02
+    trend = Math.max(-0.03, Math.min(0.03, trend))
+    currentPrice = currentPrice * (1 + trend + (Math.random() - 0.5) * 0.02)
+    currentPrice = Math.max(currentPrice * 0.98, Math.min(currentPrice * 1.02, currentPrice))
+    
+    const volume = Math.floor(1000000 + Math.random() * 5000000)
+    
+    let timeLabel
+    timeLabel = formatDateLabel(date)
+    
+    const dataPoint = {
+      time: timeLabel,
+      close: currentPrice,
+      price: currentPrice,
+      volume: volume,
+      timestamp: timestamp
+    }
+    data.push(dataPoint)
+  }
+  
+  return data
+}
 
 function calculateEMA(prices, period) {
   if (!prices || prices.length < period || period <= 0) {
@@ -127,10 +189,18 @@ function calculateSMA(values, period) {
 }
 
 function isPerfectStack(close, ema10, ema20, ema44, volume, volSma20) {
-  if (ema10 === null || ema20 === null || ema44 === null || volSma20 === null) {
+  // All EMAs must be calculated
+  if (ema10 === null || ema20 === null || ema44 === null) {
     return false
   }
-  return close > ema10 && ema10 > ema20 && ema20 > ema44 && volume > volSma20
+  // Check price alignment (bullish stack)
+  const priceAligned = close > ema10 && ema10 > ema20 && ema20 > ema44
+  // Volume confirmation (optional - if volume data is available, check it; otherwise skip)
+  let volumeConfirmed = true
+  if (volume !== null && volSma20 !== null && volSma20 > 0) {
+    volumeConfirmed = volume > volSma20
+  }
+  return priceAligned && volumeConfirmed
 }
 
 function enrichChartData(data) {
@@ -505,34 +575,92 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
     setLoading(true)
     setError(null)
 
-    try {
-      const url = `${YAHOO_BASE}/${stockId}?range=${timeframe.range}&interval=${timeframe.interval}`
-
-      const tryFetchWithProxy = async (proxyIndex = 0) => {
-        if (proxyIndex >= CORS_PROXIES.length) {
-          throw new Error('All proxies failed')
-        }
-
-        const proxy = CORS_PROXIES[proxyIndex]
-
-        try {
-          const response = await fetch(`${proxy}${encodeURIComponent(url)}`, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'application/json'
-            }
-          })
-
-          if (!response.ok) throw new Error(`HTTP ${response.status}`)
-          return await response.json()
-        } catch (err) {
-          return tryFetchWithProxy(proxyIndex + 1)
-        }
+    const tryFetchWithProxy = async (targetUrl, proxyIndex = 0, retries = 3) => {
+      if (proxyIndex >= CORS_PROXIES.length || retries <= 0) {
+        throw new Error('All proxies failed')
       }
 
-      const data = await tryFetchWithProxy()
+      const proxyConfig = CORS_PROXIES[proxyIndex]
+      const encodedUrl = proxyConfig.encode ? encodeURIComponent(targetUrl) : targetUrl
+      const proxyUrl = `${proxyConfig.url}${encodedUrl}`
 
-      if (data.chart?.result?.[0]) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), proxyConfig.timeout || 15000)
+
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: YAHOO_HEADERS,
+          signal: controller.signal
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        let data
+        const contentType = response.headers.get('content-type') || ''
+        
+        if (proxyConfig.url.includes('allorigins')) {
+          const json = await response.json()
+          if (!json.contents) {
+            throw new Error('Empty response from proxy')
+          }
+          data = JSON.parse(json.contents)
+        } else {
+          if (!contentType.includes('application/json')) {
+            throw new Error(`Invalid content type: ${contentType}`)
+          }
+          data = await response.json()
+        }
+
+        return data
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return tryFetchWithProxy(targetUrl, proxyIndex + 1, retries - 1)
+        }
+        return tryFetchWithProxy(targetUrl, proxyIndex + 1, retries - 1)
+      }
+    }
+
+    try {
+      let data = null
+      let useDemoData = false
+      
+      try {
+        const url = `${YAHOO_BASE}/${stockId}?range=${timeframe.range}&interval=${timeframe.interval}`
+        data = await tryFetchWithProxy(url)
+      } catch (apiError) {
+        useDemoData = true
+      }
+
+      if (useDemoData || (data && !data.chart?.result?.[0])) {
+        // Use demo data when API fails
+        const demoBasePrices = {
+          'RELIANCE.NS': 2500,
+          'TCS.NS': 3800,
+          'INFY.NS': 1500,
+          'HDFCBANK.NS': 1700,
+          'ICICIBANK.NS': 1100,
+          'SBIN.NS': 750,
+          'BHARTIARTL.NS': 1200,
+          'ADANIENT.NS': 3200,
+          'TATAMOTORS.NS': 950,
+          'SUNPHARMA.NS': 1800
+        }
+        
+        const basePrice = demoBasePrices[stockId] || 1500 + Math.random() * 2000
+        const days = timeframe.value === '1D' ? 1 : timeframe.value === '1W' ? 7 : 
+                     timeframe.value === '1M' ? 30 : timeframe.value === '3M' ? 90 :
+                     timeframe.value === '6M' ? 180 : timeframe.value === '1Y' ? 365 : 90
+        
+        const transformed = generateDemoData(basePrice, days)
+        const enrichedData = enrichChartData(transformed)
+        setChartData(enrichedData)
+        setError('Using demo data (API unavailable)')
+      } else if (data?.chart?.result?.[0]) {
         const result = data.chart.result[0]
         const quote = result.indicators?.quote?.[0] || {}
         const timestamps = result.timestamp || []
@@ -555,22 +683,24 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
 
           return {
             time: timeLabel,
+            close: price,
             price: price,
             volume: volume || 0,
             timestamp: ts
           }
         }).filter(Boolean)
 
-        // Enrich with EMA indicators
         const enrichedData = enrichChartData(transformed)
         setChartData(enrichedData)
       } else {
-        throw new Error('No data available')
+        setError('No data available')
       }
     } catch (err) {
       console.error('Error fetching chart data:', err)
       setError('Unable to fetch chart data')
-      setChartData([])
+      const transformed = generateDemoData(1500, 90)
+      const enrichedData = enrichChartData(transformed)
+      setChartData(enrichedData)
     } finally {
       setLoading(false)
     }
@@ -617,7 +747,7 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
             ema10={currentEMA.ema10}
             ema20={currentEMA.ema20}
             ema44={currentEMA.ema44}
-            currentPrice={stock?.current_price}
+            currentPrice={chartData.length > 0 ? chartData[chartData.length - 1].price : stock?.current_price}
             isPerfectStack={currentEMA.isPerfectStack}
           />
         </div>
@@ -677,7 +807,5 @@ function ChartWrapper({ stock, showFundamentalsPanel }) {
   )
 }
 
-// Export memoized version
-export default memo(ChartWrapper, (prevProps, nextProps) => {
-  return prevProps.stock?.id === nextProps.stock?.id
-})
+// Export component
+export default ChartWrapper
