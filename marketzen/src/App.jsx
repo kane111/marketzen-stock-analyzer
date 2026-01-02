@@ -431,6 +431,11 @@ function AppContent() {
         setPriceChange(changePercent)
         
         const meta = result.meta
+        
+        // Calculate day_high and day_low from OHLC data if not provided by API
+        const calculatedDayHigh = meta.day_high || (highs.length > 0 ? Math.max(...highs.filter(h => h !== null && h !== undefined)) : currentPrice)
+        const calculatedDayLow = meta.day_low || (lows.length > 0 ? Math.min(...lows.filter(l => l !== null && l !== undefined)) : currentPrice)
+        
         const stockDataObj = {
           id: stock.id,
           symbol: meta.symbol || stock.symbol,
@@ -438,8 +443,8 @@ function AppContent() {
           current_price: currentPrice,
           previous_close: meta.previous_close || previousPrice,
           open: meta.open || prices[0],
-          day_high: meta.day_high,
-          day_low: meta.day_low,
+          day_high: calculatedDayHigh,
+          day_low: calculatedDayLow,
           volume: quote.volume?.[prices.length - 1] || 0,
           ohlc: timestamps.map((ts, i) => ({
             timestamp: ts,
