@@ -436,6 +436,9 @@ function AppContent() {
         const calculatedDayHigh = meta.day_high || (highs.length > 0 ? Math.max(...highs.filter(h => h !== null && h !== undefined)) : currentPrice)
         const calculatedDayLow = meta.day_low || (lows.length > 0 ? Math.min(...lows.filter(l => l !== null && l !== undefined)) : currentPrice)
         
+        // Calculate total volume from OHLC data
+        const calculatedVolume = volumes.length > 0 ? volumes[volumes.length - 1] || volumes.reduce((sum, v) => sum + (v || 0), 0) : 0
+        
         const stockDataObj = {
           id: stock.id,
           symbol: meta.symbol || stock.symbol,
@@ -445,7 +448,7 @@ function AppContent() {
           open: meta.open || prices[0],
           day_high: calculatedDayHigh,
           day_low: calculatedDayLow,
-          volume: quote.volume?.[prices.length - 1] || 0,
+          volume: calculatedVolume,
           ohlc: timestamps.map((ts, i) => ({
             timestamp: ts,
             open: opens[i] || prices[0],
