@@ -19,6 +19,7 @@ export default {
         'terminal-bg': '#0C0C0C',
         'terminal-bg-light': '#2a2f35',
         'terminal-bg-secondary': '#1F2223',
+        'terminal-panel': '#1F2223',
         'terminal-border': '#3a3f42',
         'terminal-dim': '#8a9098',
         'terminal-text': '#E0E0E0',
