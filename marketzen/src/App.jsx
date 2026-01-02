@@ -962,7 +962,7 @@ function AppContent() {
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-full max-w-xl bg-terminal-panel border border-terminal-border rounded-lg shadow-xl overflow-hidden z-50"
+                          className="absolute top-full left-0 mt-1 w-full bg-terminal-panel border border-terminal-border rounded-lg shadow-xl overflow-hidden z-50"
                         >
                           {/* Loading State */}
                           {searchLoading && (
